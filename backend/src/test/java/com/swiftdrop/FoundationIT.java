@@ -15,6 +15,9 @@ import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import javax.sql.DataSource;
+import jakarta.persistence.EntityManagerFactory;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
@@ -31,6 +34,10 @@ class FoundationIT {
         properties.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         properties.add("spring.datasource.username", POSTGRES::getUsername);
         properties.add("spring.datasource.password", POSTGRES::getPassword);
+        // Override both connections so a developer's private Neon settings are never used by tests.
+        properties.add("spring.flyway.url", POSTGRES::getJdbcUrl);
+        properties.add("spring.flyway.user", POSTGRES::getUsername);
+        properties.add("spring.flyway.password", POSTGRES::getPassword);
         properties.add("spring.rabbitmq.host", RABBIT::getHost);
         properties.add("spring.rabbitmq.port", RABBIT::getAmqpPort);
         properties.add("spring.rabbitmq.username", RABBIT::getAdminUsername);
@@ -41,13 +48,32 @@ class FoundationIT {
     @Autowired
     private Flyway flyway;
     @Autowired
+    private DataSource dataSource;
+    @Autowired
     private TestRestTemplate http;
     @Autowired
     private RabbitTemplate rabbit;
+    @Autowired
+    private EntityManagerFactory entities;
 
     @Test
-    void freshPostgresMigratesAndMigrationCanRunAgain() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+    void freshPostgresMigratesAndMigrationCanRunAgain() throws Exception {
+        assertThat(flyway.getConfiguration().getDataSource()).isNotSameAs(dataSource);
+        try (var runtime = dataSource.getConnection();
+             var migration = flyway.getConfiguration().getDataSource().getConnection()) {
+            assertThat(runtime.getMetaData().getURL()).isEqualTo(migration.getMetaData().getURL());
+            assertThat(runtime.getCatalog()).isEqualTo(migration.getCatalog());
+        }
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+        // Startup runs Hibernate validation across all eight identity entities.
+        assertThat(entities.getMetamodel().getEntities()).hasSize(8);
+        var entityManager = entities.createEntityManager();
+        try {
+            assertThat(entityManager.createQuery("select r.name from Role r order by r.name", String.class).getResultList())
+                    .containsExactly("COURIER", "CUSTOMER", "DISPATCHER_ADMIN", "MERCHANT");
+        } finally {
+            entityManager.close();
+        }
         flyway.validate();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
