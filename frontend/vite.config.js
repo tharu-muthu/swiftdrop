@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig(({ mode }) => {
-  const rootEnv = fileURLToPath(new URL('..', import.meta.url));
-  // Read only the proxy target. Credentials never enter browser code.
-  const env = loadEnv(mode, rootEnv, 'BACKEND_');
+  const frontendEnv = fileURLToPath(new URL('.', import.meta.url));
+  // Only read frontend/.env files for the proxy; never parse root/backend credentials.
+  const env = loadEnv(mode, frontendEnv, 'BACKEND_');
   const proxy = {
     '/api': {
       target: env.BACKEND_URL || 'http://localhost:8081',
