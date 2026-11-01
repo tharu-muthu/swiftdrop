@@ -1,0 +1,30 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Build output and dependency caches
+**/node_modules/
+**/dist/
+**/target/
+**/coverage/
+.cache/
+tmp/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Keep Maven wrapper files, including the wrapper JAR if used later.
+!**/.mvn/wrapper/**
