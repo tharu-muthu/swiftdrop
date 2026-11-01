@@ -80,6 +80,22 @@ does not demonstrate completed integrations.
 7. RabbitMQ connection configuration and an infrastructure integration test are
    provided. Exchanges, domain queues, outbox relay and business consumers wait
    for their owners; the broker is not a substitute for in-process service calls.
+8. Follow-up development configuration: the user authorized one Neon development
+   branch per developer. Each still runs one application with the same shared
+   schema and migration history; these are isolated environments, not feature
+   databases. Private `backend/.env` files use the same three `SPRING_DATASOURCE_*`
+   names. The later identity-database task explicitly supersedes the initial
+   shared-DataSource-instance rule: runtime keeps its application connection while
+   Flyway uses a guarded direct connection to the same endpoint/database. Optional
+   `SPRING_FLYWAY_URL/USER/PASSWORD` overrides remain backend-only. Frontend
+   configuration has no database connection information.
+9. Identity database follow-up: V2 implements the eight M1 tables and JPA mappings;
+   see `docs/identity/schema.md` for the current ER and table explanations. UUID
+   `roles.id` plus unique `roles.name` supersedes the proposed role-code primary key
+   to satisfy the user's UUID requirement. The combined RefreshSession becomes
+   stable `auth_sessions` plus rotating `refresh_tokens`. There was no existing
+   audit mechanism, so `identity_audit_events` supplies append-only identity audit
+   persistence. No authentication APIs or seed accounts were added.
 
 ## Remaining team decisions
 

@@ -83,3 +83,104 @@ At handoff, the Vite server, local Java process, isolated PostgreSQL smoke clust
 and project Compose containers were stopped. Testcontainers removed its disposable
 containers. Docker Desktop remains available. Compose database/broker volumes and
 the ignored `.env` were preserved, so the documented run commands reuse them.
+
+## Neon configuration follow-up — 1 November 2026
+
+- Added backend-only Neon placeholders using `SPRING_DATASOURCE_URL`,
+  `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`. Existing
+  `POSTGRES_*` fallback changes and private configuration were preserved.
+- Maven explicitly anchors `spring-boot:run` to `backend/`; Spring imports the root
+  environment file and then the backend file before configuring the datasource.
+- Verified the actual root-directory Maven launch,
+  `backend/mvnw.cmd -f backend/pom.xml spring-boot:run`, using a temporary
+  `backend/.env` and a disposable PostgreSQL 17.11 instance. The file selected the
+  `developer_branch` database, `envcheck` role and test port 18081; health returned
+  200 and Flyway V1 succeeded in that database. No shell datasource exports were
+  used to supply the test connection.
+- `-Pintegration verify` passed all 8 unit/security tests and 3 integration tests,
+  including an assertion that Flyway holds the exact application DataSource
+  instance. Packaging and verification ran in an isolated source copy under
+  `tmp/neon-config-build/backend/`: the first in-place packaging attempt could not
+  rename a JAR held by an already-running Java process. That process was left alone.
+- Frontend tests: 4 passed. Production build passed. Vite now reads only its own
+  frontend environment files. Neither private password appeared in built assets.
+- Git ignores real root/backend/frontend `.env` files and includes the example
+  templates. `git diff --check` passed. Docker build contexts exclude `.env*`.
+- The temporary backend process, test `.env` and disposable database were removed.
+  The original private root `.env` had the same SHA-256 before and after the check;
+  pre-existing application/infrastructure services were not stopped.
+- **Not tested:** a live Neon endpoint or migration against a developer's actual
+  branch. Each developer must fill the three placeholders with their own branch
+  connection values before using the documented startup command. Local validation
+  verifies environment loading and shared datasource wiring, not remote reachability.
+
+Follow-up logs are in ignored `tmp/neon-config-isolated-verify.log` and
+`tmp/neon-env-startup.log`; isolated test reports are under
+`tmp/neon-config-build/backend/target/`.
+
+## Identity database follow-up — 1 November 2026
+
+V2 adds users, UUID roles/memberships, provider identities, stable sessions,
+rotating refresh-token records, password-reset tokens and administrative audit.
+All eight JPA mappings validate with Hibernate. V1 and the original reference
+documents were preserved; no live developer database was reset or migrated.
+
+The user's new instruction supersedes the earlier same-DataSource-instance rule.
+Runtime uses the application connection; Flyway uses a direct connection to the
+same endpoint/database. It derives the direct Neon hostname or accepts optional
+backend-only `SPRING_FLYWAY_URL/USER/PASSWORD` settings. A destination guard rejects
+mismatches before migration. Local PostgreSQL Compose configuration still works.
+
+### Passed
+
+- `mvnw.cmd -f backend/pom.xml --batch-mode --no-transfer-progress --offline
+  -Pintegration verify` from the repository root: **BUILD SUCCESS**, **24 unit/
+  configuration/security tests + 14 integration tests**, zero failures/errors/skips.
+  Used Java 21.0.9 and disposable PostgreSQL 17.11/RabbitMQ 4.2.9 containers.
+- Fresh installation, V1-to-V2 upgrade with preserved unrelated data, restart with
+  zero reapplied migrations, only four role definitions seeded and no accounts.
+- Database uniqueness/FKs/checks, generated normalized email, nullable local
+  password, token hash format and absolute expiry, retained rotation chain,
+  cross-family link rejection, two concurrent conditional rotations with one
+  winner, session/account authorization-state queries, reset consumption and
+  audit update/delete rejection. These validate persistence capabilities, not an
+  implemented login/recovery service.
+- Real application startup, Hibernate validation of all eight identity entities,
+  public health/private-route protection and a RabbitMQ round trip. Runtime and
+  Flyway use distinct DataSources with matching database destinations.
+- A subsequent targeted `FoundationIT` run passed all three tests after adding a
+  runtime JPA query that reads the four roles created through Flyway's connection.
+  Its log is `tmp/identity-runtime-query-verify.log`.
+- A child-JVM test loads the actual application YAML from a temporary backend
+  working directory with synthetic root/backend `.env` files, proving backend
+  precedence and runtime/migration credential binding without network access.
+- A separate configuration-only probe used this developer's actual private
+  `backend/.env`: values bound correctly, a Neon endpoint was configured, and the
+  direct destination guard passed. Only boolean status messages were displayed.
+  No database connection was opened; the private file's SHA-256 was unchanged.
+- Packaging produced `backend/target/swiftdrop-backend.jar`; JaCoCo report generated.
+- `git diff --check`, local documentation-link checks and V1/reference preservation
+  checks passed. `backend/.env` remains Git-ignored; no private file was edited.
+
+The first verification attempt exposed missing explicit YAML placeholders for
+uppercase Flyway keys loaded from a Java-properties `.env`. Those placeholders
+were added; the final full verification above passed. No credentials were printed.
+Docker/Java test-agent access required running tests outside the sandbox; no
+existing application services or developer databases were stopped.
+
+### Limits / not run
+
+- No live Neon connectivity, migration or remote branch-metadata lookup. The URL
+  guard verifies the same compute's pooled/direct endpoint pair and database; it
+  does not call Neon's control-plane API.
+- No Google, login, token issuance, account management or recovery delivery is
+  implemented. All eight end-to-end IAM stories remain incomplete.
+- Full four-service application image builds/startup and production TLS were not
+  rerun. Frontend code was unchanged; earlier frontend results remain historical.
+- Separate least-privilege runtime/migration roles require deployment-specific
+  grants and have not been tested against Neon.
+
+Main log: ignored `tmp/identity-database-verify.log`; reports are under
+`backend/target/surefire-reports/` and `backend/target/failsafe-reports/`.
+The current database model and exact launch command are in
+[`identity/schema.md`](identity/schema.md).
