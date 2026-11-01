@@ -1,16 +1,21 @@
 spring:
   application:
     name: swiftdrop
-  # .env is Java-properties-compatible: use plain alphanumeric secret values.
-  # Supports commands run from backend/ or from the repository root.
+  # Explicit loading for mvnw spring-boot:run (pom.xml anchors its cwd to backend/).
+  # Root .env supplies legacy/local Compose settings; backend/.env wins for matching keys.
+  # Files use Java properties syntax: KEY=value, without shell export or surrounding quotes.
   config:
-    import: optional:file:../.env[.properties],optional:file:.env[.properties]
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:./.env[.properties]
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}
-    username: ${POSTGRES_USER:swiftdrop}
-    password: ${POSTGRES_PASSWORD}
+    # All developers use these same three SPRING_DATASOURCE_* keys in backend/.env.
+    # POSTGRES_* remains a fallback for the existing local Docker setup.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}${POSTGRES_PARAMS:}}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:swiftdrop}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
     hikari:
-      connection-timeout: 5000
+      connection-timeout: 30000
   jpa:
     open-in-view: false
     hibernate:
@@ -21,12 +26,21 @@ spring:
         jdbc:
           time_zone: UTC
   flyway:
+    # DatabaseMigrationConfig derives a direct connection from the runtime URL.
+    # Explicit placeholders load the same keys from Java-properties .env files and OS env.
+    # The URL guard rejects a pooler or a different endpoint/database before migration.
+    url: ${SPRING_FLYWAY_URL:}
+    user: ${SPRING_FLYWAY_USER:${spring.datasource.username}}
+    password: ${SPRING_FLYWAY_PASSWORD:${spring.datasource.password}}
     enabled: true
     default-schema: swiftdrop
     schemas: swiftdrop
     create-schemas: true
     clean-disabled: true
     validate-migration-naming: true
+  sql:
+    init:
+      mode: never
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
