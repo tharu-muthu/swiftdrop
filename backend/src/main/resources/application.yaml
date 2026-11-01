@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: swiftdrop
+  # .env is Java-properties-compatible: use plain alphanumeric secret values.
+  # Supports commands run from backend/ or from the repository root.
+  config:
+    import: optional:file:../.env[.properties],optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}
+    username: ${POSTGRES_USER:swiftdrop}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      connection-timeout: 5000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: swiftdrop
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    default-schema: swiftdrop
+    schemas: swiftdrop
+    create-schemas: true
+    clean-disabled: true
+    validate-migration-naming: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:swiftdrop}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:swiftdrop}
+    connection-timeout: 5s
+server:
+  port: ${BACKEND_PORT:8081}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
