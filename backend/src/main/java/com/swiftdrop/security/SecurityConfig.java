@@ -1,40 +1,87 @@
 package com.swiftdrop.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swiftdrop.config.AuthSettings;
+import com.swiftdrop.exception.ApiError;
+import com.swiftdrop.integration.identity.GoogleCallbackHandler;
+import com.swiftdrop.integration.identity.GoogleFailureHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 @Configuration
 public class SecurityConfig {
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+    private AuthenticationEntryPoint unauthorized(ObjectMapper json) {
+        return (request, response, exception) -> {
+            response.setStatus(401); response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            json.writeValue(response.getWriter(), ApiError.of("UNAUTHORIZED", "Authentication required"));
+        };
+    }
+    private AccessDeniedHandler forbidden(ObjectMapper json) {
+        return (request, response, exception) -> {
+            response.setStatus(403); response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            json.writeValue(response.getWriter(), ApiError.of("FORBIDDEN", "Access denied"));
+        };
+    }
+    @Bean @Order(1)
+    SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper json, AuthSettings settings,
+            JwtDecoder decoder, IdentityJwtConverter converter, AuthRateLimiter limiter,
+            @Value("${swiftdrop.auth.source-login-limit:10}") int loginLimit) throws Exception {
+        var csrf = new CookieCsrfTokenRepository();
+        csrf.setCookieCustomizer(cookie -> cookie.httpOnly(true).secure(!settings.localhostDevelopment()).sameSite("Lax").path("/"));
+        var bearer = new DefaultBearerTokenResolver();
+        return http.securityMatcher("/api/**")
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
+                                "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .anyRequest().denyAll())
-                .csrf(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(config -> config.csrfTokenRepository(csrf))
+                .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
+                // API identities live only in this request. Existing OAuth framework sessions are left intact.
+                .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .requestCache(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable).logout(AbstractHttpConfigurer::disable)
+                .oauth2ResourceServer(resource -> resource
+                        .bearerTokenResolver(request -> request.getServletPath().startsWith("/api/v1/auth/") ? null : bearer.resolve(request))
+                        .jwt(jwt -> jwt.decoder(decoder).jwtAuthenticationConverter(converter))
+                        .authenticationEntryPoint(unauthorized(json)).accessDeniedHandler(forbidden(json)))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint(unauthorized(json)).accessDeniedHandler(forbidden(json)))
+                .build();
+    }
+    @Bean @Order(2)
+    SecurityFilterChain futureOAuthSecurity(HttpSecurity http, ObjectMapper json,
+            GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler) throws Exception {
+        return http
+                .securityMatcher("/oauth2/**", "/login/oauth2/**")
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
+                .oauth2Login(oauth -> oauth
+                        .successHandler(successHandler)
+                        .failureHandler(failureHandler))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .requestCache(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, exception) -> {
-                            response.setStatus(401);
-                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Authentication required\"}");
-                        })
-                        .accessDeniedHandler((request, response, exception) -> {
-                            response.setStatus(403);
-                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Access denied\"}");
-                        }))
+                        .authenticationEntryPoint(unauthorized(json))
+                        .accessDeniedHandler(forbidden(json)))
                 .build();
     }
 }

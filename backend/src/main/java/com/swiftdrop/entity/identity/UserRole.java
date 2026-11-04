@@ -19,6 +19,9 @@ public class UserRole {
     private Instant createdAt;
 
     protected UserRole() { }
+    public UserRole(java.util.UUID userId, java.util.UUID roleId) {
+        this.id = new UserRoleId(userId, roleId);
+    }
     public UserRoleId getId() { return id; }
     public Instant getCreatedAt() { return createdAt; }
 }

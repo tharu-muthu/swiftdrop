@@ -29,6 +29,16 @@ public class RefreshToken extends CreatedEntity {
 
     protected RefreshToken() { }
 
+    public RefreshToken(UUID sessionId, String tokenHash, Instant expiresAt) {
+        this.sessionId = sessionId;
+        this.tokenHash = tokenHash;
+        this.expiresAt = expiresAt;
+    }
+    public void consume(Instant now) {
+        consumedAt = now.isBefore(getCreatedAt()) ? getCreatedAt() : now;
+    }
+    public void replacedBy(UUID nextId) { replacedBy = nextId; }
+
     public UUID getSessionId() { return sessionId; }
     public String getTokenHash() { return tokenHash; }
     public Instant getExpiresAt() { return expiresAt; }

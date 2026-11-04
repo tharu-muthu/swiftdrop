@@ -43,6 +43,23 @@ public class User extends CreatedEntity {
 
     protected User() { }
 
+    public static User registerCustomer(String fullName, String email, String passwordHash) {
+        var user = new User();
+        user.fullName = fullName;
+        user.email = email;
+        user.passwordHash = passwordHash;
+        return user;
+    }
+
+    public static User registerGoogleCustomer(String fullName, String email) {
+        var user = new User();
+        user.fullName = fullName;
+        user.email = email;
+        // passwordHash remains null — Google-only account
+        return user;
+    }
+
+
     public String getEmail() { return email; }
     public String getEmailNormalized() { return emailNormalized; }
     public String getFullName() { return fullName; }

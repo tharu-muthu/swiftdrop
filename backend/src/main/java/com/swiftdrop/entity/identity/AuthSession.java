@@ -40,6 +40,19 @@ public class AuthSession extends CreatedEntity {
 
     protected AuthSession() { }
 
+    public AuthSession(UUID userId, long authorizationVersion, Instant expiresAt) {
+        this.userId = userId;
+        this.familyId = UUID.randomUUID();
+        this.authorizationVersion = authorizationVersion;
+        this.expiresAt = expiresAt;
+    }
+    public void revoke(Instant now, String reason) {
+        if (revokedAt == null) {
+            revokedAt = now.isBefore(getCreatedAt()) ? getCreatedAt() : now;
+            revocationReason = reason;
+        }
+    }
+
     public UUID getUserId() { return userId; }
     public UUID getFamilyId() { return familyId; }
     public long getAuthorizationVersion() { return authorizationVersion; }

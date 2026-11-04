@@ -19,6 +19,13 @@ public class OAuthAccount extends CreatedEntity {
 
     protected OAuthAccount() { }
 
+    public OAuthAccount(UUID userId, String provider, String providerSubject) {
+        this.userId = userId;
+        this.provider = provider;
+        this.providerSubject = providerSubject;
+    }
+
+
     public UUID getUserId() { return userId; }
     public String getProvider() { return provider; }
     public String getProviderSubject() { return providerSubject; }
