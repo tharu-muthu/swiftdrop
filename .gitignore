@@ -1,4 +1,5 @@
 # Local configuration and credentials
+# Covers backend/.env, frontend/.env and machine-specific variants; templates are safe.
 .env
 .env.*
 !.env.example

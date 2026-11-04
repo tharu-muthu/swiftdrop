@@ -20,8 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = HealthController.class,
         excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
-@Import({SecurityConfig.class, HealthService.class})
+@Import({SecurityConfig.class, HealthService.class, com.swiftdrop.config.JwtConfig.class, AuthRateLimiter.class})
 class HealthSecurityTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private IdentityJwtConverter converter;
     @Autowired
     private MockMvc mvc;
 

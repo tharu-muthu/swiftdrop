@@ -1,16 +1,21 @@
 spring:
   application:
     name: swiftdrop
-  # .env is Java-properties-compatible: use plain alphanumeric secret values.
-  # Supports commands run from backend/ or from the repository root.
+  # Explicit loading for mvnw spring-boot:run (pom.xml anchors its cwd to backend/).
+  # Root .env supplies legacy/local Compose settings; backend/.env wins for matching keys.
+  # Files use Java properties syntax: KEY=value, without shell export or surrounding quotes.
   config:
-    import: optional:file:../.env[.properties],optional:file:.env[.properties]
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:./.env[.properties]
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}
-    username: ${POSTGRES_USER:swiftdrop}
-    password: ${POSTGRES_PASSWORD}
+    # All developers use these same three SPRING_DATASOURCE_* keys in backend/.env.
+    # POSTGRES_* remains a fallback for the existing local Docker setup.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}${POSTGRES_PARAMS:}}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:swiftdrop}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
     hikari:
-      connection-timeout: 5000
+      connection-timeout: 30000
   jpa:
     open-in-view: false
     hibernate:
@@ -21,12 +26,21 @@ spring:
         jdbc:
           time_zone: UTC
   flyway:
+    # DatabaseMigrationConfig derives a direct connection from the runtime URL.
+    # Explicit placeholders load the same keys from Java-properties .env files and OS env.
+    # The URL guard rejects a pooler or a different endpoint/database before migration.
+    url: ${SPRING_FLYWAY_URL:}
+    user: ${SPRING_FLYWAY_USER:${spring.datasource.username}}
+    password: ${SPRING_FLYWAY_PASSWORD:${spring.datasource.password}}
     enabled: true
     default-schema: swiftdrop
     schemas: swiftdrop
     create-schemas: true
     clean-disabled: true
     validate-migration-naming: true
+  sql:
+    init:
+      mode: never
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -34,9 +48,40 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:swiftdrop}
     connection-timeout: 5s
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: openid, email, profile
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
 server:
   port: ${BACKEND_PORT:8081}
   error:
     include-message: never
     include-stacktrace: never
     include-binding-errors: never
+
+# PostgreSQL constraint details may include whole rows (including password hashes).
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.SQL: OFF
+
+swiftdrop:
+  auth:
+    jwt-secret: ${AUTH_JWT_SECRET:}
+    issuer: ${AUTH_JWT_ISSUER:https://swiftdrop.local}
+    audience: ${AUTH_JWT_AUDIENCE:swiftdrop-api}
+    access-ttl: ${AUTH_ACCESS_TTL:10m}
+    refresh-ttl: ${AUTH_REFRESH_TTL:7d}
+    # Opt in only on loopback development origins. All other environments use Secure cookies.
+    localhost-development: ${AUTH_LOCALHOST_DEVELOPMENT:false}
+    allowed-origins: ${AUTH_ALLOWED_ORIGINS:}
+  google:
+    frontend-origin: ${GOOGLE_FRONTEND_ORIGIN:http://127.0.0.1:5173}
