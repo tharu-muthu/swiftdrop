@@ -11,6 +11,14 @@ export default defineConfig(({ mode }) => {
       target: env.BACKEND_URL || 'http://localhost:8081',
       changeOrigin: true,
     },
+    '/oauth2': {
+      target: env.BACKEND_URL || 'http://localhost:8081',
+      changeOrigin: false,
+    },
+    '/login/oauth2': {
+      target: env.BACKEND_URL || 'http://localhost:8081',
+      changeOrigin: false,
+    },
   };
 
   return {
