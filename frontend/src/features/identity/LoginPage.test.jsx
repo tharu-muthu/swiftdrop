@@ -15,7 +15,8 @@ describe('password login screen', () => {
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/register');
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('button', { name: /Google sign-in coming soon/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Google' }))
+      .toHaveAttribute('href', '/oauth2/authorization/google');
   });
   it('announces generic login errors without changing the password', async () => {
     const login = vi.fn().mockRejectedValue(new Error('Email or password is incorrect.')); setup(login);

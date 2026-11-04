@@ -51,6 +51,10 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-swiftdrop-api}
       AUTH_ACCESS_TTL: ${AUTH_ACCESS_TTL:-10m}
       AUTH_REFRESH_TTL: ${AUTH_REFRESH_TTL:-7d}
+      GOOGLE_ENABLED: ${GOOGLE_ENABLED:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_FRONTEND_ORIGIN: ${GOOGLE_FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-8080}}
       # This Compose file exposes only loopback HTTP. Use false with HTTPS in deployment.
       AUTH_LOCALHOST_DEVELOPMENT: 'true'
       AUTH_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8080},http://127.0.0.1:${FRONTEND_PORT:-8080}

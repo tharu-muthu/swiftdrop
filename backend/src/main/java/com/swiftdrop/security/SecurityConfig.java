@@ -6,11 +6,13 @@ import com.swiftdrop.exception.ApiError;
 import com.swiftdrop.integration.identity.GoogleCallbackHandler;
 import com.swiftdrop.integration.identity.GoogleFailureHandler;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -66,6 +68,7 @@ public class SecurityConfig {
                 .build();
     }
     @Bean @Order(2)
+    @ConditionalOnProperty(prefix = "swiftdrop.google", name = "enabled", havingValue = "true")
     SecurityFilterChain futureOAuthSecurity(HttpSecurity http, ObjectMapper json,
             GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler) throws Exception {
         return http
@@ -75,6 +78,22 @@ public class SecurityConfig {
                         .successHandler(successHandler)
                         .failureHandler(failureHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .requestCache(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint(unauthorized(json))
+                        .accessDeniedHandler(forbidden(json)))
+                .build();
+    }
+
+    @Bean @Order(3)
+    SecurityFilterChain denyUnmatchedRequests(HttpSecurity http, ObjectMapper json) throws Exception {
+        return http
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().denyAll())
+                .csrf(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

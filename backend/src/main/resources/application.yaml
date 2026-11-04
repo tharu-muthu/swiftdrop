@@ -48,17 +48,6 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:swiftdrop}
     connection-timeout: 5s
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID:}
-            client-secret: ${GOOGLE_CLIENT_SECRET:}
-            scope: openid, email, profile
-        provider:
-          google:
-            issuer-uri: https://accounts.google.com
 server:
   port: ${BACKEND_PORT:8081}
   error:
@@ -84,4 +73,7 @@ swiftdrop:
     localhost-development: ${AUTH_LOCALHOST_DEVELOPMENT:false}
     allowed-origins: ${AUTH_ALLOWED_ORIGINS:}
   google:
+    enabled: ${GOOGLE_ENABLED:false}
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
     frontend-origin: ${GOOGLE_FRONTEND_ORIGIN:http://127.0.0.1:5173}
