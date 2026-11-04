@@ -1,7 +1,9 @@
 # Foundation verification
 
-Checked on 1 November 2026 on the supplied Windows development machine. These
-results apply to the foundation only, not to the unimplemented assignment features.
+Checked on 1 November 2026 on the supplied Windows development machine.
+The initial results below apply to the foundation. Later sections record Neon,
+identity database and IAM-01 follow-ups; they do not establish unimplemented IAM
+stories or other assignment features.
 
 ## Development tools inspected
 
@@ -184,3 +186,99 @@ Main log: ignored `tmp/identity-database-verify.log`; reports are under
 `backend/target/surefire-reports/` and `backend/target/failsafe-reports/`.
 The current database model and exact launch command are in
 [`identity/schema.md`](identity/schema.md).
+
+## IAM-01 registration follow-up — 1 November 2026
+
+Customer registration now uses the existing V2 tables. V1/V2, reference files,
+toolchain pins and private environment files are unchanged. No live Neon database
+was connected, reset or migrated by this task. Runtime/direct Flyway wiring and
+Hibernate validation remain intact.
+
+### Passed
+
+- Final root-directory command: `backend/mvnw.cmd -f backend/pom.xml --batch-mode
+  --no-transfer-progress --offline -Pintegration verify`. **BUILD SUCCESS: 31
+  unit/configuration/security cases and 27 integration cases; zero failures,
+  errors or skips.** Executable JAR and JaCoCo report generated.
+- `RegistrationServiceTest` (5): server-only CUSTOMER assignment, exact password
+  handling, missing-role/failure propagation, adaptive randomized hashing and
+  Unicode/length Bean Validation. `RegistrationRateLimitFilterTest` (2): safe
+  throttling, ignored spoofed forwarding addresses and unaffected health.
+- `RegistrationIT` (13) used real HTTP and PostgreSQL 17.11: safe 201, password
+  matching without trimming, only CUSTOMER membership, no auth session/cookie,
+  concurrent differently cased email with exactly one 201/409, seven injected
+  extra-field variants, invalid/missing input, malformed/non-JSON requests,
+  CSRF/route protection, and role-insert failure rolling the user back. Captured
+  logs/responses excluded submitted passwords, hashes and database row details.
+- Existing 14 integration cases still pass: Flyway upgrade/preservation,
+  constraints, session-token persistence, Hibernate validation, health/security
+  and RabbitMQ publish/receive. Both test connections target disposable containers.
+- `npm.cmd --prefix frontend test`: **9 passed**, including confirmation before
+  network submission, visibility, exact three-field JSON/CSRF, pending state,
+  backend validation/conflict feedback, network failure, success without login
+  and preserved health-page cases. `npm.cmd --prefix frontend run build` passed.
+- Actual browser signup: a packaged Java backend on loopback 18081 and Vite on
+  5174, connected only to a disposable PostgreSQL container, created a synthetic
+  customer. The browser displayed **Account created** and **You have not been
+  signed in** through the real proxy/CSRF/API flow.
+- Visual inspection at 1440px desktop and 360px mobile. The mobile document and
+  viewport widths were both 360px; the form/card stayed within the viewport.
+  Screenshots: ignored `tmp/registration-smoke/success.png` and `mobile.png`.
+- `git diff --check`, local documentation links and unchanged-reference/migration
+  checks passed. `backend/.env` remains ignored. No dependency changes or new
+  migration were needed.
+
+Backend tests required local Docker/test-agent access outside the sandbox. The
+temporary browser tab, Java/Vite processes, smoke database container and its
+temporary environment file were removed afterward; existing developer services,
+credentials and data were preserved. The final log is ignored
+`tmp/registration-final-verify.log`; reports are in the normal Maven output folders.
+
+### Limits / not run
+
+- Live Neon reachability and real-branch migration were not run. Existing
+  configuration tests verify environment loading and matching runtime/direct
+  migration destinations, not remote database access.
+- Full application image builds, Nginx/four-service startup, production TLS and
+  proxy/distributed load tests were not rerun. Prior image-download limitations
+  remain historical evidence, not a passing container deployment check.
+- Browser signup was an executed smoke check, not a committed browser automation
+  suite. The repository's repeatable checks are the commands above.
+- Login, Google, refresh/logout, recovery and admin/profile features remain
+  unimplemented. No default administrator or automatic login was added.
+- Signup throttling is process-local and keys on the actual connection address;
+  deployment behind a proxy needs trusted gateway rate limits. A compromised-
+  password blocklist is not implemented; the selected encoder parameters still
+  need deployment hardware/load review. These limits are documented in the
+  [registration guide](identity/registration.md).
+
+
+## Password feedback and eight-character minimum — 1 November 2026
+
+- Per the user's request, changed the minimum to eight in frontend/backend;
+  the maximum remains 128 Unicode code points. Updated hints, safe validation
+  messages, API documentation and team rules. No mandatory number/symbol rule
+  was added. The existing adaptive encoder and schema are unchanged.
+- Replaced Show/Hide text with accessible eye icons. Added a character count and
+  distinct missing/minimum/maximum feedback, including clearing a stale
+  confirmation mismatch when the password is corrected.
+- `npm.cmd --prefix frontend test`: 16 passed. Production build passed.
+- `backend/mvnw.cmd -f backend/pom.xml --batch-mode --no-transfer-progress --offline
+  -Pintegration verify`: BUILD SUCCESS, 31 unit/configuration/security tests and
+  29 integration tests; zero failures/errors/skips. Regression cases cover
+  seven-character rejection, eight/128-character acceptance, exact Unicode
+  password hashing and no leaked submitted values.
+- `git diff --check` passed. Log: ignored `tmp/password-minimum-eight-verify.log`.
+- The prior eye-icon/feedback browser check verified icon toggling, the precise
+  short-password error and correction behavior. Its final registration result
+  was interrupted and is not counted as a completed browser signup. The updated
+  eight-character policy was verified by frontend and real HTTP/PostgreSQL tests;
+  the browser flow was not rerun after this policy change.
+- Removed the earlier temporary feedback-test Java/Vite processes, disposable
+  PostgreSQL container and its temporary environment file. Live Neon, existing
+  private environment files and the application's database data were untouched.
+
+
+## IAM-02 / IAM-07 — 1 November 2026
+
+Final `-Pintegration verify` passed 38 unit/security/configuration and 47 integration cases, with zero failures/errors/skips. Frontend tests: 30 passed; production build passed. Backend packaging passed. See [session verification and limits](identity/sessions.md#verification). Live Neon, full application Compose deployment, browser visual checks and process-restart smoke checks were not run. V1/V2 and reference files were preserved. Log: `tmp/sessions-final-verify.log`.

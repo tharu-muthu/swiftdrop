@@ -1,6 +1,6 @@
 # Member 1: Identity and Access implementation checklist
 
-Reviewed: 1 November 2026; updated after the identity database task. **Persistence foundation implemented; none of the end-to-end IAM-01 through IAM-08 features is complete yet.** V2, eight JPA entity mappings and direct Flyway configuration now exist; see [the implemented ER/table guide](schema.md). Unchecked boxes below remain future acceptance criteria. Proposed API/policy choices must be settled in their implementation PRs.
+Reviewed: 1 November 2026; updated after IAM-01. **Database foundation, IAM-01, IAM-02 and IAM-07 are implemented. IAM-03–IAM-06 and IAM-08 remain incomplete (GET /me and a trusted IdentityContext now provide part of their foundation).** See [current session implementation and verification limits](sessions.md). See [the registration guide](registration.md), [API contract](../../contracts/identity-registration.md) and [ER/table guide](schema.md). Unchecked boxes remain future acceptance criteria; later API/policy proposals still need implementation review.
 
 ## 1. What we have and what Member 1 owns
 
@@ -11,13 +11,13 @@ Keep one backend and one shared PostgreSQL application schema, `swiftdrop`. A de
 | Existing implementation | Evidence in this repository | Missing work / reuse decision |
 | --- | --- | --- |
 | Layered health endpoint | `backend/src/main/java/com/swiftdrop/controller/system/HealthController.java`, `service/system/HealthService.java`, `dto/system/HealthResponse.java` | Reuse the layering. GET `/api/v1/health` stays public and returns only status/application. It is liveness, not a full database/broker probe. |
-| Security foundation | `backend/src/main/java/com/swiftdrop/security/SecurityConfig.java`, `SwiftDropApplication.java` | Only GET health is permitted; everything else is denied, including requests with a mock authenticated principal. CSRF is enabled; form login, HTTP Basic, default logout and generated user are disabled. No password or JWT authentication works yet. |
+| Security foundation | `backend/src/main/java/com/swiftdrop/security/SecurityConfig.java`, `SwiftDropApplication.java` | GET health/CSRF and POST registration are permitted; everything else is denied, including requests with a mock authenticated principal. CSRF remains enabled. Form login, HTTP Basic, default logout and generated user remain disabled. No password login or JWT authentication works yet. |
 | PostgreSQL and Flyway | `backend/src/main/resources/application.yaml`, `db/migration/V1__initialize_shared_schema.sql`, `V2__create_identity_tables.sql`, `entity/identity/` | V1 is unchanged; V2 adds eight identity tables and the four roles. No accounts/passwords are seeded. Hibernate validates all eight mappings. Constraints are tested on PostgreSQL. |
 | Private Neon configuration | `backend/.env.example`, `backend/pom.xml`, `application.yaml`, `config/DatabaseMigrationConfig.java`, `.gitignore` | Spring imports root `.env`, then `backend/.env`; Maven anchors startup to `backend/`. Runtime uses the application connection and Flyway a separate direct connection to the same endpoint/database. A guard rejects mismatches. Private-file binding was verified without displaying values or connecting to Neon; live Neon reachability remains unverified. |
 | Dependencies and packaging | `backend/pom.xml`, Maven wrapper, `frontend/package.json`, `package-lock.json`, Dockerfiles, Compose files | Reuse pinned toolchains. Security/JPA/validation/testing are present. OAuth client, JWT verification/issuance and email delivery still need implementation and suitable dependencies managed by the Boot parent where available. |
-| React shell and proxy | `frontend/src/app/App.jsx`, `frontend/vite.config.js`, `frontend/nginx.conf` | Health status/retry page only. No auth screens, routing, auth state or protected navigation. Current proxies forward `/api`; Google routes need additional proxy coverage or explicitly configured API-prefixed routes. |
-| Tests | `backend/src/test/java/com/swiftdrop/`, `frontend/src/app/App.test.jsx` | 24 backend unit/configuration/security cases and 14 integration cases cover the foundation/schema. Four React health-page cases remain. These do not establish working login, role enforcement, reset delivery or Google. |
-| API contracts | `contracts/README.md` | Health only. Publish reviewed IAM request/response contracts here when implementation starts. No OpenAPI generator or browser end-to-end test command exists yet. |
+| React shell and proxy | `frontend/src/app/App.jsx`, `frontend/vite.config.js`, `frontend/nginx.conf` | Registration is at `/` and `/register`; the original health/retry page is at `/foundation`. Reusable form/layout components, validation, confirmation, pending/errors/success and real API wiring exist. No signed-in state or login screen. Proxies forward `/api`; Google routes still need coverage. |
+| Tests | `backend/src/test/java/com/swiftdrop/`, `frontend/src/app/App.test.jsx` | 31 backend unit/configuration/security cases and 29 integration cases cover foundation/schema/registration. Sixteen React tests cover health and registration. These do not establish working login, role enforcement, reset delivery or Google. |
+| API contracts | `contracts/README.md` | Health and `contracts/identity-registration.md` are implemented contracts. No OpenAPI generator or browser end-to-end automation command exists; an actual browser signup was checked manually through the development proxy. |
 
 Ownership boundaries:
 
@@ -31,24 +31,27 @@ Ownership boundaries:
 
 ### IAM-01 — Customer registration
 
-**Existing:** user/role tables and JPA mappings, validation/security libraries, register screen reference. **Missing:** account creation repository operations, DTOs, service/controller, form and feature tests.
+**Implemented:** strict registration DTO/controller, transactional service, existing user/role repositories, adaptive encoder, safe errors, CSRF, bounded signup throttle, responsive React form and feature tests. No schema changes. See [the actual request flow and password policy](registration.md).
 
-- [ ] Form follows `register.png`: full name, email, password, confirmation, show/hide control, submit/loading/error state and sign-in link. No role picker or merchant/courier fields.
-- [ ] Server validates input, confirmation and the agreed password policy. Normalize email consistently for registration, login, Google matching and recovery; retain a display value. Enforce a database uniqueness constraint, including concurrent requests.
-- [ ] One transaction stores a user and **CUSTOMER only**. Reject injected `roles`, `active`, IDs or other undeclared fields; do not silently bind a persistence entity.
-- [ ] Store an adaptive password hash using a Spring `PasswordEncoder`, never plaintext/reversible encryption. Select and benchmark encoder parameters during implementation; do not truncate accepted passwords.
-- [ ] Success is `201` with a safe account summary, then the UI offers sign-in, matching activity 4.2.1. Registration does not automatically issue tokens in this proposal.
-- [ ] Invalid input is `400`; duplicate email is a generic `409 REGISTRATION_UNAVAILABLE`, with no provider/account details. Rate-limit signup. Test duplicates, case normalization, password mismatch, role injection and absence of hashes in responses/logs. A distinct duplicate status can still reveal registration; record that tradeoff rather than claiming full enumeration protection.
+- [x] Form follows `Figma design/register.png`: four fields, show/hide, pending, field errors and success. No role picker. Sign-in is explicitly marked coming soon until IAM-02; no broken login link.
+- [x] Server validates full name/email/password with Bean Validation. **Confirmation is frontend-only**, as the user's API instruction requires. Store/return canonical email from PostgreSQL `lower(btrim(...))`, with database uniqueness under concurrency. Future login/recovery must reuse this rule.
+- [x] One transaction stores the user and **CUSTOMER only**. Reject all undeclared fields, including roles/status/IDs/confirmation. Membership failure rolls back account creation.
+- [x] Spring `DelegatingPasswordEncoder` uses PBKDF2-HMAC-SHA256, 600,000 iterations, random 16-byte salt and 256-bit output. Accept 8–128 Unicode code points with no password alteration/truncation. Unit/integration tests verify exact matching and randomized hashes; deployment work-factor/load tuning remains future validation.
+- [x] Success is `201 {id,email,fullName,roles:["CUSTOMER"]}`. Clear the form and show success without login, auth cookies or tokens (only the separate CSRF cookie exists).
+- [x] Invalid input returns safe `400`; normalized-email races return generic `409 REGISTRATION_UNAVAILABLE`. A distinct 409 still permits account inference. The 20-attempt/ten-minute remote-address throttle is process-local; proxy/distributed deployment needs gateway integration.
+- [x] Service/PostgreSQL/frontend tests cover success, concurrent duplicates, invalid input, privileged fields, exact-password hashing, atomic rollback, CSRF/protected routes, pending/error/confirmation/success behavior and no credential leakage in responses/logs.
+
+**Deferred outside this slice:** login navigation/flow, approved Terms/Privacy pages, compromised-password blocklist, production load/TLS/proxy validation and live Neon connectivity. These are not claimed as implemented. Registration does not verify ownership of the supplied email.
 
 ### IAM-02 — Password login and logout
 
-**Existing:** deny-by-default filter chain, user/session/token persistence mappings and login screen reference. **Missing:** credential checks, token/session issuance, logout and React auth state.
+**Implemented:** password login/logout, safe profile read, JWT/session enforcement and shared React authentication. Current contracts and configuration are in [sessions.md](sessions.md).
 
-- [ ] Email/password login accepts only active accounts with a valid password hash; unknown email, wrong password, suspended user and Google-only account get the same safe `401` response. Bound attempts by account and source; test throttling without permanently locking out victims.
-- [ ] Successful login creates a persisted session, returns a short-lived access JWT and sets the refresh cookie described in section 3. Passwords and tokens never appear in logs or URLs.
-- [ ] UI implements password visibility, field labels, pending state, generic failure, Google sign-in, forgot-password and registration navigation. Use account-neutral wording instead of promising every user a courier dashboard.
-- [ ] Logout revokes the current session/family server-side, clears the refresh cookie using the same cookie attributes, and removes the access token/user state from React. Repeated logout is safe; logout does not require an unexpired access JWT when a refresh cookie can identify the session.
-- [ ] Test correct/incorrect credentials, suspended/Google-only accounts, CSRF rejection and reuse of both access and refresh credentials after logout. Unknown routes remain denied.
+- [x] Email/password login accepts only active accounts with a valid password hash; unknown email, wrong password, suspended user and Google-only account get the same safe `401` response. Bound attempts by account and source; test throttling without permanently locking out victims.
+- [x] Successful login creates a persisted session, returns a short-lived access JWT and sets the refresh cookie described in section 3. Passwords and tokens never appear in logs or URLs.
+- [x] UI implements password visibility, field labels, pending state, generic failure, registration navigation; Google sign-in and recovery remain visibly unavailable until IAM-03/IAM-08. Use account-neutral wording instead of promising every user a courier dashboard.
+- [x] Logout revokes the current session/family server-side, clears the refresh cookie using the same cookie attributes, and removes the access token/user state from React. Repeated logout is safe; logout does not require an unexpired access JWT when a refresh cookie can identify the session.
+- [x] Test correct/incorrect credentials, suspended/Google-only accounts, CSRF rejection and reuse of both access and refresh credentials after logout. Unknown routes remain denied.
 
 ### IAM-03 — Google OAuth/OIDC login
 
@@ -96,15 +99,16 @@ Ownership boundaries:
 
 ### IAM-07 — Session refresh, expiry and revocation
 
-**Existing:** session/rotation persistence, constraints and transaction tests. Current `STATELESS` setting alone does not implement authentication. **Missing:** token processing, repository/service operations, cookie/CSRF handling and React refresh coordination.
+**Implemented:** token processing, atomic rotation/replay revocation, current-state checks, protected cookies and coordinated React refresh. API identities are request-scoped; a separate chain preserves future OAuth framework sessions.
 
-- [ ] Proposed v3 lifetimes: access JWT 10 minutes; refresh family absolute lifetime 7 days from login, never extended by rotation. Persist a stable session ID referenced by JWT `sid` and the authorization version captured at issue time.
-- [ ] Store only hashes of cryptographically random refresh tokens. Each successful refresh atomically consumes the old token and creates its replacement within the same family; exactly one concurrent request may succeed.
-- [ ] Reuse of an already consumed refresh token revokes the entire family/session, including the replacement token. Retain enough consumed-token history to detect reuse for the family's lifetime.
-- [ ] Every protected request checks active account, unrevoked/unexpired session and matching authorization version. Logout affects the current session; suspension, role changes and password reset revoke every session. Fail closed on state lookup failure.
-- [ ] Cookie-authenticated operations have CSRF and origin protection. Secure cookie attributes and exact-origin proxy behavior are tested; do not disable CSRF globally because access tokens are JWTs.
-- [ ] React keeps access tokens in memory, bootstraps with refresh then `/me`, and permits one coordinated refresh/retry per failed API operation. Serialize refresh across tabs too; never loop on `401` or automatically retry an ambiguous network failure with a potentially consumed refresh token. Fall back to sign-in when necessary.
-- [ ] Test rotation races, replay, expiry boundaries using an injectable clock, logout, authorization changes, browser reload and backend restart. No `localStorage`/`sessionStorage` token fallback.
+- [x] Proposed v3 lifetimes: access JWT 10 minutes; refresh family absolute lifetime 7 days from login, never extended by rotation. Persist a stable session ID referenced by JWT `sid` and the authorization version captured at issue time.
+- [x] Store only hashes of cryptographically random refresh tokens. Each successful refresh atomically consumes the old token and creates its replacement within the same family; exactly one concurrent request may succeed.
+- [x] Reuse of an already consumed refresh token revokes the entire family/session, including the replacement token. Retain enough consumed-token history to detect reuse for the family's lifetime.
+- [x] Every protected request checks active account, unrevoked/unexpired session and matching authorization version. Logout affects the current session; suspension, role changes and password reset revoke every session. Fail closed on state lookup failure.
+- [x] Cookie-authenticated operations have CSRF and origin protection. Secure cookie attributes and exact-origin proxy behavior are tested; do not disable CSRF globally because access tokens are JWTs.
+- [x] React keeps access tokens in memory, bootstraps with refresh then `/me`, and permits one coordinated refresh/retry per failed API operation. Serialize refresh across tabs too; never loop on `401` or automatically retry an ambiguous network failure with a potentially consumed refresh token. Fall back to sign-in when necessary.
+- [x] Test rotation races, replay, expiry using an injectable clock, logout, authorization changes and client bootstrap. No localStorage/sessionStorage token fallback.
+- [ ] Execute a real browser reload and backend process-restart smoke check; these were not run in this slice.
 
 ### IAM-08 — Password recovery
 
@@ -134,19 +138,19 @@ The browser presents `Authorization: Bearer <accessToken>` to business APIs. The
 
 Proposed refresh cookie: `swiftdrop_refresh`, `HttpOnly`, `Secure` under HTTPS, `SameSite=Lax`, host-only, `Path=/api/v1/auth`. Clear it with identical attributes. Keep it out of JavaScript. A development-only loopback HTTP exception for Secure must be explicit and tested; deployment requires HTTPS. The current Compose setup is local HTTP and is not yet a production authentication deployment.
 
-Proposed CSRF bootstrap: GET `/api/v1/auth/csrf` returns `{token, headerName}` and establishes the browser's CSRF association. React sends the token in that header for auth POSTs, including login, refresh and logout; refresh the CSRF value when authentication changes. Validate allowed origin on cookie-changing requests. This permits an explicit Spring Security SPA CSRF design without turning every protected API into cookie authentication. Bearer-only APIs may have narrowly scoped CSRF exclusions only after tests establish that they do not accept ambient cookie credentials.
+Implemented CSRF bootstrap: GET `/api/v1/auth/csrf` returns `{token, headerName}` and establishes the browser's CSRF association. React sends that header on registration. Future login/refresh/logout must reuse the mechanism and refresh the CSRF value when authentication changes; review allowed origins for cookie-changing requests. Bearer-only APIs may have narrowly scoped CSRF exclusions only after tests establish that they do not accept ambient cookie credentials.
 
 Google authorization-request state is temporary and distinct from application bearer authentication. Use a bounded, expiring authorization-request store (a short-lived server session is an option); clear it after callback/failure. Do not assume the current global `STATELESS` setting provides OIDC state storage. If a temporary HTTP session is used, it must not become an alternate authentication mechanism for protected business APIs.
 
 ### HTTP API proposal
 
-All JSON routes below are **planned**, except health. `Public + CSRF` means no application login is required, but unsafe browser requests still need the CSRF header. All auth entry points are validated and rate-limited. Protected routes need a live bearer identity and, where indicated, a role.
+Health, CSRF, registration, login, refresh, logout and GET /me below are **implemented**; other routes remain **planned**. The current auth contract is [identity-sessions.md](../../contracts/identity-sessions.md). `Public + CSRF` means no application login is required, but unsafe browser requests still need the CSRF header. All auth entry points are validated and rate-limited. Protected routes need a live bearer identity and, where indicated, a role.
 
 | Method and path | Access | Request | Success / important failures |
 | --- | --- | --- | --- |
 | GET `/api/v1/health` | Public; existing | None | Existing `200 {status:"UP", application:"swiftdrop"}`; stays unchanged. |
 | GET `/api/v1/auth/csrf` | Public | None | `200 {token, headerName}`; no-store. |
-| POST `/api/v1/auth/register` | Public + CSRF | `{fullName, email, password, confirmPassword}` | `201 {id, email, fullName, roles:["CUSTOMER"]}`; `400`, generic `409`, `429`. |
+| POST `/api/v1/auth/register` | Public + CSRF | `{fullName, email, password}` | `201 {id, email, fullName, roles:["CUSTOMER"]}`; `400`, generic `409`, `429`. |
 | POST `/api/v1/auth/login` | Public + CSRF | `{email, password}` | `200 TokenResponse` + refresh cookie; generic `401`, `429`. |
 | POST `/api/v1/auth/refresh` | Refresh cookie + CSRF | No token in body | `200 TokenResponse` + rotated cookie; `401` invalid/expired/replayed/revoked; `403` bad CSRF/origin. |
 | POST `/api/v1/auth/logout` | Refresh cookie + CSRF; bearer optional | Empty | `204`, revoke matching current session and clear cookie; missing/already revoked cookie also `204`; `403` bad CSRF/origin. |
@@ -163,7 +167,7 @@ All JSON routes below are **planned**, except health. `Public + CSRF` means no a
 
 `TokenResponse = {accessToken, tokenType:"Bearer", expiresIn:600}`. The refresh token is cookie-only. `UserProfile = {id, email, fullName, phone, roles, active, createdAt, updatedAt, version}`. Internal authorization version and credential/provider/session secrets are not profile-editable fields.
 
-Use a shared safe error shape `{code, message, correlationId, fieldErrors}`; `fieldErrors` is an optional array of `{field, message}` and never contains rejected passwords/tokens. Current security errors have only `code` and `message`; extending them is future work. Use `400` for validation, `401` for unusable identity/session, `403` for denied authority/CSRF, `404` for an unavailable permitted resource, `409` for conflicts and `429` with retry guidance for throttling. Security filters may reject a request before its controller runs.
+Use a shared safe error shape `{code, message, correlationId, fieldErrors}`; `fieldErrors` is an optional array of `{field, message}` and never contains rejected passwords/tokens. Registration and security errors now use this shape with an always-present array; raw input values and database details are excluded. Use `400` for validation, `401` for unusable identity/session, `403` for denied authority/CSRF, `404` for an unavailable permitted resource, `409` for conflicts and `429` with retry guidance for throttling. Security filters may reject a request before its controller runs.
 
 Proposed frontend routes: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/complete`, `/profile`, `/admin/users`. These are React pages, not additional JSON API paths. Business dashboards wait for their feature owners.
 
@@ -176,11 +180,11 @@ Proposed frontend routes: `/login`, `/register`, `/forgot-password`, `/reset-pas
 | `UserIdentityService.requireActiveRole(userId, role)` | M5 validates a courier account before its own profile operation. Domain rules/transactions remain in M5. |
 | Controlled merchant-role update service | M2 invokes after its approval/access transition, with actor/reason and transaction agreement. M1 persists roles, increments authorization version and revokes sessions; M2 persists approval. Coordinate atomicity in the single backend, not RabbitMQ-delayed authorization. |
 
-Exact Java interfaces will be published with the first implementation slice. These are proposed service responsibilities, not classes that already exist.
+These teammate-facing Java interfaces will be published with IAM-06. They remain proposed responsibilities; IAM-01's `RegistrationService` is not an authenticated IdentityContext or account-lookup API.
 
 ## 4. Database foundation — implemented in V2
 
-All tables below exist in **`swiftdrop`**, with UUID identifiers and UTC `timestamptz` fields. [The implemented ER guide](schema.md) is authoritative for exact columns, constraints and transaction requirements. Services/APIs remain future work.
+All tables below exist in **`swiftdrop`**, with UUID identifiers and UTC `timestamptz` fields. [The implemented ER guide](schema.md) is authoritative for exact columns, constraints and transaction requirements. Registration service/API now uses these tables; other IAM services/APIs remain future work.
 
 - [x] Add V2 without editing V1; preserve existing data in upgrade tests.
 - [x] Add eight JPA mappings and validate them against migrated PostgreSQL.
@@ -228,7 +232,7 @@ Reviewed the four-page [assignment](<../reference/Group Assignment.pdf>), all 38
 | v3 uses Spring Google redirect routes while existing Vite/Nginx proxy only `/api`. | Proposed contract retains `/oauth2/authorization/google` and `/login/oauth2/code/google`; extend both proxies during IAM-03 and configure the externally visible callback origin. Do not claim the current proxy already supports this. |
 | V3 IAM list stops at IAM-07; forgot-password UI exists; earlier `reference-review.md` deferred recovery. | User's current explicit IAM-08 request brings recovery into scope. That earlier deferral is historical. Saved addresses remain outside this scope. |
 | Forgot-password screenshot shows only the request screen. | Add reset completion, invalid/expired-link and success states in the same visual style. Endpoint/token/mail contracts are proposals in this checklist. |
-| Register UI says at least eight characters including a number; v3 does not settle a password policy. | Propose 15–128 characters, allow spaces/Unicode, no mandatory digit rule, reject common/compromised passwords and do not truncate. Update UI/server together once agreed. This is a security proposal, not a requirement quoted from the assignment. See the guidance below. |
+| Register UI says at least eight characters including a number; v3 does not settle a password policy. | IAM-01 implements 8–128 Unicode code points, spaces/Unicode allowed, no mandatory digit rule and no truncation/normalization. UI and server share the policy. A common/compromised-password blocklist remains future hardening; no remote password-check service is called. This project choice supersedes the screenshot hint. |
 | Login subtitle says courier dashboard although four roles use it. | Use neutral account wording; route after login based on permitted modules. Do not build other members' dashboards. |
 | UI references Terms/Privacy but no corresponding documents/pages are supplied. | Obtain approved text/destination before making links live; do not invent legal acceptance semantics. |
 | V3's short access JWT and immediate logout/suspension checks can be misread as fully stateless authentication. | JWT validation also checks persisted account/session/version state. Revocation cannot wait for JWT expiry. Current deny-all `STATELESS` setup is only the foundation. |
@@ -237,7 +241,7 @@ Reviewed the four-page [assignment](<../reference/Group Assignment.pdf>), all 38
 | No supplied local-email verification flow; Google requires verified email. | Do not mark password signup email as verified merely because it was entered. Recovery proves mailbox control only for its action. If verified local email is required, add a separately reviewed story/schema/contract before relying on it for business eligibility. |
 | V3 suggests coverage targets; assignment asks for testing/coverage but gives no hard percentage. | Add behavior/security tests and report coverage honestly. Existing foundation coverage is not evidence that IAM is covered. |
 
-The password-policy proposal is informed by [OWASP's Authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html), particularly length, password blocklists and avoiding forced composition rules. The proposed 128-character maximum is a project choice.
+The user selected the current eight-character minimum, replacing the initial 15-character implementation. The maximum remains 128 code points, with no mandatory character classes. [OWASP's Authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) informed the original policy; this project choice does not claim compliance with its password-only minimum. The referenced blocklist recommendation is not implemented in this slice.
 
 The remaining booking/pricing/tracking/notification/webhook diagrams were reviewed for boundaries: they consume a trusted identity or their own public/API-key contract. They do not transfer business-record ownership checks into M1. General non-IAM conflicts remain recorded in `docs/reference-review.md`.
 
@@ -334,7 +338,7 @@ curl.exe -i http://127.0.0.1:5173/api/v1/health
 curl.exe -i http://127.0.0.1:8081/api/v1/me
 ```
 
-**Today:** both health requests should return `200` and `{"status":"UP","application":"swiftdrop"}`; React should show “Backend connected”. `/me` should return `401`, because identity is not implemented. Seeing that denial is not a failed login feature. The health response alone does not prove you selected the intended Neon branch; inspect non-secret startup/Flyway information and your branch configuration.
+**Today:** both health requests should return `200` and `{"status":"UP","application":"swiftdrop"}`. React shows registration at `/register` and “Backend connected” at `/foundation`. `/me` should return `401`, because login/profile access is not implemented. Seeing that denial is not a failed login feature. The health response alone does not prove you selected the intended Neon branch; inspect non-secret startup/Flyway information and your branch configuration.
 
 For the existing local-database option, follow README section 2B, start `postgres rabbitmq` using the same Compose files, and select the local `POSTGRES_*` configuration instead of a Neon override. The full container route remains `docker compose up --build` with frontend at `http://localhost:8080`; see the verification limitations below.
 
@@ -349,4 +353,26 @@ For the existing local-database option, follow README section 2B, start `postgre
 
 ### Database implementation follow-up
 
-V2, JPA mappings, direct migration configuration and database tests are now implemented as described above. Backend verification passed 24 unit/configuration/security tests and 14 integration tests against disposable PostgreSQL/RabbitMQ, with no skips. A configuration-only check confirmed this developer's private file bindings without printing credentials or opening a Neon connection. Full details and remaining limits are in [the verification record](../verification.md). All end-to-end IAM feature boxes remain unchecked.
+V2, JPA mappings, direct migration configuration and database tests are now implemented as described above. Backend verification passed 24 unit/configuration/security tests and 14 integration tests against disposable PostgreSQL/RabbitMQ, with no skips. A configuration-only check confirmed this developer's private file bindings without printing credentials or opening a Neon connection. Full details and remaining limits are in [the verification record](../verification.md). That historical database step left all IAM feature boxes unchecked; IAM-01 is now completed above.
+
+
+### IAM-01 implementation follow-up
+
+Implemented registration against V2 without changing migrations or private credentials. See the checked IAM-01 criteria and [registration guide](registration.md) for actual files, decisions and commands. Verification: 31 backend unit/configuration/security tests, 27 PostgreSQL/broker integration tests, nine frontend tests, both builds and a real browser signup through Vite. Desktop and 360px mobile layouts were checked; no mobile horizontal overflow. The disposable browser account/database were removed afterward. Live Neon and full Compose application image startup were not retested. IAM-02–IAM-08 remain unchecked.
+
+
+### Password feedback and minimum-length follow-up
+
+The user selected an eight-character minimum. Frontend and backend now consistently
+accept 8–128 Unicode code points and return specific missing/too-short/too-long
+messages. The form shows the character count and uses accessible eye icons for
+both password fields. Tests cover seven-character rejection, eight-character
+acceptance, the 128-character boundary, unchanged password values and confirmation
+correction. Final verification passed 31 backend unit/configuration/security tests,
+29 PostgreSQL/broker integration tests, 16 frontend tests and both builds. No
+migration, database credential or hashing algorithm changed.
+
+
+### IAM-02 / IAM-07 implementation follow-up
+
+The [session guide](sessions.md) and [API contract](../../contracts/identity-sessions.md) supersede earlier proposed session/security descriptions above. V2 is reused unchanged. Final checks passed 38 backend unit/security tests, 47 integration tests and 30 frontend tests, plus both builds. Live Neon, browser visual checks, full Compose image deployment and process-restart checks were not run. No Google, recovery, admin or profile editing is implemented.

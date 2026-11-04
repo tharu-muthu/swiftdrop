@@ -2,7 +2,7 @@
 
 Implemented by `V2__create_identity_tables.sql` in the shared **`swiftdrop`** schema. V1 is unchanged. All eight tables have JPA mappings under `com.swiftdrop.entity.identity`; Hibernate checks those mappings with `ddl-auto: validate`. Flyway alone creates/changes the schema; Spring SQL initialization is disabled.
 
-This is persistence infrastructure, not working authentication. No signup/login endpoints, credential issuance, role assignment service, Google integration or password-reset delivery are implemented by this migration. Only four role definitions are seeded; there are no default accounts/passwords.
+This migration supplies persistence infrastructure. [IAM-01 registration](registration.md) now uses it to create CUSTOMER accounts; login, credential issuance, Google integration and password-reset delivery remain future work. Only four role definitions are seeded; there are no default accounts/passwords.
 
 ## Entity relationships
 
@@ -99,7 +99,7 @@ erDiagram
 | --- | --- |
 | `users` | One account across all roles. The database generates `email_normalized = lower(btrim(email))` and enforces its uniqueness, including writes outside Java and concurrent inserts. A nullable password hash permits Google-only accounts. `active` supports suspension; `authorization_version` invalidates older authorization state; `version` is a separate JPA optimistic-lock counter. |
 | `roles` | The four allowed role names: CUSTOMER, MERCHANT, COURIER, DISPATCHER_ADMIN. Both UUID IDs and role names are unique. Seed IDs are stable reference data, not user IDs. |
-| `user_roles` | Connects an existing user to an existing role. Its composite UUID key prevents duplicate assignments. Public signup's CUSTOMER-only rule belongs in the future service; this table alone does not enforce which caller may assign roles. |
+| `user_roles` | Connects an existing user to an existing role. Its composite UUID key prevents duplicate assignments. Public signup's CUSTOMER-only rule is enforced by `RegistrationService`; this table alone does not enforce which caller may assign roles. |
 | `oauth_accounts` | Links a user to a lowercase provider name and case-sensitive provider subject. `(provider, provider_subject)` is globally unique; `(user_id, provider)` allows one linked identity per provider for each user. No Google access/refresh tokens are stored. |
 | `auth_sessions` | A stable sign-in session and one refresh-token family. `id` will be JWT `sid`; `family_id` is unique. Holds absolute expiry, captured authorization version and revocation with a reason. Multiple sessions per user support multiple devices. |
 | `refresh_tokens` | One row per token generation, retaining consumed hashes to detect reuse. Stores only a SHA-256 digest, timestamps and replacement pointer. At most one unconsumed/unrevoked token per session. A composite FK keeps replacement links inside the same session and every token's expiry equal to the parent's absolute expiry. |
@@ -124,7 +124,7 @@ Database structure supports these operations but does not execute them automatic
 4. **Reset:** conditionally set `used_at` only for an unused, unrevoked, unexpired token while changing the password, invalidating other tokens/sessions and recording required audit information in the same transaction.
 5. **Expired-token cleanup:** retain replay evidence until family expiry. Delete a completed family's token chain in a transaction before its session; deferred self-references permit deleting the chain together. Audit retention requires a separately reviewed procedure.
 
-JPA entities currently supply field mappings/read access for validation and later repositories. This step intentionally adds no authentication repository/service/API or public entity serialization. Add domain mutation methods and repository locking queries with their future behavior tests.
+JPA entities supply validated mappings. IAM-01 adds registration creation methods, user/role repositories and one transactional service, with DTO-only API responses. Add future session/profile mutation methods and locking queries alongside their behavior tests. Entities must never be serialized as public responses.
 
 ## Neon connections and environment loading
 

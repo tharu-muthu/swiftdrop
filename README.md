@@ -1,11 +1,19 @@
 # SwiftDrop
 
-Shared foundation for a nine-member university courier management project.
-The application currently shows a React connection-check page and a public backend
-health endpoint. Sign-in, Google authentication, bookings and other business
-features are intentionally not implemented. The identity database foundation now
-includes eight tables and JPA mappings; [the identity ER guide](docs/identity/schema.md)
-explains them. Only role definitions are seeded, with no default account/password.
+Team onboarding and collaboration: see [the team development guide](docs/team-development-guide.md)
+for Docker setup, private configuration, feature branches, PRs into `dev`, migration
+coordination and the current Google/Docker readiness limitations.
+
+Customer registration, password login/logout, rotating refresh sessions and safe
+profile reads now work end to end. Open `/register`, `/login` and `/account`.
+See [authentication setup and request flow](docs/identity/sessions.md) and the
+[current API contract](contracts/identity-sessions.md). Google, recovery, admin
+and other business features remain future work.
+
+**New setup step:** from the root run
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
+before starting the backend. This adds private signing/origin settings while
+preserving Neon credentials. For full Compose use `-Compose` instead.
 
 ## Architecture and folders
 
@@ -25,16 +33,17 @@ The health service is a liveness response and needs no repository or business ta
 | Folder / file | What it does |
 | --- | --- |
 | `frontend/` | React browser app, Vite development server, npm dependencies and tests; Docker builds static files served by Nginx. |
-| `frontend/src/app/` | Minimal shared page and styles. |
-| `frontend/src/features/` | Future feature screens and API calls, one area per member. |
+| `frontend/src/app/` | Page entry point, preserved foundation page and shared styles. |
+| `frontend/src/features/` | Feature screens and API calls; `identity/` implements registration. |
+| `frontend/src/components/` | Reusable auth layout, brand and form fields. |
 | `backend/` | Single Spring Boot Maven project and its Windows/Linux/macOS Maven wrappers. |
 | `backend/src/main/java/com/swiftdrop/` | `controller`, `service`, `repository`, `entity`, `dto`, `security`, `config`, `exception`, `integration` layers; add feature subpackages as needed. |
 | `backend/src/main/resources/` | Environment-based configuration and `db/migration/` Flyway SQL. |
 | `backend/src/test/` | HTTP/security tests and optional real PostgreSQL/RabbitMQ integration tests. |
-| `contracts/` | Current health contract; future agreed OpenAPI and event schemas. |
+| `contracts/` | Health and registration API contracts; future OpenAPI/event schemas. |
 | `docs/reference/` | Original design PDF, diagrams and screen references, preserved unchanged. |
 | `docs/reference-review.md` | Conflicts, source provenance, scope decisions and unresolved team questions. |
-| `docs/identity/` | Identity acceptance checklist, implemented ER/table guide and database connection rules. |
+| `docs/identity/` | IAM checklist, registration guide, ER/table guide and connection rules. |
 | `docs/verification.md` | Actual environment and checks from this scaffold run. |
 | `compose.yaml` | Four containers: frontend, backend, PostgreSQL, RabbitMQ; persistent data volumes. |
 | `compose.dev.yaml` | Optional localhost ports for connecting locally running Java to container infrastructure. |
@@ -139,10 +148,10 @@ connection. It runs frontend tests/build and backend
 unit/security tests as part of building the images. Compose starts PostgreSQL and
 RabbitMQ first, waits for them, then starts the backend and frontend.
 
-Open **[http://localhost:8080](http://localhost:8080)**. You should see “SwiftDrop”,
-“One foundation. Built together.” and **“Backend connected”**. “Check again” repeats
-the health request. The page should show “Backend unavailable” if it cannot reach
-the backend, rather than pretending the connection works.
+Open **[http://localhost:8080/register](http://localhost:8080/register)**. You should
+see the SwiftDrop registration form. A valid submission shows **“Account created”**
+without signing you in. The original health/retry page is at `/foundation`; it
+shows **“Backend connected”** when the backend is reachable.
 
 Check HTTP responses from another PowerShell terminal:
 
@@ -153,7 +162,8 @@ curl.exe -i http://localhost:8080/api/v1/private
 
 Use `curl` instead of `curl.exe` on macOS/Linux. Expected: health returns HTTP 200
 with `{"status":"UP","application":"swiftdrop"}`; the private URL returns HTTP 401.
-POST without a CSRF token returns 403. There is no login page or account to use yet.
+POST without a CSRF token returns 403. React obtains that token automatically for
+registration. Login is available at `/login`; registration does not sign you in.
 
 Check that Flyway ran (default database/user names):
 
@@ -335,8 +345,9 @@ cd ../backend
 .\mvnw.cmd --batch-mode --no-transfer-progress verify
 ```
 
-The frontend tests exercise connection success, failure, retry and bad responses.
-The backend tests exercise public health, protected routes, CSRF and denied writes.
+Frontend tests cover registration validation, confirmation, visibility, pending
+state, API errors/success and the preserved health page. Backend unit tests cover
+service rules, validation, password encoding, throttling, security and configuration.
 These tests do not need a running database, broker or Docker engine.
 
 With Docker running, from `backend/`:
@@ -353,7 +364,9 @@ starts disposable PostgreSQL and RabbitMQ containers on random ports, verifies
 Flyway on a fresh real database and on a second migration run, checks actual HTTP
 security, and round-trips an infrastructure-only broker message. It also checks
 V1-to-V2 data preservation, identity constraints, token rotation races, audit
-protection and Hibernate mappings. Both connection configurations are overridden:
+protection and Hibernate mappings. Registration tests cover real HTTP/database
+success, duplicate races, injection, safe errors/logs and transaction rollback.
+Both connection configurations are overridden:
 it does not touch Neon or the Compose database, and it is not a login or domain
 event/notification implementation.
 It fails if Docker is unavailable; it does not silently report a skipped suite as a pass.
@@ -390,7 +403,7 @@ Nginx serves the built page and proxies API requests in Docker.
 | Port already in use | Change the relevant host port in `.env`. For local backend changes, keep `BACKEND_URL` aligned. |
 | React says backend unavailable | Check backend logs and health URL; ensure correct startup mode, `.env`, DB connectivity and proxy target. |
 | Flyway checksum mismatch | Restore the original applied migration; add a new migration for changes. Do not disable validation. |
-| A protected URL returns 401/403 | Expected. Only GET health is public and no authentication mechanism exists yet. |
+| A protected URL returns 401/403 | Expected. Health/CSRF and implemented auth entry points are public; auth POSTs require CSRF and an allowed Origin. GET /me requires a valid bearer identity. |
 
 ## Before feature work
 
