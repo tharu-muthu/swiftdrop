@@ -45,10 +45,10 @@ The health service is a liveness response and needs no repository or business ta
 | `docs/reference-review.md` | Conflicts, source provenance, scope decisions and unresolved team questions. |
 | `docs/identity/` | IAM checklist, registration guide, ER/table guide and connection rules. |
 | `docs/verification.md` | Actual environment and checks from this scaffold run. |
-| `compose.yaml` | Four containers: frontend, backend, PostgreSQL, RabbitMQ; persistent data volumes. |
-| `compose.dev.yaml` | Optional localhost ports for connecting locally running Java to container infrastructure. |
+| `compose.yaml` | Three containers: frontend, backend and RabbitMQ; the backend connects to Neon. |
+| `compose.dev.yaml` | Optional localhost ports for connecting locally running Java to RabbitMQ. |
 | `AGENTS.md` | Short architecture and coding rules for the team and coding assistants. |
-| `.env.example` | Root template for local Docker infrastructure; real `.env` files are ignored. |
+| `.env.example` | Root template for RabbitMQ and app ports; real `.env` files are ignored. |
 | `backend/.env.example` | Shared variable names and placeholders for each developer's private Neon connection. |
 | `frontend/.env.example` | Optional proxy URL only; never database credentials. |
 
@@ -77,7 +77,7 @@ optional because the wrapper downloads the pinned version.
 | React / React DOM | `19.3.1` |
 | Vite / React plugin | `8.3.5` / `6.1.2` |
 | Vitest | `5.0.5` |
-| PostgreSQL | `17.11-bookworm` container (independent of any PostgreSQL already installed on your computer). |
+| PostgreSQL | Neon-hosted PostgreSQL; each developer uses a separate Neon branch. |
 | RabbitMQ | `4.2.9-management-alpine` |
 | Nginx | `1.28.3-alpine` |
 
@@ -104,8 +104,8 @@ missing, open Docker Desktop and wait until the engine is running.
 
 ## 1. Create local configuration
 
-The root file configures local Docker infrastructure. For a Neon development
-branch, also follow **2C** and put those credentials in `backend/.env`.
+The root file configures RabbitMQ and app ports. Every developer must also put
+their private Neon connection in `backend/.env` as described in **2A**.
 
 Open a terminal in the repository root (the folder containing `compose.yaml`).
 In PowerShell:
@@ -122,18 +122,27 @@ test -f .env || cp .env.example .env
 # Open .env in your text editor.
 ```
 
-Set the two blank values `POSTGRES_PASSWORD` and `RABBITMQ_PASSWORD` to **different,
-random alphanumeric passwords**, at least 24 characters each. Leave the other
-values unchanged initially. Do not use real university/service passwords. Keep
-plain values without quotes, spaces or `$`: the local backend also reads this
-file as Java properties. Never commit `.env`; never put credentials in `VITE_*`
-variables, which would expose them to browsers.
+Set `RABBITMQ_PASSWORD` to a random alphanumeric password of at least 24
+characters. Do not use real university/service passwords. Keep plain values
+without quotes, spaces or `$`. Never commit `.env`; never put credentials in
+`VITE_*` variables, which would expose them to browsers.
 
-This setup session created an ignored `.env` with random local passwords in the
-current checkout. Keep it; a fresh clone needs the steps above. No Google client
-ID, JWT key, mail account or merchant key is needed yet.
+The database is hosted in Neon; no local PostgreSQL container or password is
+needed. No Google client ID, JWT key, mail account or merchant key is needed yet.
 
-## 2A. Run everything in Docker (easiest first check)
+## 2A. Run the application with Neon and RabbitMQ
+
+First create the private Neon configuration:
+
+```powershell
+if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+notepad backend/.env
+```
+
+In Neon **Connect**, select your own development branch, database and role. Fill
+the three `SPRING_DATASOURCE_*` values in `backend/.env`; keep credentials out
+of the JDBC URL. The pooled runtime URL is converted to the matching direct
+endpoint for Flyway. Then, from the repository root:
 
 From the repository root, in PowerShell or Bash:
 
@@ -144,9 +153,9 @@ docker compose ps
 ```
 
 The first build downloads several large images and may take a long time on a slow
-connection. It runs frontend tests/build and backend
-unit/security tests as part of building the images. Compose starts PostgreSQL and
-RabbitMQ first, waits for them, then starts the backend and frontend.
+connection. It runs frontend tests/build and backend unit/security tests as part
+of building the images. Compose starts RabbitMQ, waits for it, then starts the
+backend (connected to Neon) and frontend.
 
 Open **[http://localhost:8080/register](http://localhost:8080/register)**. You should
 see the SwiftDrop registration form. A valid submission shows **“Account created”**
@@ -165,39 +174,39 @@ with `{"status":"UP","application":"swiftdrop"}`; the private URL returns HTTP 4
 POST without a CSRF token returns 403. React obtains that token automatically for
 registration. Login is available at `/login`; registration does not sign you in.
 
-Check that Flyway ran (default database/user names):
+Flyway runs against the selected Neon branch during backend startup. Verify its
+history in the Neon SQL editor, for example:
 
-```text
-docker compose exec postgres psql -U swiftdrop -d swiftdrop -c "SELECT version, description, success FROM swiftdrop.flyway_schema_history ORDER BY installed_rank;"
+```sql
+SELECT version, description, success
+FROM swiftdrop.flyway_schema_history
+ORDER BY installed_rank;
 ```
 
-Expect successful V1 `initialize shared schema` and V2 `create identity tables`
-(Flyway may also record its schema creation row). V2 adds the identity tables and
-four role definitions, without creating users. Normal backend startup requires
-PostgreSQL and a successful migration. Health reports **application liveness**;
-it does not probe broker availability or assert that business integrations work.
+Expect successful V1 and V2 entries. Health reports **application liveness**; it
+does not probe broker availability or assert that business integrations work.
 
 Useful commands:
 
 ```text
 docker compose logs --tail=100 backend
-docker compose logs --tail=100 postgres rabbitmq
+docker compose logs --tail=100 rabbitmq
 docker compose logs --follow backend
 # Ctrl+C exits log following without stopping containers.
 docker compose down
 ```
 
-`down` preserves database/broker volumes. Do not add `--volumes` unless you intend
-to erase local data. Changing `.env` passwords later does not change credentials
-already stored in existing database/broker volumes; rotate those explicitly.
+`down` preserves the RabbitMQ volume. Neon data is managed by Neon, not Docker.
+Changing `.env` passwords later does not change credentials already stored in the
+RabbitMQ volume; rotate those explicitly.
 
 ## 2B. Run React and Java locally (daily development)
 
-Choose either 2A, 2B or 2C. Stop the full stack with `docker compose down` before
-switching modes. Start only the infrastructure, exposing localhost ports:
+Choose either 2A or 2B. Stop the full stack with `docker compose down` before
+switching modes. Start only RabbitMQ, exposing its localhost ports:
 
 ```text
-docker compose -f compose.yaml -f compose.dev.yaml up --detach --wait postgres rabbitmq
+docker compose -f compose.yaml -f compose.dev.yaml up --detach --wait rabbitmq
 ```
 
 In **terminal 1**, from the repository root, PowerShell:
@@ -209,10 +218,9 @@ cd backend
 ```
 
 On macOS/Linux use `sh ./mvnw --version` and `sh ./mvnw spring-boot:run`.
-The backend explicitly imports the root `.env`, then `backend/.env` if present,
-and listens on port **8081**. To use this local PostgreSQL mode after Neon, move
-`backend/.env` to ignored `backend/.env.neon` first; restore it when returning to 2C.
-You should see Flyway migration/validation output and `Started SwiftDropApplication`.
+The backend explicitly imports the root `.env`, then `backend/.env`, and listens
+on port **8081**. You should see Flyway migration/validation output against Neon
+and `Started SwiftDropApplication`.
 
 In **terminal 2**, from the repository root, PowerShell:
 
@@ -232,9 +240,7 @@ Vite. An old root-level `BACKEND_URL` is no longer used by Vite.
 
 The optional broker management page is
 [http://localhost:15672](http://localhost:15672); use your `.env` RabbitMQ username
-and password. PostgreSQL is available at `localhost:5433`, database/user
-`swiftdrop`. This avoids the usual `5432` port of an existing PostgreSQL installation.
-These infrastructure ports are not published by the base Compose file.
+and password. No PostgreSQL port is published or required.
 
 Stop Java and Vite with Ctrl+C in their terminals, then stop infrastructure:
 
@@ -242,7 +248,7 @@ Stop Java and Vite with Ctrl+C in their terminals, then stop infrastructure:
 docker compose -f compose.yaml -f compose.dev.yaml down
 ```
 
-## 2C. Use your own Neon development branch
+## 2C. Neon connection details
 
 Keep the same variable names for every developer. Only their values change.
 Complete step 1 for local RabbitMQ configuration, then, from the repository root:
@@ -271,9 +277,6 @@ This file is loaded as Java properties: use `KEY=value`, no `export`, no surroun
 quotes; double a literal backslash. Keep passwords private and out of frontend
 files, `VITE_*` variables, commits, and command-line arguments.
 
-The existing `POSTGRES_*` settings remain supported for local/legacy configuration.
-If your Neon values are currently in root `.env`, use them to fill these three
-backend variables, then keep the root `POSTGRES_*` settings for local Docker only.
 The setup changes do not overwrite existing private files.
 
 Start the broker from the repository root (no local PostgreSQL is needed for Neon):
@@ -301,8 +304,7 @@ stale `SPRING_DATASOURCE_*` and `SPRING_FLYWAY_*` overrides if the wrong branch 
 
 JPA/runtime queries use the application DataSource. `DatabaseMigrationConfig`
 derives Flyway's direct URL by removing `-pooler` only from a Neon hostname, while
-keeping the same database, port and TLS parameters. Direct/runtime and local
-PostgreSQL URLs are unchanged. Migration credentials default to the runtime role
+keeping the same database, port and TLS parameters. Direct/runtime and test fallback PostgreSQL URLs are unchanged. Migration credentials default to the runtime role
 and password. This follows [Neon's pooled/direct endpoint convention](https://neon.com/docs/connect/connection-pooling).
 
 Optional explicit overrides belong in the same private `backend/.env`:
@@ -329,8 +331,8 @@ Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
 `{"status":"UP","application":"swiftdrop"}`. Run the frontend as shown in 2B;
 it communicates only with the backend API and needs no Neon information.
 
-The all-container setup in 2A intentionally uses its local PostgreSQL service.
-`backend/.env` is excluded from Docker builds and is not copied into an image.
+Compose loads `backend/.env` at runtime; it is excluded from Docker builds and is
+not copied into the backend image.
 
 ## 3. Run tests and builds
 
@@ -354,7 +356,6 @@ With Docker running, from `backend/`:
 
 ```powershell
 # Optional first-time prefetch; useful on slow connections:
-docker pull postgres:17.11-bookworm
 docker pull rabbitmq:4.2.9-management-alpine
 .\mvnw.cmd --batch-mode --no-transfer-progress -Pintegration verify
 ```

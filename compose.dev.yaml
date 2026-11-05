@@ -1,8 +1,5 @@
 # Opt-in host ports for local Java/React development. Loopback access only.
 services:
-  postgres:
-    ports:
-      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
   rabbitmq:
     ports:
       - '127.0.0.1:${RABBITMQ_PORT:-5672}:5672'

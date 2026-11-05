@@ -13,7 +13,7 @@ main                  stable milestones
     codex/m3-quote    another independent feature/change
 ```
 
-Docker uses the repository's pinned Java, Node, PostgreSQL and RabbitMQ versions. This reduces environment differences. It cannot prevent conflicting code edits, incompatible API changes, migration collisions or business-rule mistakes. We coordinate those before merging and test the combined result.
+Docker uses the repository's pinned Java, Node and RabbitMQ versions. PostgreSQL is hosted in Neon so every member can use their own development branch. This reduces environment differences. It cannot prevent conflicting code edits, incompatible API changes, migration collisions or business-rule mistakes. We coordinate those before merging and test the combined result.
 
 **Before inviting everyone to pull:** the lead must commit, review and push the shared foundation to `dev`. Changes present only on the lead's computer are not available to teammates. This guide does not create remote branches, configure GitHub rules or claim that CI exists.
 
@@ -21,14 +21,14 @@ Docker uses the repository's pinned Java, Node, PostgreSQL and RabbitMQ versions
 
 | Mode | Database used | Required host tools |
 | --- | --- | --- |
-| Full Docker, recommended common integration baseline | Each computer's local PostgreSQL container | Git, Docker Desktop; PowerShell for the setup helper |
-| Local Java/React with a private Neon branch | That developer's Neon branch | Above plus Java 21 JDK and Node 24/npm |
+| Docker application stack | That developer's Neon branch plus RabbitMQ container | Git, Docker Desktop; PowerShell for the setup helper |
+| Local Java/React development | That developer's Neon branch plus RabbitMQ container | Above plus Java 21 JDK and Node 24/npm |
 
 Each mode still has one database and one shared `swiftdrop` application schema. Separate Neon branches are isolated development environments, not feature-specific schemas. Their users and other data are separate.
 
 **Important current limitations:**
 
-- Base `compose.yaml` explicitly uses local PostgreSQL. It does not load `backend/.env` or connect its backend container to Neon. Putting Neon credentials there does not change full Docker mode. A reviewed Compose override for Neon would be a separate configuration task.
+- Compose loads each developer's private `backend/.env` and connects the backend directly to Neon. It does not create or publish a local PostgreSQL container.
 - The current checkout contains newer Google OAuth wiring, while some identity documents still describe Google as future work. The full Docker environment does not yet pass Google client settings to the backend, and its Nginx configuration only proxies `/api`, not the OAuth routes. Do not treat Google-in-Docker as ready or supply invented credentials to bypass setup errors.
 - The lead must verify a fresh-clone full Docker startup with the current OAuth configuration before making it the mandatory team baseline. Agree either a tested optional-Google configuration or completed Google configuration/proxy support first. Merely copying this guide does not fix that gap.
 
@@ -36,7 +36,7 @@ Previously recorded identity tests passed, but this documentation change has not
 
 ## 3. Install and check tools
 
-Install Git, Docker Desktop and an editor. Start Docker Desktop using Linux containers. First builds need internet access and sufficient disk space for images and dependencies. Host Java, Node, Maven, PostgreSQL and RabbitMQ installations are unnecessary for full Docker execution.
+Install Git, Docker Desktop and an editor. Start Docker Desktop using Linux containers. First builds need internet access and sufficient disk space for images and dependencies. Host Java, Node, Maven, PostgreSQL and RabbitMQ installations are unnecessary for the Docker application stack; PostgreSQL is provided by Neon and RabbitMQ by Compose.
 
 ```powershell
 git --version
@@ -66,7 +66,19 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 notepad .env
 ```
 
-Fill `POSTGRES_PASSWORD` and `RABBITMQ_PASSWORD` with different randomly generated alphanumeric passwords of at least 24 characters. These are private local credentials. Keep the other defaults initially. Then generate private Compose authentication settings:
+Create the private Neon file before running Compose:
+
+```powershell
+if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+notepad backend/.env
+```
+
+In Neon Connect, select the developer's branch, database and role and fill the
+three `SPRING_DATASOURCE_*` values. Compose and the local Maven launch use this
+same file; the pooled runtime URL is converted to the matching direct endpoint
+for Flyway.
+
+Fill `RABBITMQ_PASSWORD` with a randomly generated alphanumeric password of at least 24 characters. Neon credentials belong in `backend/.env`, not this root file. Keep the other defaults initially. Then generate private Compose authentication settings:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1 -Compose
@@ -92,7 +104,7 @@ docker compose up --build --detach --wait --wait-timeout 300
 docker compose ps
 ```
 
-Open `http://localhost:8080/register`. Use the same hostname throughout a session. The backend and database are accessed through the application containers; the base file only publishes the frontend on loopback.
+Open `http://localhost:8080/register`. Use the same hostname throughout a session. The backend connects to Neon and RabbitMQ through the application stack; the base file only publishes the frontend on loopback.
 
 ```powershell
 curl.exe -i http://localhost:8080/api/v1/health
@@ -107,11 +119,11 @@ Useful commands:
 ```powershell
 docker compose logs --tail=100 backend
 docker compose logs --tail=100 frontend
-docker compose logs --tail=100 postgres rabbitmq
+docker compose logs --tail=100 rabbitmq
 docker compose down
 ```
 
-`down` preserves data volumes. Do not add `--volumes` during routine work. Changing passwords in `.env` does not change passwords already stored in existing database/broker volumes.
+`down` preserves the RabbitMQ volume. Neon data is managed by Neon, not Docker. Do not add `--volumes` during routine work. Changing the RabbitMQ password in `.env` does not change the password already stored in the existing volume.
 
 ## 6. Editing and rebuilding
 
@@ -130,7 +142,7 @@ The backend image build runs Maven verification (ordinary unit/security tests). 
 
 After dependency/configuration changes, rebuild the relevant images. A simple restart does not incorporate changed source or Docker environment configuration.
 
-## 7. Optional daily development with Neon
+## 7. Optional daily local development
 
 Use this mode when you need your assigned Neon branch or React live reload. Install Java 21 JDK and Node 24/npm matching the team policy. Use the Maven wrapper and `npm ci`. Do not run this and the full Docker application simultaneously on conflicting ports.
 

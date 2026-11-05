@@ -1,20 +1,6 @@
 name: swiftdrop
 
 services:
-  postgres:
-    image: postgres:17.11-bookworm
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-swiftdrop}
-      POSTGRES_USER: ${POSTGRES_USER:-swiftdrop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
   rabbitmq:
     image: rabbitmq:4.2.9-management-alpine
     hostname: rabbitmq
@@ -34,12 +20,9 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-swiftdrop}
-      POSTGRES_USER: ${POSTGRES_USER:-swiftdrop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-swiftdrop}
@@ -59,8 +42,6 @@ services:
       AUTH_LOCALHOST_DEVELOPMENT: 'true'
       AUTH_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8080},http://127.0.0.1:${FRONTEND_PORT:-8080}
     depends_on:
-      postgres:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     healthcheck:
@@ -85,5 +66,4 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
   rabbitmq_data:

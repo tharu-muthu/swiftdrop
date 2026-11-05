@@ -10,7 +10,7 @@ spring:
       - optional:file:./.env[.properties]
   datasource:
     # All developers use these same three SPRING_DATASOURCE_* keys in backend/.env.
-    # POSTGRES_* remains a fallback for the existing local Docker setup.
+    # POSTGRES_* remains only as a test/legacy fallback; Compose uses Neon.
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:swiftdrop}${POSTGRES_PARAMS:}}
     username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:swiftdrop}}
     password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
