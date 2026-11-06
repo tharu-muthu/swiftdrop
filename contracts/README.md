@@ -1,5 +1,9 @@
 # Shared contracts
 
+Backend feature integration: [shared identity services](identity-services.md)
+documents the implemented current-user/role/courier lookup contract, React API
+client usage, examples, permissions and pending role-changing workflows.
+
 Current endpoint: `GET /api/v1/health`, public, HTTP 200:
 
 ```json

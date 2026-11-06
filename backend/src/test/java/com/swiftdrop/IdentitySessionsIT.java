@@ -65,6 +65,32 @@ class IdentitySessionsIT {
     @Autowired AuthSettings settings;
     @Autowired MutableClock clock;
     @Autowired MockMvc mvc;
+    @Autowired com.swiftdrop.service.identity.IdentityAccountService identityAccounts;
+    @Autowired com.swiftdrop.security.IdentityJwtConverter identityConverter;
+
+    @Test void sharedAccountContractUsesLiveRolesAndRejectsRevokedSessions() throws Exception {
+        var signedIn = login(account());
+        var jwt = decoder.decode(access(signedIn));
+        UUID actorId = UUID.fromString(jwt.getSubject());
+        String courierEmail = account();
+        UUID courierId = sql.queryForObject("select id from swiftdrop.users where email=?", UUID.class, courierEmail);
+        try {
+            org.springframework.security.core.context.SecurityContextHolder.getContext()
+                    .setAuthentication(identityConverter.convert(jwt));
+            assertThatThrownBy(() -> identityAccounts.requireActiveCourier(courierId))
+                    .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+            // Test fixtures only: production role mutation remains a separate audited workflow.
+            sql.update("insert into swiftdrop.user_roles(user_id,role_id) select ?,id from swiftdrop.roles where name='DISPATCHER_ADMIN'", actorId);
+            sql.update("insert into swiftdrop.user_roles(user_id,role_id) select ?,id from swiftdrop.roles where name='COURIER'", courierId);
+            assertThat(identityAccounts.requireActiveCourier(courierId).id()).isEqualTo(courierId);
+            sql.update("update swiftdrop.users set active=false where id=?", courierId);
+            assertThatThrownBy(() -> identityAccounts.requireActiveCourier(courierId))
+                    .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+            sql.update("update swiftdrop.auth_sessions set revoked_at=now(),revocation_reason='TEST' where id=?", session(signedIn));
+            assertThatThrownBy(identityAccounts::requireCurrentIdentity)
+                    .isInstanceOf(com.swiftdrop.exception.IdentityAuthenticationException.class);
+        } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+    }
     private static final String PASSWORD = "Exact password 8 ";
     private static final String ORIGIN = "http://localhost:5173";
     @BeforeEach void resetClock() { clock.offset = Duration.ZERO; }
