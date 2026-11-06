@@ -1,0 +1,33 @@
+/* M4 adopts the established SwiftDrop identity from the supplied account-page reference. */
+.booking-shell { background: #f5f7fb; color: #142c52; }
+.booking-sidebar { background: linear-gradient(155deg, #061938 0%, #0b2b5a 100%); }
+.booking-form-brand { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 29px; font-weight: 800; letter-spacing: -1.25px; line-height: 1; position: relative; z-index: 1; }
+.booking-form-brand svg { width: 43px; height: 42px; fill: currentColor; flex: 0 0 auto; }
+.booking-form-brand b { color: #ff752d; font-weight: inherit; }
+.booking-form-brand-compact { color: #173260; }
+.booking-form-brand-compact svg { width: 31px; height: 30px; }
+.booking-sidebar .side-link:hover, .booking-sidebar .side-link.active { background: #0877f9; box-shadow: 0 8px 20px #001a4e66; }
+.booking-header { background: #fff; border-bottom-color: #d7e1ee; }
+.booking-header .header-title { gap: 11px; }
+.booking-header .header-title strong { color: #142c52; }
+.booking-header .avatar { background: #173260; }
+.booking-hero { border: 1px solid #d7e1ee; }
+.booking-hero:after { background: linear-gradient(90deg, #f5f8fdee 0%, #eef4f9db 42%, #e6eef755 68%, transparent 82%); }
+.booking-shell .hero-overlay button, .booking-shell .tracking-card form button, .booking-shell .placeholder-card button { background: #0877f9; }
+.booking-shell .hero-overlay button:hover, .booking-shell .tracking-card form button:hover, .booking-shell .placeholder-card button:hover { background: #0862d1; }
+.booking-shell .summary-panel, .booking-shell .tracking-card, .booking-shell .quick-action { border-color: #d7e1ee; box-shadow: 0 7px 18px #17326010; }
+.booking-shell .quick-action { background: #fff; }
+.booking-shell .booking-stat { background: #f8fbff; border-color: #d7e1ee; }
+.booking-form-page .form-banner { background: linear-gradient(115deg, #f5f8fd, #e5effb); border: 1px solid #d7e1ee; }
+.booking-form-page .form-banner p, .booking-form-page .progress-steps .current { color: #0877f9; }
+.booking-form-page .form-banner h1, .booking-form-page .form-section-heading h2 { color: #142c52; }
+.booking-form-page .form-banner-art { color: #0877f9; opacity: .34; }
+.booking-form-page .progress-steps .current>span, .booking-form-page .progress-steps .complete>span,
+.booking-form-page .booking-steps-card li.active-step>span { background: #0877f9; border-color: #0877f9; }
+.booking-form-page .form-section-heading { background: #edf4fd; }
+.booking-form-page .form-section-heading>span { background: #0877f9; }
+.booking-form-page .next-step { background: #0877f9; }
+.booking-form-page .next-step:hover { background: #0862d1; }
+.booking-form-page .quick-tips { background: #f3f7fc; }
+.booking-form-page .quick-tips h3 { color: #173260; }
+@media (max-width: 760px) { .booking-form-brand { font-size: 24px; } .booking-form-brand svg { width: 35px; height: 34px; } }
