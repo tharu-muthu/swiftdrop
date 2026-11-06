@@ -20,6 +20,10 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> denied() {
         return ResponseEntity.status(403).body(ApiError.of("FORBIDDEN", "Access denied"));
     }
+    @ExceptionHandler(LifecycleConflictException.class)
+    ResponseEntity<ApiError> lifecycleConflict(LifecycleConflictException error) {
+        return ResponseEntity.status(409).body(ApiError.of("LIFECYCLE_CONFLICT", error.getMessage()));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");

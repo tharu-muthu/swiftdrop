@@ -10,6 +10,7 @@ import BookingPlaceholder from '../features/booking/BookingPlaceholder.jsx';
 import BookingFormPage from '../features/booking/BookingFormPage.jsx';
 import MyBookingsPage from '../features/booking/MyBookingsPage.jsx';
 import BookingDetailsPage from '../features/booking/BookingDetailsPage.jsx';
+import CourierDashboardPage from '../features/execution/CourierDashboardPage.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -23,6 +24,7 @@ export default function App() {
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
   if (auth.status === 'authenticated') {
+    if (path === '/courier' && auth.user.roles.includes('COURIER')) return <CourierDashboardPage />;
     if (path.startsWith('/bookings/') && path !== '/bookings/new') return <BookingDetailsPage bookingId={path.split('/')[2]} />;
     if (['/booking', '/bookings/new', '/bookings', '/quote', '/tracking', '/receipts', '/help'].includes(path)) {
       if (path === '/booking') return <BookingHomePage />;

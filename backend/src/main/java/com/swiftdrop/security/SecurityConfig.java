@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings/dashboard").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/registration").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/registration").authenticated()
+                        .requestMatchers("/api/v1/courier/deliveries/**").hasRole("COURIER")
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
