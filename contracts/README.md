@@ -15,7 +15,8 @@ GET `/api/v1/auth/csrf` and POST `/api/v1/auth/register`. Unsafe requests withou
 CSRF protection return 403. Other routes remain denied. Registration creates a
 CUSTOMER account; login/session issuance is not implemented yet.
 
-Add agreed OpenAPI and event schemas here as feature work begins. Proposed roles,
-service DTOs, business paths and events in v3 are not implemented contracts yet.
+Feature work adds reviewed OpenAPI and event schemas here. The M9 webhook event
+envelope is documented in `webhook-events.md`; its merchant approval and canonical
+parcel-status adapters still require the M2 and M6 handoffs.
 
 Implemented login, refresh, logout and GET /me: see [session contracts](identity-sessions.md), which supersede the earlier no-login status above.

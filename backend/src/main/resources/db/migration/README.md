@@ -2,11 +2,13 @@
 
 Flyway creates `swiftdrop` and records V1 in `swiftdrop.flyway_schema_history`.
 V1 adds a schema comment only and is unchanged. V2 adds eight identity tables and
-seeds the four role definitions, with no accounts or passwords. The current ER and
-table explanations are in `docs/identity/schema.md` at the repository root.
+seeds the four role definitions, with no accounts or passwords. V3 adds the M4
+booking dashboard table. V4 adds M9 webhook subscription and delivery tables.
+The current ER and table explanations are in `docs/identity/schema.md` at the
+repository root.
 
 Coordinate the next version with the team before merging. Use
-`V3__short_description.sql` is next in this checkout; confirm before merging.
+`V5__short_description.sql` is next in this checkout; confirm before merging.
 Never edit an applied migration;
 add a new one. JPA validates mappings and must not create or update tables.
 Use foreign keys across feature-owned tables in this same schema.
