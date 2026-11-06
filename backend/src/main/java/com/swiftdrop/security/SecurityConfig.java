@@ -70,9 +70,12 @@ public class SecurityConfig {
     @Bean @Order(2)
     @ConditionalOnProperty(prefix = "swiftdrop.google", name = "enabled", havingValue = "true")
     SecurityFilterChain futureOAuthSecurity(HttpSecurity http, ObjectMapper json,
-            GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler) throws Exception {
+            GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler,
+            com.swiftdrop.config.GoogleSettings googleSettings) throws Exception {
         return http
                 .securityMatcher("/oauth2/**", "/login/oauth2/**")
+                .addFilterBefore(new GoogleOriginFilter(googleSettings),
+                        org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth
                         .successHandler(successHandler)

@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = HealthController.class,
+        properties = "swiftdrop.google.enabled=false",
         excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
 @Import({SecurityConfig.class, HealthService.class, com.swiftdrop.config.JwtConfig.class, AuthRateLimiter.class})
 class HealthSecurityTest {

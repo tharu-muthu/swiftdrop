@@ -34,7 +34,6 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-swiftdrop-api}
       AUTH_ACCESS_TTL: ${AUTH_ACCESS_TTL:-10m}
       AUTH_REFRESH_TTL: ${AUTH_REFRESH_TTL:-7d}
-      GOOGLE_FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT:-8080}
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       # This Compose file exposes only loopback HTTP. Use false with HTTPS in deployment.
       AUTH_LOCALHOST_DEVELOPMENT: 'true'
