@@ -20,3 +20,11 @@ The dashboard deliberately does not invent M3 pricing or M6/M7 delivery/tracking
 data. Until those owners publish an in-process service/projection contract, the
 UI identifies the delivered metric and tracking flow as unavailable rather than
 returning fabricated statistics or querying another feature's tables.
+
+## Booking form quotation preparation
+
+The four-step M4 browser form retains pickup, recipient and parcel input locally
+while the customer moves between steps. Its frontend request adapter and backend
+`QuotePreparationRequest` DTO validate a proposed M4-to-M3 input contract. M4 does
+not expose a quotation endpoint or calculate a fee: M3 must agree and implement
+that service before the final step sends any network request.
