@@ -1,0 +1,2 @@
+.tracking-card input[aria-invalid=true] { border-color: #b3332b; }
+.tracking-error { color: #a12f27 !important; font-size: 12px !important; margin: 6px 0 0; }
