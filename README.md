@@ -1,5 +1,10 @@
 # SwiftDrop
 
+Teammates: start with the [identity integration handoff](contracts/identity-services.md)
+before adding authenticated feature endpoints or calling identity services.
+Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
+configuration and the first feature PR.
+
 Team onboarding and collaboration: see [the team development guide](docs/team-development-guide.md)
 for Docker setup, private configuration, feature branches, PRs into `dev`, migration
 coordination and the current Google/Docker readiness limitations.

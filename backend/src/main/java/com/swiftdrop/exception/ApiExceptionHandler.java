@@ -12,6 +12,14 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    ResponseEntity<ApiError> missingAuthentication() {
+        return ResponseEntity.status(401).body(ApiError.of("UNAUTHORIZED", "Authentication required"));
+    }
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    ResponseEntity<ApiError> denied() {
+        return ResponseEntity.status(403).body(ApiError.of("FORBIDDEN", "Access denied"));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");
