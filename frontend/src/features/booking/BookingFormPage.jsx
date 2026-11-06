@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
-import { BookingFrame } from './BookingHomePage.jsx';
+import BookingFrame from './BookingFrame.jsx';
 import { createQuotePreparationRequest } from './bookingFormApi.js';
 import './booking-form.css';
+import './booking-brand-theme.css';
 
 const steps = [
   ['Pickup Information', 'Sender details and pickup address'],

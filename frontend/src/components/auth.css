@@ -1,6 +1,6 @@
 .auth-layout{display:grid;grid-template-columns:42% 58%;min-height:100vh;color:#142c52;background:#f5f7fb;line-height:1.45}
-.identity-brand{display:flex;align-items:center;gap:9px;font-size:32px;font-weight:750;letter-spacing:-.8px;line-height:1.2}
-.identity-brand svg{width:48px;height:42px;flex-shrink:0}.brand-orange{color:#ff792b}
+.identity-brand{display:flex;align-items:center;gap:12px;font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1.2}
+.identity-brand svg{width:52px;height:46px;flex-shrink:0}.brand-orange{color:#ff752d}
 .auth-story{background:linear-gradient(155deg,#061938,#102e60);color:#fff;position:relative;overflow:hidden;min-height:900px;padding:78px 9% 290px}
 .story-copy h1{font-size:clamp(34px,3.25vw,49px);line-height:1.18;letter-spacing:-.6px;margin:96px 0 60px;font-weight:750}
 .story-copy p{color:#c2d2ed;font-size:21px;line-height:1.2;margin:0}
