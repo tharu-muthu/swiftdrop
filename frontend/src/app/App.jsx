@@ -5,6 +5,8 @@ import { useAuth } from '../features/identity/AuthProvider.jsx';
 import LoginPage from '../features/identity/LoginPage.jsx';
 import AccountPage from '../features/identity/AccountPage.jsx';
 import AuthCompletePage from '../features/identity/AuthCompletePage.jsx';
+import BookingHomePage from '../features/booking/BookingHomePage.jsx';
+import BookingPlaceholder from '../features/booking/BookingPlaceholder.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -17,6 +19,11 @@ export default function App() {
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
-  if (auth.status === 'authenticated') return <AccountPage />;
+  if (auth.status === 'authenticated') {
+    if (['/booking', '/bookings/new', '/bookings', '/quote', '/tracking', '/receipts', '/help'].includes(path)) {
+      return path === '/booking' ? <BookingHomePage /> : <BookingPlaceholder path={path} />;
+    }
+    return <AccountPage />;
+  }
   return path === '/register' || path === '/' ? <RegisterPage /> : <LoginPage />;
 }
