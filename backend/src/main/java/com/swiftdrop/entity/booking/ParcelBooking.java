@@ -5,8 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.sql.Types;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
 
 /** M4 booking aggregate; delivery lifecycle is deliberately not represented here. */
@@ -37,6 +39,25 @@ public class ParcelBooking extends UuidEntity {
     @Column(name = "parcel_weight_grams", nullable = false, updatable = false)
     private int parcelWeightGrams;
 
+    @Column(name = "quoted_amount_minor", updatable = false)
+    private Integer quotedAmountMinor;
+
+    @JdbcTypeCode(Types.CHAR)
+    @Column(name = "currency_code", length = 3, updatable = false)
+    private String currencyCode;
+
+    @Column(name = "recipient_name", length = 120, updatable = false)
+    private String recipientName;
+
+    @Column(name = "recipient_phone", length = 32, updatable = false)
+    private String recipientPhone;
+
+    @Column(name = "pickup_city", length = 100, updatable = false)
+    private String pickupCity;
+
+    @Column(name = "delivery_city", length = 100, updatable = false)
+    private String deliveryCity;
+
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
@@ -51,6 +72,12 @@ public class ParcelBooking extends UuidEntity {
     public String getTrackingNumber() { return trackingNumber; }
     public String getBookingState() { return bookingState; }
     public String getReceiptState() { return receiptState; }
+    public String getRecipientName() { return recipientName; }
+    public String getRecipientPhone() { return recipientPhone; }
+    public String getPickupCity() { return pickupCity; }
+    public String getDeliveryCity() { return deliveryCity; }
+    public Integer getQuotedAmountMinor() { return quotedAmountMinor; }
+    public String getCurrencyCode() { return currencyCode; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }
