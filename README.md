@@ -188,7 +188,7 @@ FROM swiftdrop.flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-Expect successful V1 and V2 entries. Health reports **application liveness**; it
+Expect successful V1 through V4 entries. Health reports **application liveness**; it
 does not probe broker availability or assert that business integrations work.
 
 Useful commands:
@@ -330,8 +330,8 @@ automatically during startup, so choose your development branch before launching
 See [the identity schema guide](docs/identity/schema.md) for guard limits and exact
 environment loading; private files are preserved.
 
-Expected startup: Flyway applies/validates V1 and V2, Hibernate validates the identity
-tables, followed by `Started SwiftDropApplication`.
+Expected startup: Flyway applies/validates V1 through V4, Hibernate validates the
+identity and webhook tables, followed by `Started SwiftDropApplication`.
 Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
 `{"status":"UP","application":"swiftdrop"}`. Run the frontend as shown in 2B;
 it communicates only with the backend API and needs no Neon information.
@@ -418,7 +418,7 @@ Coordinate one ordered Flyway history, feature DTOs and service contracts. Keep
 business authorization in services as features arrive. The detailed v3 ER views
 are the design baseline; the implemented M1 model is in [the identity ER guide](docs/identity/schema.md).
 The standalone ER PNG has recorded conflicts. V2 is used by identity; coordinate
-V3 or the next free migration number before merging another schema change.
+V5 or the next free migration number before merging another schema change.
 
 The team still needs lecturer approval for nine rather than ten members, member
 names/IDs, deadline and hosting decisions. The assignment found beside this

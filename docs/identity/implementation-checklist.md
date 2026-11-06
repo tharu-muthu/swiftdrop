@@ -208,7 +208,7 @@ Indexes should cover normalized email, provider/subject, user roles, sessions by
 
 Schema workflow:
 
-1. Read all migrations and coordinate the next global number in the team PR. V1 and V2 now exist; coordinate V3 or the next free version before merging further changes.
+1. Read all migrations and coordinate the next global number in the team PR. V1 through V4 now exist; coordinate V5 or the next free version before merging further changes.
 2. Add an immutable SQL file to `backend/src/main/resources/db/migration/`. This folder is where schema changes belong; do not create a competing `schema.sql` or rename the migration folder for this task.
 3. Extend the existing `com.swiftdrop.entity.identity` mappings and add repositories under `com.swiftdrop.repository.identity` with feature behavior. Keep `ddl-auto: validate`.
 4. Run fresh-database and upgrade/restart tests. Confirm Flyway's direct connection and JPA's runtime connection target the same database and `swiftdrop` schema.

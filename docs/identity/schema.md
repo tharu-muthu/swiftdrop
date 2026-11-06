@@ -160,13 +160,17 @@ Exact command, from the repository root in PowerShell:
 
 The Maven plugin sets the application's working directory to `backend/`. `application.yaml` imports `../.env[.properties]`, then `./.env[.properties]` before creating connections. Explicit placeholders map the shared uppercase keys into both datasource and Flyway properties. Backend values override matching root file values; OS variables/command-line properties have higher precedence. Files use Java-properties syntax (`KEY=value`, no shell `export`, no surrounding quotes; escape a literal backslash as `\\`). Maven does not automatically source `.env` as a shell script.
 
-Root `.env` still configures local RabbitMQ/PostgreSQL; `backend/.env` contains private Neon credentials; frontend configuration contains no database credentials. Real environment files and keys are Git-ignored and excluded from Docker contexts. The local Compose option still uses its PostgreSQL service and supplies two separate connections to that same local database. See [README](../../README.md) for infrastructure startup and switching environments.
+Root `.env` configures local RabbitMQ and application ports; `backend/.env` contains private Neon credentials; frontend configuration contains no database credentials. Real environment files and keys are Git-ignored and excluded from Docker contexts. Compose connects directly to the selected Neon branch. Automated integration tests use disposable Testcontainers databases. See [README](../../README.md) for infrastructure startup.
 
-Normal startup applies V1/V2 if pending and validates Hibernate before serving health. It **will migrate the selected branch**; check your private target before starting. This task's automated tests use disposable PostgreSQL only, never that branch.
+Normal startup applies pending migrations through the current shared version and validates Hibernate before serving health. It **will migrate the selected branch**; check your private target before starting. This task's automated tests use disposable PostgreSQL only, never that branch.
 
 ## Migration workflow and verification
 
-V2 is the next number in this checkout. Coordinate it with the team before merging; if another PR takes V2 first, resolve the numbering before either is shared/applied. Never renumber or edit a migration already applied to a shared environment. Add V3 or the next available version for subsequent changes. No `clean`, reset, `baselineOnMigrate`, schema auto-update or applied-V1 modification is used here.
+The M1 history is V1 and V2. The current shared chain continues through V4 for
+booking and webhook persistence. Never renumber or edit a migration already
+applied to a shared environment. Add V5 or the next available version for later
+changes. No `clean`, reset, `baselineOnMigrate`, schema auto-update or applied-V1
+modification is used here.
 
 Run from the repository root with Java 21 and Docker Desktop's Linux engine available:
 
