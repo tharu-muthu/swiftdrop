@@ -3,19 +3,10 @@ import { navigate } from '../../app/navigation.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import { loadBookingDashboard } from './bookingApi.js';
 import heroVan from '../../assets/booking-hero-van.png';
+import BookingFrame from './BookingFrame.jsx';
 import './booking.css';
 import './booking-validation.css';
-
-const navItems = [
-  ['⌂', 'Dashboard', '/booking'], ['□', 'Book Parcel', '/bookings/new'], ['▣', 'My Bookings', '/bookings'],
-  ['⌖', 'Track Parcel', '/tracking'], ['▤', 'Receipts', '/receipts'], ['?', 'Help', '/help'],
-];
-
-function BrandMark({ compact = false }) {
-  return <div className={compact ? 'booking-mark compact-mark' : 'booking-mark'} aria-label="SwiftDrop">
-    <span className="cube-mark" aria-hidden="true">◇</span>{!compact && <span>SwiftDrop</span>}
-  </div>;
-}
+import './booking-brand-theme.css';
 
 function ActionCard({ icon, tone, title, description, to }) {
   return <button className="quick-action" onClick={() => navigate(to)}>
@@ -32,7 +23,7 @@ function StatCard({ icon, tone, label, value, hint }) {
 }
 
 export default function BookingHomePage() {
-  const { user, client } = useAuth();
+  const { client } = useAuth();
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -56,20 +47,7 @@ export default function BookingHomePage() {
     navigate(`/tracking${number ? `?number=${encodeURIComponent(number)}` : ''}`);
   }
 
-  return <div className="booking-shell">
-    <aside className="booking-sidebar">
-      <BrandMark />
-      <nav aria-label="Booking navigation">{navItems.map(([icon, label, to]) => <button key={to}
-        className={to === '/booking' ? 'side-link active' : 'side-link'} onClick={() => navigate(to)}>
-        <span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
-      <div className="sidebar-parcels" aria-hidden="true"><i /><i /><i /></div>
-    </aside>
-    <main className="booking-main">
-      <header className="booking-header">
-        <div className="header-title"><BrandMark compact /><span><strong>Booking Home</strong><small>M4 Parcel Booking Module</small></span></div>
-        <div className="header-user"><span className="bell" aria-label="Notifications">♧</span><span className="avatar">{user.fullName?.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
-          <span className="user-name"><strong>{user.fullName}</strong><small>SwiftDrop customer</small></span><button className="account-menu" onClick={() => navigate('/account')} aria-label="Open account">⌄</button></div>
-      </header>
+  return <BookingFrame activePath="/booking" headerTitle="Booking Home">
       <section className="booking-hero">
         <img src={heroVan} alt="Delivery van and parcels on a sunny campus street" />
         <div className="hero-overlay"><p>Welcome to <b>SwiftDrop</b></p><h1>Book a Parcel</h1><span>Create parcel bookings, manage shipments, track their status, and access receipts — all in one place.</span>
@@ -97,6 +75,5 @@ export default function BookingHomePage() {
           <button>Track Parcel</button></form>
         {trackingError && <p id="tracking-error" className="tracking-error" role="alert">{trackingError}</p>}
       </section>
-    </main>
-  </div>;
+  </BookingFrame>;
 }
