@@ -53,6 +53,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings/dashboard").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings", "/api/v1/bookings/*").authenticated()
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
