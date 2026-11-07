@@ -11,6 +11,7 @@ import BookingFormPage from '../features/booking/BookingFormPage.jsx';
 import MyBookingsPage from '../features/booking/MyBookingsPage.jsx';
 import BookingDetailsPage from '../features/booking/BookingDetailsPage.jsx';
 import CourierDashboardPage from '../features/execution/CourierDashboardPage.jsx';
+import PublicTrackingPage from '../features/tracking/PublicTrackingPage.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -22,11 +23,17 @@ export default function App() {
   }, []);
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
+  if (path === '/tracking' || path.startsWith('/tracking/')) {
+    const trackingNumber = path.startsWith('/tracking/')
+      ? decodeURIComponent(path.slice('/tracking/'.length))
+      : '';
+    return <PublicTrackingPage trackingNumber={trackingNumber} />;
+  }
   if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
   if (auth.status === 'authenticated') {
     if (path === '/courier' && auth.user.roles.includes('COURIER')) return <CourierDashboardPage />;
     if (path.startsWith('/bookings/') && path !== '/bookings/new') return <BookingDetailsPage bookingId={path.split('/')[2]} />;
-    if (['/booking', '/bookings/new', '/bookings', '/quote', '/tracking', '/receipts', '/help'].includes(path)) {
+    if (['/booking', '/bookings/new', '/bookings', '/quote', '/receipts', '/help'].includes(path)) {
       if (path === '/booking') return <BookingHomePage />;
       if (path === '/bookings/new') return <BookingFormPage />;
       return path === '/bookings' ? <MyBookingsPage /> : <BookingPlaceholder path={path} />;
