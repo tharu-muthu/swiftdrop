@@ -43,7 +43,7 @@ public class ParcelBooking extends UuidEntity {
     private Integer quotedAmountMinor;
 
     @JdbcTypeCode(Types.CHAR)
-    @Column(name = "currency_code", length = 3, updatable = false)
+    @Column(name = "currency_code", columnDefinition = "char(3)", updatable = false)
     private String currencyCode;
 
     @Column(name = "recipient_name", length = 120, updatable = false)
