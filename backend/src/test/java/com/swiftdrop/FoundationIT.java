@@ -65,8 +65,8 @@ class FoundationIT {
             assertThat(runtime.getCatalog()).isEqualTo(migration.getCatalog());
         }
         assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
-        // Startup runs Hibernate validation across identity, booking, and webhook entities.
-        assertThat(entities.getMetamodel().getEntities()).hasSize(12);
+        // Startup validates identity, booking, webhook, merchant, and execution entities.
+        assertThat(entities.getMetamodel().getEntities()).hasSize(19);
         var entityManager = entities.createEntityManager();
         try {
             assertThat(entityManager.createQuery("select r.name from Role r order by r.name", String.class).getResultList())

@@ -58,7 +58,7 @@ class IdentitySchemaIT {
             execute(c, "INSERT INTO swiftdrop.preservation_probe VALUES (?, 'preserve me')", UUID.randomUUID());
         }
         var v2 = migration(url, null);
-        assertThat(v2.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(v2.migrate().migrationsExecuted).isEqualTo(3);
         v2.validate();
         assertThat(v2.migrate().migrationsExecuted).isZero();
         try (var c = DriverManager.getConnection(url, POSTGRES.getUsername(), POSTGRES.getPassword())) {
