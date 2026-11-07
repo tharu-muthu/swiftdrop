@@ -72,6 +72,10 @@ public class ParcelBooking extends UuidEntity {
     public String getTrackingNumber() { return trackingNumber; }
     public String getBookingState() { return bookingState; }
     public String getReceiptState() { return receiptState; }
+    public String getPickupAddressSnapshot() { return pickupAddressSnapshot; }
+    public String getDropoffAddressSnapshot() { return dropoffAddressSnapshot; }
+    public String getParcelDescription() { return parcelDescription; }
+    public int getParcelWeightGrams() { return parcelWeightGrams; }
     public String getRecipientName() { return recipientName; }
     public String getRecipientPhone() { return recipientPhone; }
     public String getPickupCity() { return pickupCity; }
