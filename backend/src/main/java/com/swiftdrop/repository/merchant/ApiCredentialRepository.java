@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ApiCredentialRepository extends JpaRepository<ApiCredential, UUID> {
     List<ApiCredential> findByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
     Optional<ApiCredential> findByIdAndMerchantId(UUID id, UUID merchantId);
+    Optional<ApiCredential> findByKeyPrefix(String keyPrefix);
     long countByMerchantIdAndRevokedAtIsNull(UUID merchantId);
     boolean existsByKeyPrefix(String keyPrefix);
 }

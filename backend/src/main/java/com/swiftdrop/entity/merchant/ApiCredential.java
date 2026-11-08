@@ -5,7 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
@@ -51,6 +54,15 @@ public class ApiCredential extends UuidEntity {
         if (revokedAt == null) {
             revokedAt = when;
         }
+    }
+
+    public void markUsed(Instant when) { this.lastUsedAt = when; }
+
+    public Set<String> scopeSet() {
+        return Arrays.stream(scopes.split(","))
+                .map(String::trim)
+                .filter(scope -> !scope.isEmpty())
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public UUID getMerchantId() { return merchantId; }
