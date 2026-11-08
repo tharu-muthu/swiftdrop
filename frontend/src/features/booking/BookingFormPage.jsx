@@ -48,6 +48,45 @@ function TextField({ name, label, type, placeholder, draft, errors, update }) {
     {errors[name] && <small id={`${id}-error`} className="field-error">{errors[name]}</small>}</div>;
 }
 
+function addressLine(address, city, postalCode) {
+  return [address, city, postalCode].filter(Boolean).join(', ');
+}
+
+function QuoteReadiness({ draft }) {
+  const quoteRequest = createQuotePreparationRequest(draft);
+  const parcelSize = quoteRequest.parcel.size.replaceAll('_', ' ').toLowerCase();
+
+  return <section className="quote-ready" aria-labelledby="quote-ready-title">
+    <div className="quote-ready-icon" aria-hidden="true">◇</div>
+    <p className="quote-eyebrow">Booking details reviewed</p>
+    <h3 id="quote-ready-title">Ready to request a delivery quote</h3>
+    <p>M3 owns delivery-rate calculation and the quotation API. Your booking has not been created and no payment will be requested until M3 returns an accepted quote.</p>
+    <div className="booking-review" aria-label="Booking details for quote">
+      <section>
+        <h4>Pickup</h4>
+        <strong>{quoteRequest.pickup.fullName}</strong>
+        <span>{quoteRequest.pickup.contactNumber}</span>
+        <span>{addressLine(quoteRequest.pickup.address, quoteRequest.pickup.city, quoteRequest.pickup.postalCode)}</span>
+      </section>
+      <section>
+        <h4>Recipient</h4>
+        <strong>{quoteRequest.recipient.fullName}</strong>
+        <span>{quoteRequest.recipient.contactNumber}</span>
+        <span>{addressLine(quoteRequest.recipient.address, quoteRequest.recipient.city, quoteRequest.recipient.postalCode)}</span>
+      </section>
+      <section className="review-parcel">
+        <h4>Parcel</h4>
+        <strong>{quoteRequest.parcel.weightGrams.toLocaleString()} g · {parcelSize}</strong>
+        <span>{quoteRequest.parcel.description}</span>
+      </section>
+    </div>
+    <div className="quote-integration-status" id="quote-service-note" role="status">
+      <strong>Quotation service pending</strong>
+      <span>The validated request is ready for the M3 integration. A booking confirmation will be available only after M3 returns an accepted quote.</span>
+    </div>
+  </section>;
+}
+
 export default function BookingFormPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
@@ -76,8 +115,8 @@ export default function BookingFormPage() {
       {step === 3 && <div className="booking-field-grid"><TextField name="weightGrams" label="Weight in grams" type="number" placeholder="e.g. 1500" draft={draft} errors={errors} update={update} />
         <div className="booking-field"><label htmlFor="booking-parcelSize">Parcel size <b>*</b></label><select id="booking-parcelSize" value={draft.parcelSize} onChange={event => update('parcelSize', event.target.value)} aria-invalid={Boolean(errors.parcelSize)}><option value="">Select size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option><option value="EXTRA_LARGE">Extra large</option></select>{errors.parcelSize && <small className="field-error">{errors.parcelSize}</small>}</div>
         <div className="booking-field field-wide"><label htmlFor="booking-description">Parcel description <b>*</b></label><textarea id="booking-description" value={draft.description} maxLength="200" placeholder="Describe parcel contents (no prohibited items)." onChange={event => update('description', event.target.value)} aria-invalid={Boolean(errors.description)} />{errors.description && <small className="field-error">{errors.description}</small>}</div></div>}
-      {step === 4 && <div className="quote-ready"><span>◇</span><h3>Ready for a delivery quote</h3><p>Your validated booking details have been prepared. M3 owns rate calculation and the quotation API, so no delivery price is shown until that integration is available.</p><dl><dt>Route</dt><dd>{draft.pickupCity} → {draft.deliveryCity}</dd><dt>Parcel</dt><dd>{draft.weightGrams} g · {draft.parcelSize.replaceAll('_', ' ').toLowerCase()}</dd></dl><input type="hidden" value={JSON.stringify(createQuotePreparationRequest(draft))} readOnly /></div>}
-      <div className="form-actions"><button type="button" className="cancel-booking" onClick={() => navigate('/booking')}>← Cancel</button><span />{step > 1 && <button type="button" className="back-step" onClick={back}>← Back</button>}{step < 4 ? <button className="next-step">Next: {steps[step][0]} →</button> : <button type="button" className="next-step" disabled>Quote service pending</button>}</div>
+      {step === 4 && <QuoteReadiness draft={draft} />}
+      <div className="form-actions"><button type="button" className="cancel-booking" onClick={() => navigate('/booking')}>← Cancel</button><span />{step > 1 && <button type="button" className="back-step" onClick={back}>← Back</button>}{step < 4 ? <button className="next-step">Next: {steps[step][0]} →</button> : <button type="button" className="next-step" disabled aria-describedby="quote-service-note">Quote service pending</button>}</div>
     </form>
     <aside className="booking-steps-card"><h2>▱ Booking Steps</h2><ol>{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'active-step' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol><div className="quick-tips"><h3>☼ Quick Tips</h3><ul><li>Use a reachable contact number.</li><li>Provide a complete pickup address.</li><li>Check all details before getting a quote.</li></ul></div></aside>
     </div>
