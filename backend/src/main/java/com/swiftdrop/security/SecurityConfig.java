@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/tracking/customer/{trackingNumber}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/registration").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/registration").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/api-keys").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/merchant/api-keys", "/api/v1/merchant/api-keys/*/revoke").authenticated()
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
