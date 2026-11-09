@@ -10,8 +10,12 @@ import com.swiftdrop.entity.execution.ParcelStatusHistory;
 import com.swiftdrop.repository.tracking.TrackingBookingRepository;
 import com.swiftdrop.repository.tracking.TrackingLifecycleRepository;
 import com.swiftdrop.repository.tracking.TrackingStatusHistoryRepository;
+import com.swiftdrop.service.identity.IdentityAccountService;
+import com.swiftdrop.dto.identity.IdentityRole;
+import com.swiftdrop.security.IdentityContext;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -20,7 +24,8 @@ class TrackingServiceTest {
     private final TrackingBookingRepository bookings = mock(TrackingBookingRepository.class);
     private final TrackingLifecycleRepository lifecycles = mock(TrackingLifecycleRepository.class);
     private final TrackingStatusHistoryRepository history = mock(TrackingStatusHistoryRepository.class);
-    private final TrackingService service = new TrackingService(bookings, lifecycles, history);
+    private final IdentityAccountService identities = mock(IdentityAccountService.class);
+    private final TrackingService service = new TrackingService(bookings, lifecycles, history, identities);
 
     @Test
     void returnsSanitizedPublicTimelineForKnownTrackingNumber() {
@@ -81,5 +86,46 @@ class TrackingServiceTest {
     void ignoresBlankTrackingNumbersWithoutQueryingRepositories() {
         assertThat(service.publicTracking("  ")).isEmpty();
         verifyNoInteractions(bookings, lifecycles, history);
+    }
+
+    @Test
+    void customerTrackingReturnsExtraDetailsOnlyForTheCurrentCustomer() {
+        var customerId = UUID.randomUUID();
+        var booking = mock(ParcelBooking.class);
+        var lifecycle = mock(ParcelLifecycle.class);
+        var bookingId = UUID.randomUUID();
+        var lifecycleId = UUID.randomUUID();
+        when(identities.requireCurrentRole(IdentityRole.CUSTOMER))
+                .thenReturn(new IdentityContext(customerId, UUID.randomUUID(), Set.of("CUSTOMER"), 1));
+        when(booking.getId()).thenReturn(bookingId);
+        when(booking.getCustomerId()).thenReturn(customerId);
+        when(booking.getTrackingNumber()).thenReturn("SD-1003");
+        when(booking.getPickupCity()).thenReturn("Colombo");
+        when(booking.getDeliveryCity()).thenReturn("Kandy");
+        when(booking.getRecipientName()).thenReturn("Recipient");
+        when(lifecycle.getId()).thenReturn(lifecycleId);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.OUT_FOR_DELIVERY);
+        when(bookings.findByTrackingNumber("SD-1003")).thenReturn(Optional.of(booking));
+        when(lifecycles.findByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
+        when(history.findAllByLifecycleIdOrderBySequenceNoAsc(lifecycleId)).thenReturn(List.of());
+
+        var response = service.customerTracking("SD-1003").orElseThrow();
+
+        assertThat(response.pickupCity()).isEqualTo("Colombo");
+        assertThat(response.deliveryCity()).isEqualTo("Kandy");
+        assertThat(response.recipientName()).isEqualTo("Recipient");
+    }
+
+    @Test
+    void customerTrackingHidesParcelsOwnedByAnotherCustomer() {
+        var customerId = UUID.randomUUID();
+        var booking = mock(ParcelBooking.class);
+        when(identities.requireCurrentRole(IdentityRole.CUSTOMER))
+                .thenReturn(new IdentityContext(customerId, UUID.randomUUID(), Set.of("CUSTOMER"), 1));
+        when(booking.getCustomerId()).thenReturn(UUID.randomUUID());
+        when(bookings.findByTrackingNumber("SD-1004")).thenReturn(Optional.of(booking));
+
+        assertThat(service.customerTracking("SD-1004")).isEmpty();
+        verifyNoInteractions(lifecycles, history);
     }
 }
