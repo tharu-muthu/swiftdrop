@@ -1,0 +1,328 @@
+openapi: 3.0.3
+info:
+  title: SwiftDrop merchant API (M2)
+  version: 0.1.0
+  description: |
+    Merchant onboarding, API keys and partner key authentication.
+    Quote and order creation (`/merchant/quotes`, `/merchant/orders`) are reserved and not implemented yet.
+    The merchant is always derived from the session or the API key, never from a request body.
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Local development
+security: []
+tags:
+  - name: Owner
+  - name: Admin
+  - name: Partner
+
+paths:
+  /merchant/registration:
+    post:
+      tags: [Owner]
+      summary: Register a business (starts as PENDING)
+      security: [{ bearerAuth: [] }]
+      description: Requires the CUSTOMER role and the CSRF header used by the identity contract (see identity-sessions.md).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MerchantRegistrationRequest' }
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantResponse' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: A business is already registered for this account (MERCHANT_ALREADY_REGISTERED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    get:
+      tags: [Owner]
+      summary: View my application
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The signed-in user's own application
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: The user has not applied
+
+  /merchant/api-keys:
+    post:
+      tags: [Owner]
+      summary: Create an API key (APPROVED business only)
+      security: [{ bearerAuth: [] }]
+      description: The full key is returned once and cannot be shown again. At most 5 keys can be active.
+      responses:
+        '201':
+          description: Key created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyCreatedResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The business is not approved (MERCHANT_NOT_APPROVED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: No business registered (MERCHANT_NOT_FOUND)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '409':
+          description: Active key limit reached (API_KEY_LIMIT_REACHED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    get:
+      tags: [Owner]
+      summary: List my API keys (never includes secrets)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Keys, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ApiKeySummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No business registered (MERCHANT_NOT_FOUND)
+
+  /merchant/api-keys/{id}/revoke:
+    post:
+      tags: [Owner]
+      summary: Revoke one of my API keys (takes effect on the next request)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Key revoked (revoking twice keeps the first revocation time)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeySummary' }
+        '400':
+          description: Invalid key id
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Key not found, including keys that belong to another merchant (API_KEY_NOT_FOUND)
+
+  /admin/merchants:
+    get:
+      tags: [Admin]
+      summary: List applications (DISPATCHER_ADMIN)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, required: false, schema: { $ref: '#/components/schemas/ApprovalStatus' } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses:
+        '200':
+          description: One page, oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantPageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/merchants/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a pending application (DISPATCHER_ADMIN)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantAdminResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Application not found (MERCHANT_NOT_FOUND)
+        '409':
+          description: Already decided (MERCHANT_ALREADY_DECIDED)
+
+  /admin/merchants/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a pending application with a reason (DISPATCHER_ADMIN)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MerchantRejectionRequest' }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantAdminResponse' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Application not found (MERCHANT_NOT_FOUND)
+        '409':
+          description: Already decided (MERCHANT_ALREADY_DECIDED)
+
+  /merchant/verify:
+    get:
+      tags: [Partner]
+      summary: Check that an API key works
+      security: [{ apiKeyAuth: [] }]
+      responses:
+        '200':
+          description: The business and scopes the key carries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiKeyVerificationResponse' }
+        '401':
+          description: Missing, malformed, wrong or revoked key (INVALID_API_KEY)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '403':
+          description: The business is not approved (MERCHANT_NOT_APPROVED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '429':
+          description: Rate limited (RATE_LIMITED). Wait for Retry-After seconds.
+          headers:
+            Retry-After: { schema: { type: integer } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Application access JWT from the identity module.
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "Merchant API key, format sdk_<10 hex>.<43 url-safe characters>. Shown once at creation."
+
+  responses:
+    ValidationFailed:
+      description: Validation failed (VALIDATION_FAILED)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Unauthorized:
+      description: Authentication required (UNAUTHORIZED)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Forbidden:
+      description: Access denied (FORBIDDEN)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+
+  schemas:
+    ApprovalStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, SUSPENDED]
+    ApiError:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        correlationId: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    MerchantRegistrationRequest:
+      type: object
+      required: [businessName, contactEmail]
+      properties:
+        businessName: { type: string, maxLength: 150 }
+        contactEmail: { type: string, format: email, maxLength: 254 }
+        contactPhone: { type: string, maxLength: 30, description: Digits, spaces, plus, brackets and hyphens only }
+        businessAddress: { type: string, maxLength: 300 }
+    MerchantResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        businessName: { type: string }
+        contactEmail: { type: string }
+        contactPhone: { type: string, nullable: true }
+        businessAddress: { type: string, nullable: true }
+        approvalStatus: { $ref: '#/components/schemas/ApprovalStatus' }
+        reviewReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    MerchantAdminResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ownerUserId: { type: string, format: uuid }
+        businessName: { type: string }
+        contactEmail: { type: string }
+        contactPhone: { type: string, nullable: true }
+        businessAddress: { type: string, nullable: true }
+        approvalStatus: { $ref: '#/components/schemas/ApprovalStatus' }
+        reviewReason: { type: string, nullable: true }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    MerchantPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MerchantAdminResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+    MerchantRejectionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, maxLength: 500 }
+    ApiKeySummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        keyPrefix: { type: string, example: sdk_0123456789 }
+        scopes: { type: string, example: 'quote,order' }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        active: { type: boolean }
+    ApiKeyCreatedResponse:
+      type: object
+      properties:
+        credential: { $ref: '#/components/schemas/ApiKeySummary' }
+        apiKey: { type: string, description: The full key. Shown once. }
+        notice: { type: string }
+    ApiKeyVerificationResponse:
+      type: object
+      properties:
+        merchantId: { type: string, format: uuid }
+        businessName: { type: string }
+        scopes:
+          type: array
+          items: { type: string }
