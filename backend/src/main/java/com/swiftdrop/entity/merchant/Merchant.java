@@ -68,7 +68,21 @@ public class Merchant extends UuidEntity {
         merchant.approvalStatus = MerchantApprovalStatus.PENDING;
         return merchant;
     }
+    public boolean isPending() { return approvalStatus == MerchantApprovalStatus.PENDING; }
 
+    public void approve(UUID reviewer, Instant when) {
+        this.approvalStatus = MerchantApprovalStatus.APPROVED;
+        this.reviewReason = null;
+        this.reviewedBy = reviewer;
+        this.reviewedAt = when;
+    }
+
+    public void reject(UUID reviewer, String reason, Instant when) {
+        this.approvalStatus = MerchantApprovalStatus.REJECTED;
+        this.reviewReason = reason;
+        this.reviewedBy = reviewer;
+        this.reviewedAt = when;
+    }
     public UUID getOwnerUserId() { return ownerUserId; }
     public String getBusinessName() { return businessName; }
     public String getContactEmail() { return contactEmail; }
