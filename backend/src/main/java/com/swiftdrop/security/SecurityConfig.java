@@ -60,6 +60,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/registration").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/api-keys").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/api-keys", "/api/v1/merchant/api-keys/*/revoke").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/webhooks", "/api/v1/merchant/webhooks/*/deliveries").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/merchant/webhooks", "/api/v1/merchant/webhooks/*/rotate-secret",
+                                "/api/v1/merchant/webhooks/*/test").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/webhooks/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").authenticated()
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)

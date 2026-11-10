@@ -208,7 +208,7 @@ Indexes should cover normalized email, provider/subject, user roles, sessions by
 
 Schema workflow:
 
-1. Read all migrations and coordinate the next global number in the team PR. V1 through V4 now exist; coordinate V5 or the next free version before merging further changes.
+1. Read all migrations and coordinate the next global number in the team PR. V1 through V7 now exist. V8 is already reserved and must not be reused. Coordinate the next available version before merging further changes.
 2. Add an immutable SQL file to `backend/src/main/resources/db/migration/`. This folder is where schema changes belong; do not create a competing `schema.sql` or rename the migration folder for this task.
 3. Extend the existing `com.swiftdrop.entity.identity` mappings and add repositories under `com.swiftdrop.repository.identity` with feature behavior. Keep `ddl-auto: validate`.
 4. Run fresh-database and upgrade/restart tests. Confirm Flyway's direct connection and JPA's runtime connection target the same database and `swiftdrop` schema.
@@ -340,7 +340,7 @@ curl.exe -i http://127.0.0.1:8081/api/v1/me
 
 **Today:** both health requests should return `200` and `{"status":"UP","application":"swiftdrop"}`. React shows registration at `/register` and “Backend connected” at `/foundation`. `/me` should return `401`, because login/profile access is not implemented. Seeing that denial is not a failed login feature. The health response alone does not prove you selected the intended Neon branch; inspect non-secret startup/Flyway information and your branch configuration.
 
-For the existing local-database option, follow README section 2B, start `postgres rabbitmq` using the same Compose files, and select the local `POSTGRES_*` configuration instead of a Neon override. The full container route remains `docker compose up --build` with frontend at `http://localhost:8080`; see the verification limitations below.
+For the current Docker route, follow README section 2A and use the selected Neon branch in `backend/.env`. Compose starts RabbitMQ and connects the backend to Neon. The full container route remains `docker compose up --build` with frontend at `http://localhost:8080`; see the verification limitations below.
 
 ### Historical verification record for the planning step
 
