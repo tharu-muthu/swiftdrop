@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = {RegistrationController.class, SessionController.class}, properties = {
+        "swiftdrop.google.enabled=false",
         "swiftdrop.auth.localhost-development=false", "swiftdrop.auth.allowed-origins=https://app.test",
         "swiftdrop.auth.source-login-limit=1" })
 @Import({SecurityConfig.class, JwtConfig.class, AuthRateLimiter.class})
