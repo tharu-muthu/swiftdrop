@@ -62,3 +62,23 @@ M9 accepts a trusted merchant ownership result from M2 and a trusted committed
 event from M6. A browser request never supplies the merchant ID used for
 authorization. A delivery is created only for an approved merchant's active
 subscription that is subscribed to the event type.
+
+## Merchant settings API
+
+The signed-in merchant owner uses the following CSRF-protected browser routes.
+The backend resolves the approved merchant from the current identity. Request
+bodies never contain a merchant ID.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/merchant/webhooks` | List the current merchant's subscriptions |
+| POST | `/api/v1/merchant/webhooks` | Create a subscription and return its secret once |
+| PATCH | `/api/v1/merchant/webhooks/{id}` | Update callback URL, event types, or active state |
+| DELETE | `/api/v1/merchant/webhooks/{id}` | Deactivate a subscription |
+| POST | `/api/v1/merchant/webhooks/{id}/rotate-secret` | Replace the secret and return the new value once |
+| GET | `/api/v1/merchant/webhooks/{id}/deliveries` | Read that subscription's delivery history |
+| POST | `/api/v1/merchant/webhooks/{id}/test` | Send a signed `webhook.test` callback |
+
+Secret values are never returned by list, update, delete, or delivery-log
+responses. A subscription ID from another merchant returns the same safe not-found
+result as an absent subscription.

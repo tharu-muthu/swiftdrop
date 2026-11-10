@@ -166,10 +166,10 @@ Normal startup applies pending migrations through the current shared version and
 
 ## Migration workflow and verification
 
-The M1 history is V1 and V2. The current shared chain continues through V4 for
-booking and webhook persistence. Never renumber or edit a migration already
-applied to a shared environment. Add V5 or the next available version for later
-changes. No `clean`, reset, `baselineOnMigrate`, schema auto-update or applied-V1
+The M1 history is V1 and V2. The current shared chain continues through V7 for
+booking, merchant, execution, and webhook persistence. Never renumber or edit a
+migration already applied to a shared environment. V8 is already reserved, so
+coordinate the next available version for later changes. No `clean`, reset, `baselineOnMigrate`, schema auto-update or applied-V1
 modification is used here.
 
 Run from the repository root with Java 21 and Docker Desktop's Linux engine available:
@@ -179,7 +179,7 @@ Run from the repository root with Java 21 and Docker Desktop's Linux engine avai
 git diff --check
 ```
 
-`IdentitySchemaIT` checks fresh migration, V1 upgrade with preserved unrelated data, repeat migration without reseeding, constraints, concurrent rotation, revocation queries, reset consumption, audit protection and timezone handling. `FoundationIT` starts the application against isolated PostgreSQL/RabbitMQ, validates all eight JPA entities and checks health/access rules. It overrides **both** connections to avoid private Neon settings. `EnvironmentLoadingTest` launches a configuration-only JVM in a temporary backend directory, using synthetic root/backend `.env` files and the actual application YAML; it proves file precedence and credential binding without any database access. `MigrationConnectionPolicyTest` checks direct endpoint derivation and safe rejection of mismatches/embedded secrets.
+`IdentitySchemaIT` checks fresh migration, V1 upgrade with preserved unrelated data, repeat migration without reseeding, constraints, concurrent rotation, revocation queries, reset consumption, audit protection and timezone handling. `FoundationIT` starts the application against isolated PostgreSQL/RabbitMQ, validates the current JPA entity model and checks health/access rules. It overrides **both** connections to avoid private Neon settings. `EnvironmentLoadingTest` launches a configuration-only JVM in a temporary backend directory, using synthetic root/backend `.env` files and the actual application YAML; it proves file precedence and credential binding without any database access. `MigrationConnectionPolicyTest` checks direct endpoint derivation and safe rejection of mismatches/embedded secrets.
 
 See [verification record](../verification.md) for observed results and checks not run. Live Neon reachability/credentials are separate from local configuration and migration test results.
 

@@ -33,8 +33,8 @@ coming soon; the login wording applies to all roles.
 Maven still anchors startup to backend/. Spring imports root `.env` then
 `backend/.env`; OS variables override those files. Runtime and direct Flyway
 connections still target the same database/Neon branch. The helper does not
-change database settings or connect to Neon. For local PostgreSQL, use the
-existing README section 2B and start `postgres rabbitmq` instead.
+change database settings or connect to Neon. Compose provides RabbitMQ only, and
+the backend uses the selected Neon branch for PostgreSQL.
 
 | Shared environment variable | Value / purpose |
 | --- | --- |

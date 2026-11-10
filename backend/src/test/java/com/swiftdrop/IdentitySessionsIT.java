@@ -122,6 +122,45 @@ class IdentitySessionsIT {
         var headers = new HttpHeaders(); headers.setBearerAuth(token);
         return http.exchange("/api/v1/me", HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
+    ResponseEntity<String> patchProfile(String token, Object body) {
+        var headers = csrf(null);
+        if (token != null) headers.setBearerAuth(token);
+        return http.exchange("/api/v1/me", HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class);
+    }
+
+    @Test void profileUpdateIsScopedValidatedAndVersioned() throws Exception {
+        String email = account();
+        String token = access(login(email));
+        JsonNode before = json.readTree(me(token).getBody());
+        long version = before.get("version").asLong();
+        assertThat(before.get("passwordConfigured").asBoolean()).isTrue();
+        assertThat(before.get("googleConnected").asBoolean()).isFalse();
+        assertThat(patchProfile(null, Map.of("fullName", "Wrong", "version", version)).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(patchProfile(token, Map.of("fullName", " ", "version", version)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(patchProfile(token, Map.of("fullName", "Changed", "phone", "123", "version", version)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        var injected = new HashMap<String, Object>(Map.of("fullName", "Changed", "version", version, "roles", List.of("DISPATCHER_ADMIN")));
+        assertThat(patchProfile(token, injected).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(patchProfile(token, Map.of("fullName", "Changed", "version", version, "email", "other@example.test")).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        var valid = new HashMap<String, Object>(Map.of("fullName", "  Updated Name  ", "phone", "+94 77-1234567", "version", version));
+        var updated = patchProfile(token, valid);
+        assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode profile = json.readTree(updated.getBody());
+        assertThat(profile.get("fullName").asText()).isEqualTo("Updated Name");
+        assertThat(profile.get("phone").asText()).isEqualTo("+94771234567");
+        assertThat(profile.get("version").asLong()).isGreaterThan(version);
+        assertThat(profile.get("email").asText()).isEqualTo(email);
+        assertThat(profile.toString()).doesNotContain("passwordHash", "authorizationVersion");
+        assertThat(patchProfile(token, valid).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(sql.queryForObject("select full_name from swiftdrop.users where email=?", String.class, email)).isEqualTo("Updated Name");
+        var clear = new HashMap<String, Object>(Map.of("fullName", "Updated Name", "version", profile.get("version").asLong()));
+        clear.put("phone", null);
+        assertThat(patchProfile(token, clear).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(me(token).getBody()).get("phone").isNull()).isTrue();
+    }
 
     @Test void loginSetsSafeCookieAndReturnsSafeProfileAndClaims(CapturedOutput logs) throws Exception {
         String email = account(); var response = login(email);
@@ -137,7 +176,7 @@ class IdentitySessionsIT {
         assertThat(jwt.getAudience()).contains(settings.audience());
         var profile = me(access(response));
         assertThat(profile.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(profile.getBody()).contains(email, "CUSTOMER", "Session Test").doesNotContain("password", "token", "authorizationVersion");
+        assertThat(profile.getBody()).contains(email, "CUSTOMER", "Session Test").doesNotContain("passwordHash", "token", "authorizationVersion");
         String raw = cookie(response).split("=", 2)[1];
         String hash = sql.queryForObject("select token_hash from swiftdrop.refresh_tokens where session_id=?", String.class, session(response));
         assertThat(hash).isEqualTo(TokenSecrets.hash(raw)).isNotEqualTo(raw);

@@ -41,9 +41,8 @@ is still unimplemented. The original health/retry page remains at `/foundation`.
 Vite forwards `/api` to `http://localhost:8081` by default. If using a custom
 backend port, set only `BACKEND_URL` in private `frontend/.env` and restart Vite.
 
-For the existing local PostgreSQL option, use README section 2B: start
-`postgres rabbitmq`, select the root `POSTGRES_*` values and remove/disable
-conflicting private Neon/shell overrides. Full Compose remains available at
+Use the selected Neon branch in `backend/.env` and start RabbitMQ through Compose
+for Docker or local Java development. Full Compose remains available at
 `http://localhost:8080/register`; its image-build verification limit is recorded
 in [verification](../verification.md). No new credentials are required for IAM-01.
 
