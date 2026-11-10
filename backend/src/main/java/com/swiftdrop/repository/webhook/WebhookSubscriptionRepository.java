@@ -7,4 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WebhookSubscriptionRepository extends JpaRepository<WebhookSubscription, UUID> {
     List<WebhookSubscription> findByMerchantIdAndActiveTrue(UUID merchantId);
+    List<WebhookSubscription> findByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
+    boolean existsByMerchantIdAndCallbackUrl(UUID merchantId, String callbackUrl);
+    boolean existsByMerchantIdAndCallbackUrlAndIdNot(UUID merchantId, String callbackUrl, UUID id);
 }

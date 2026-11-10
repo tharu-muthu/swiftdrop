@@ -24,6 +24,30 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> lifecycleConflict(LifecycleConflictException error) {
         return ResponseEntity.status(409).body(ApiError.of("LIFECYCLE_CONFLICT", error.getMessage()));
     }
+    @ExceptionHandler(WebhookEndpointException.class)
+    ResponseEntity<ApiError> webhookEndpoint() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_WEBHOOK_ENDPOINT", "The webhook endpoint is invalid."));
+    }
+    @ExceptionHandler(WebhookSubscriptionConflictException.class)
+    ResponseEntity<ApiError> webhookConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("WEBHOOK_SUBSCRIPTION_CONFLICT", "A webhook subscription already uses this endpoint."));
+    }
+    @ExceptionHandler(WebhookSubscriptionNotFoundException.class)
+    ResponseEntity<ApiError> webhookNotFound() {
+        return ResponseEntity.status(404).body(ApiError.of("WEBHOOK_NOT_FOUND", "Webhook subscription not found."));
+    }
+    @ExceptionHandler(MerchantNotApprovedException.class)
+    ResponseEntity<ApiError> merchantNotApproved() {
+        return ResponseEntity.status(403).body(ApiError.of("MERCHANT_NOT_APPROVED", "This business is not approved."));
+    }
+    @ExceptionHandler(MerchantNotFoundException.class)
+    ResponseEntity<ApiError> merchantNotFound() {
+        return ResponseEntity.status(404).body(ApiError.of("MERCHANT_NOT_FOUND", "Merchant application not found."));
+    }
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ApiError> invalidArgument() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST", "The request is invalid."));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");

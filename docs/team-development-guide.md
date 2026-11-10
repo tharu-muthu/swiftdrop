@@ -245,7 +245,7 @@ Ownership covers frontend and backend layers. It does not create separate backen
 
 ## 10. Database migration coordination
 
-Schema changes belong in `backend/src/main/resources/db/migration/`. Current migrations are V1 through V4. Reserve the next free number with the lead before writing/applying a migration, for example `V5__create_merchant_profiles.sql` only if V5 is actually free. Keep a shared reservation list in the relevant PRs/issues. Merge dependent migrations in order; finish or release reservations promptly. The filename example is not a reservation.
+Schema changes belong in `backend/src/main/resources/db/migration/`. Current migrations are V1 through V7. Reserve the next free number with the lead before writing/applying a migration. V8 is already reserved and must not be reused. Keep a shared reservation list in the relevant PRs/issues. Merge dependent migrations in order; finish or release reservations promptly.
 
 - Commit SQL migrations and corresponding entity/service changes in the same PR.
 - Never edit or renumber an already-shared/applied migration. Add a new version for corrections.
