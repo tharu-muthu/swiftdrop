@@ -24,6 +24,10 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> lifecycleConflict(LifecycleConflictException error) {
         return ResponseEntity.status(409).body(ApiError.of("LIFECYCLE_CONFLICT", error.getMessage()));
     }
+    @ExceptionHandler({ProfileConflictException.class, org.springframework.orm.ObjectOptimisticLockingFailureException.class})
+    ResponseEntity<ApiError> profileConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("PROFILE_CONFLICT", "Your profile changed. Reload it before saving again."));
+    }
     @ExceptionHandler(WebhookEndpointException.class)
     ResponseEntity<ApiError> webhookEndpoint() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_WEBHOOK_ENDPOINT", "The webhook endpoint is invalid."));
@@ -74,8 +78,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ApiError> unreadable(jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI();
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST",
-                request.getRequestURI().equals("/api/v1/auth/login")
+                path.equals("/api/v1/me")
+                        ? "Send a JSON object containing only fullName, phone and version."
+                        : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
                         : "Send a JSON object containing only fullName, email and password."));
     }

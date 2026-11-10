@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings/dashboard").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{trackingNumber}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tracking/*/events").permitAll()
