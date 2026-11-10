@@ -1,6 +1,6 @@
 # Member 1: Identity and Access implementation checklist
 
-Reviewed: 1 November 2026; updated after IAM-01. **Database foundation, IAM-01, IAM-02 and IAM-07 are implemented. IAM-03–IAM-06 and IAM-08 remain incomplete (GET /me and a trusted IdentityContext now provide part of their foundation).** See [current session implementation and verification limits](sessions.md). See [the registration guide](registration.md), [API contract](../../contracts/identity-registration.md) and [ER/table guide](schema.md). Unchecked boxes remain future acceptance criteria; later API/policy proposals still need implementation review.
+Reviewed: 1 November 2026; updated through IAM-08 on 10 November 2026. **Database foundation and IAM-01, IAM-02, IAM-04, IAM-07 and IAM-08 are implemented. IAM-05 remains open. IAM-03 and IAM-06 need a separate audit against existing Google and identity-contract code because some detailed rows below predate that implementation.** See [sessions](sessions.md), [registration](registration.md), [password recovery](../../contracts/identity-password-recovery.md) and [ER/table guide](schema.md). Unchecked boxes remain future acceptance criteria.
 
 ## 1. What we have and what Member 1 owns
 
@@ -112,15 +112,15 @@ Ownership boundaries:
 
 ### IAM-08 — Password recovery
 
-**Existing:** reset-token table/mapping and `forget password.png` request-screen design. **Missing:** request/completion endpoints, token generation/consumption service, reset form, delivery adapter and feature tests. IAM-08 explicitly adds recovery to M1 even though v3 enumerates IAM-01 through IAM-07.
+**Implemented on `feat/password-recovery`:** request/completion endpoints, single-use hashed-token service, SMTP delivery adapter, Docker Mailpit inbox, React forms and feature tests. The request screen follows `forget password.png`; the completion form uses the same SwiftDrop layout. See [password recovery contract](../../contracts/identity-password-recovery.md). IAM-08 explicitly adds recovery to M1 even though v3 enumerates IAM-01 through IAM-07.
 
-- [ ] Implement the supplied email request form, generic acknowledgement and back-to-login link. For valid email input, return the same `202` body for existing, unknown, suspended and Google-only accounts, with comparable response behavior. Rate-limit without revealing whether an account exists.
-- [ ] Proposed eligibility: send reset instructions only for active accounts with a local password. Google-only users continue with Google; recovery must not silently add a local credential or reactivate a suspended account.
-- [ ] Generate a random, single-use reset token; store only its hash and expiry (proposed 30 minutes), and invalidate prior outstanding reset tokens for that user. Deliver through the agreed backend mail adapter. No reset token in normal API responses or application logs.
-- [ ] Add the missing completion UI: new password, confirmation, show/hide, submitting, invalid/expired/used-link and success states. Use the same password policy as registration.
-- [ ] In one transaction, consume a valid token, change the password hash, increment authorization version and revoke all sessions/other reset tokens. Two simultaneous submissions cannot both succeed. Sign in normally afterwards; do not automatically log in or change account roles/status.
-- [ ] Construct links from a configured trusted frontend origin, not the request Host header. Keep reset-page URLs out of analytics/referrers and clear the token from browser history after capture. Email delivery failures are recorded safely; do not expose provider details or claim delivery was verified when it was not.
-- [ ] Test unknown email responses, expired/reused/invalid tokens, rate limiting, transaction races, old-password rejection, session invalidation and mail failures. Use a test mail adapter; real delivery remains a separate configured smoke test.
+- [x] Implement the supplied email request form, generic acknowledgement and back-to-login link. Valid email input gets the same `202` body for eligible, unknown, suspended and Google-only accounts. Per-source and per-email rate limits apply.
+- [x] Send reset instructions only for active accounts with a local password. Google-only users continue with Google; recovery never adds a local credential or reactivates a suspended account.
+- [x] Generate a random, single-use reset token; store only its hash and 30-minute expiry, and invalidate prior outstanding reset tokens. The backend SMTP adapter delivers after commit on a bounded local worker. No reset token is returned or logged.
+- [x] The completion UI includes new password, confirmation, visibility toggle, pending, invalid/expired/used-link and success states. It uses registration's password policy.
+- [x] In one transaction, consume a valid token, change the password hash, increment authorization version and revoke all sessions/other reset tokens. A concurrent integration test confirms only one submission succeeds. Users sign in normally afterwards.
+- [x] Construct links from a configured trusted frontend origin, not the request Host header. The token is in a URL fragment, referrers are disabled, and the fragment is cleared from browser history. Delivery failures are recorded without sensitive details and the API does not claim confirmed delivery.
+- [x] PostgreSQL integration tests cover unknown, suspended and Google-only accounts, expired/reused/invalid and superseded tokens, CSRF, concurrent consumption, old-password rejection, session invalidation and mail failure; 25 `IdentitySessionsIT` tests passed on 10 November 2026. A separate unit test verifies the per-email limit. Real SMTP delivery remains a separate configured smoke check; Docker Mailpit supports the local browser check.
 
 Recovery safeguards follow [OWASP's Forgot Password guidance](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html); the 30-minute expiry and eligibility choices above are project proposals, not requirements from that source.
 

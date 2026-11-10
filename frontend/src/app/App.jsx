@@ -13,6 +13,7 @@ import MyBookingsPage from '../features/booking/MyBookingsPage.jsx';
 import BookingDetailsPage from '../features/booking/BookingDetailsPage.jsx';
 import CourierDashboardPage from '../features/execution/CourierDashboardPage.jsx';
 import PublicTrackingPage from '../features/tracking/PublicTrackingPage.jsx';
+import { ForgotPasswordPage, ResetPasswordPage } from '../features/identity/PasswordRecoveryPages.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -24,6 +25,8 @@ export default function App() {
   }, []);
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
+  if (path === '/forgot-password') return <ForgotPasswordPage />;
+  if (path === '/reset-password') return <ResetPasswordPage />;
   if (path === '/tracking' || path.startsWith('/tracking/')) {
     const trackingNumber = path.startsWith('/tracking/')
       ? decodeURIComponent(path.slice('/tracking/'.length))

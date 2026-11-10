@@ -6,6 +6,7 @@ import com.swiftdrop.config.AuthSettings;
 import com.swiftdrop.controller.identity.RegistrationController.CsrfResponse;
 import com.swiftdrop.dto.identity.TokenResponse;
 import com.swiftdrop.service.identity.TokenSecrets;
+import com.swiftdrop.integration.identity.PasswordResetDelivery;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.test.context.*;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.*;
@@ -31,6 +33,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -67,6 +70,99 @@ class IdentitySessionsIT {
     @Autowired MockMvc mvc;
     @Autowired com.swiftdrop.service.identity.IdentityAccountService identityAccounts;
     @Autowired com.swiftdrop.security.IdentityJwtConverter identityConverter;
+    @MockitoBean PasswordResetDelivery resetDelivery;
+
+    @Test void passwordRecoveryIsGenericSingleUseAndRevokesSessions() throws Exception {
+        reset(resetDelivery);
+        var withoutCsrf = new HttpHeaders(); withoutCsrf.setOrigin(ORIGIN);
+        assertThat(http.exchange("/api/v1/auth/password-reset/request", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", "someone@example.test"), withoutCsrf), String.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(post("password-reset/request", Map.of("email", UUID.randomUUID() + "@example.test"), null).getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+        verifyNoInteractions(resetDelivery);
+        String email = account();
+        var login = login(email);
+        String oldAccess = access(login);
+        assertThat(post("password-reset/request", Map.of("email", email), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(resetDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        assertThat(raw).matches("[A-Za-z0-9_-]{43}");
+        String stored = sql.queryForObject("select token_hash from swiftdrop.password_reset_tokens where user_id=(select id from swiftdrop.users where email=?)", String.class, email);
+        assertThat(stored).isEqualTo(TokenSecrets.hash(raw)).isNotEqualTo(raw);
+        String replacement = "Another strong password 9";
+        assertThat(post("password-reset/confirm", Map.of("token", raw, "password", replacement), null).getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(me(oldAccess).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(login(email).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(post("password-reset/confirm", Map.of("token", raw, "password", replacement), null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(post("password-reset/confirm", Map.of("token", TokenSecrets.generate(), "password", replacement), null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(post("login", Map.of("email", email, "password", replacement), null).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test void newerRecoveryLinkInvalidatesOlderLinkAndExpires() {
+        reset(resetDelivery);
+        String email = account();
+        assertThat(post("password-reset/request", Map.of("email", email), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        var links = org.mockito.ArgumentCaptor.forClass(String.class);
+        assertThat(post("password-reset/request", Map.of("email", email), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        verify(resetDelivery, timeout(5000).times(2)).send(org.mockito.ArgumentMatchers.eq(email), links.capture());
+        String old = links.getAllValues().get(0).split("#token=", 2)[1];
+        String current = links.getAllValues().get(1).split("#token=", 2)[1];
+        assertThat(post("password-reset/confirm", Map.of("token", old, "password", "A strong password 11"), null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        clock.offset = Duration.ofMinutes(31);
+        assertThat(post("password-reset/confirm", Map.of("token", current, "password", "A strong password 11"), null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test void suspendedAndGoogleOnlyAccountsGetGenericRecoveryAcknowledgementWithoutMail() {
+        reset(resetDelivery);
+        String suspended = account();
+        String googleOnly = account();
+        sql.update("update swiftdrop.users set active=false where email=?", suspended);
+        sql.update("update swiftdrop.users set password_hash=null where email=?", googleOnly);
+        assertThat(post("password-reset/request", Map.of("email", suspended), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(post("password-reset/request", Map.of("email", googleOnly), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        verifyNoInteractions(resetDelivery);
+    }
+
+    @Test void mailTransportFailureDoesNotRevealAccountOrToken() {
+        reset(resetDelivery);
+        String email = account();
+        doThrow(new org.springframework.mail.MailSendException("transport unavailable"))
+                .when(resetDelivery).send(org.mockito.ArgumentMatchers.eq(email), org.mockito.ArgumentMatchers.anyString());
+        var response = post("password-reset/request", Map.of("email", email), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(response.getBody()).doesNotContain(email, "token", "transport unavailable");
+        verify(resetDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test void simultaneousResetSubmissionsConsumeTokenOnlyOnce() throws Exception {
+        reset(resetDelivery);
+        String email = account();
+        assertThat(post("password-reset/request", Map.of("email", email), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(resetDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        var ready = new CountDownLatch(2);
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<HttpStatusCode> attempt = () -> {
+                ready.countDown(); start.await();
+                return post("password-reset/confirm", Map.of("token", raw, "password", "Concurrent password 12"), null).getStatusCode();
+            };
+            var first = executor.submit(attempt);
+            var second = executor.submit(attempt);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST);
+        }
+    }
 
     @Test void sharedAccountContractUsesLiveRolesAndRejectsRevokedSessions() throws Exception {
         var signedIn = login(account());

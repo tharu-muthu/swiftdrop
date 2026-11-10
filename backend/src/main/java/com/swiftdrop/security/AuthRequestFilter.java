@@ -17,7 +17,8 @@ public class AuthRequestFilter extends OncePerRequestFilter {
     private final Map<String, Integer> limits;
     public AuthRequestFilter(AuthSettings settings, AuthRateLimiter limiter, ObjectMapper json, int loginLimit) {
         this.settings = settings; this.limiter = limiter; this.json = json;
-        this.limits = Map.of("login", loginLimit, "refresh", 60, "logout", 60, "csrf", 120);
+        this.limits = Map.of("login", loginLimit, "refresh", 60, "logout", 60, "csrf", 120,
+                "password-reset/request", 10, "password-reset/confirm", 20);
     }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         return !request.getServletPath().startsWith("/api/v1/auth/");

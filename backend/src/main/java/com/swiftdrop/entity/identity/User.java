@@ -74,4 +74,9 @@ public class User extends CreatedEntity {
         this.fullName = fullName;
         this.phone = phone;
     }
+
+    public void resetPassword(String encodedPassword) {
+        this.passwordHash = encodedPassword;
+        this.authorizationVersion++;
+    }
 }
