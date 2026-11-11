@@ -3,9 +3,14 @@ import { useAuth } from '../identity/AuthProvider.jsx';
 import './booking.css';
 import './booking-brand-theme.css';
 
-const navItems = [
-  ['⌂', 'Dashboard', '/booking'], ['□', 'Book Parcel', '/bookings/new'], ['▣', 'My Bookings', '/bookings'],
-  ['⌖', 'Track Parcel', '/tracking'], ['▤', 'Receipts', '/receipts'], ['?', 'Help', '/help'],
+// Core customer navigation items
+const baseNavItems = [
+  ['⌂', 'Dashboard', '/booking'], 
+  ['□', 'Book Parcel', '/bookings/new'], 
+  ['▣', 'My Bookings', '/bookings'],
+  ['⌖', 'Track Parcel', '/tracking'], 
+  ['▤', 'Receipts', '/receipts'], 
+  ['?', 'Help', '/help'],
 ];
 
 function BrandMark({ compact = false }) {
@@ -17,19 +22,43 @@ function BrandMark({ compact = false }) {
 
 export default function BookingFrame({ activePath, children, headerTitle = 'Create Booking' }) {
   const { user } = useAuth();
+  
+  // Dynamically add the Dispatch link if the user has the admin role
+  const isDispatcher = user?.roles?.includes('DISPATCHER_ADMIN');
+  const navItems = [...baseNavItems];
+  if (isDispatcher) {
+    navItems.splice(1, 0, ['⚡', 'Dispatch Dashboard', '/dispatch']); 
+  }
+
   return <div className="booking-shell">
     <aside className="booking-sidebar">
       <BrandMark />
-      <nav aria-label="Booking navigation">{navItems.map(([icon, label, to]) => <button key={to}
-        className={to === activePath ? 'side-link active' : 'side-link'} onClick={() => navigate(to)}>
-        <span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
+      <nav aria-label="Booking navigation">
+        {navItems.map(([icon, label, to]) => (
+          <button key={to}
+            className={to === activePath || (activePath?.startsWith('/dispatch') && to === '/dispatch') ? 'side-link active' : 'side-link'} 
+            onClick={() => navigate(to)}>
+            <span aria-hidden="true">{icon}</span>{label}
+          </button>
+        ))}
+      </nav>
       <div className="sidebar-parcels" aria-hidden="true"><i /><i /><i /></div>
     </aside>
     <main className="booking-main">
       <header className="booking-header">
-        <div className="header-title"><BrandMark compact /><span><strong>{headerTitle}</strong><small>M4 Parcel Booking Module</small></span></div>
-        <div className="header-user"><span className="bell" aria-label="Notifications">♧</span><span className="avatar">{user.fullName?.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
-          <span className="user-name"><strong>{user.fullName}</strong><small>SwiftDrop customer</small></span><button className="account-menu" onClick={() => navigate('/account')} aria-label="Open account">⌄</button></div>
+        <div className="header-title">
+          <BrandMark compact />
+          <span><strong>{headerTitle}</strong><small>{isDispatcher ? 'M5 Dispatch Module' : 'M4 Parcel Booking Module'}</small></span>
+        </div>
+        <div className="header-user">
+          <span className="bell" aria-label="Notifications">♧</span>
+          <span className="avatar">{user.fullName?.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
+          <span className="user-name">
+            <strong>{user.fullName}</strong>
+            <small>{isDispatcher ? 'Dispatch Admin' : 'SwiftDrop customer'}</small>
+          </span>
+          <button className="account-menu" onClick={() => navigate('/account')} aria-label="Open account">⌄</button>
+        </div>
       </header>
       {children}
     </main>
