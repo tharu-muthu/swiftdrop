@@ -36,6 +36,19 @@ public class WebhookDeliveryAttempt extends UuidEntity {
 
     protected WebhookDeliveryAttempt() { }
 
+    public static WebhookDeliveryAttempt create(WebhookDelivery delivery, int attemptNumber,
+            Instant startedAt, Instant completedAt, Integer httpStatus, String outcome, String errorMessage) {
+        var attempt = new WebhookDeliveryAttempt();
+        attempt.delivery = delivery;
+        attempt.attemptNumber = attemptNumber;
+        attempt.startedAt = startedAt;
+        attempt.completedAt = completedAt;
+        attempt.httpStatus = httpStatus;
+        attempt.outcome = outcome;
+        attempt.errorMessage = errorMessage;
+        return attempt;
+    }
+
     public WebhookDelivery getDelivery() { return delivery; }
     public int getAttemptNumber() { return attemptNumber; }
     public Instant getStartedAt() { return startedAt; }

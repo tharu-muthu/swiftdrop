@@ -64,7 +64,7 @@ class FoundationIT {
             assertThat(runtime.getMetaData().getURL()).isEqualTo(migration.getMetaData().getURL());
             assertThat(runtime.getCatalog()).isEqualTo(migration.getCatalog());
         }
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
         // Startup validates identity, booking, webhook, merchant, and execution entities.
         assertThat(entities.getMetamodel().getEntities()).hasSize(19);
         var entityManager = entities.createEntityManager();

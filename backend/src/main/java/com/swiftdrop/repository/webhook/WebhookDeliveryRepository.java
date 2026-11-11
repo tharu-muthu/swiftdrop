@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WebhookDeliveryRepository extends JpaRepository<WebhookDelivery, UUID> {
     Optional<WebhookDelivery> findBySubscriptionIdAndEventId(UUID subscriptionId, UUID eventId);
+    java.util.List<WebhookDelivery> findBySubscriptionIdOrderByCreatedAtDesc(UUID subscriptionId);
     java.util.List<WebhookDelivery> findTop100ByDeliveryStateAndNextAttemptAtLessThanEqualOrderByNextAttemptAtAsc(
             String deliveryState, Instant now);
 }

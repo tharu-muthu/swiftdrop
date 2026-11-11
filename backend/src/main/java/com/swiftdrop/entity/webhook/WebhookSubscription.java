@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
@@ -51,6 +53,32 @@ public class WebhookSubscription extends UuidEntity {
     private Instant updatedAt;
 
     protected WebhookSubscription() { }
+
+    public static WebhookSubscription create(UUID merchantId, String callbackUrl, List<String> eventTypes,
+            byte[] encryptedSecret, byte[] nonce, String secretKeyVersion) {
+        var subscription = new WebhookSubscription();
+        subscription.merchantId = merchantId;
+        subscription.callbackUrl = callbackUrl;
+        subscription.eventTypes = new ArrayList<>(new LinkedHashSet<>(eventTypes));
+        subscription.encryptedSigningSecret = encryptedSecret.clone();
+        subscription.signingSecretNonce = nonce.clone();
+        subscription.secretKeyVersion = secretKeyVersion;
+        subscription.active = true;
+        return subscription;
+    }
+
+    public void updateConfiguration(String callbackUrl, List<String> eventTypes) {
+        this.callbackUrl = callbackUrl;
+        this.eventTypes = new ArrayList<>(new LinkedHashSet<>(eventTypes));
+    }
+
+    public void setActive(boolean active) { this.active = active; }
+
+    public void rotateSecret(byte[] encryptedSecret, byte[] nonce, String secretKeyVersion) {
+        this.encryptedSigningSecret = encryptedSecret.clone();
+        this.signingSecretNonce = nonce.clone();
+        this.secretKeyVersion = secretKeyVersion;
+    }
 
     public UUID getMerchantId() { return merchantId; }
     public String getCallbackUrl() { return callbackUrl; }
