@@ -12,5 +12,6 @@ public interface ParcelLifecycleRepository extends JpaRepository<ParcelLifecycle
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<ParcelLifecycle> findByIdAndAssignedCourierId(UUID id, UUID courierId);
     boolean existsByBookingId(UUID bookingId);
+    Optional<ParcelLifecycle> findByBookingId(UUID bookingId);
     List<ParcelLifecycle> findAllByAssignedCourierIdOrderByUpdatedAtDesc(UUID courierId);
 }
