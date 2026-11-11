@@ -72,6 +72,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").authenticated()
                         .requestMatchers("/api/v1/courier/deliveries/**").hasRole("COURIER")
                         .requestMatchers("/api/v1/dispatch/**").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/quotes").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/quotes/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/zones", "/api/v1/admin/rate-cards").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/zones", "/api/v1/admin/zones/*/postcodes",
+                                "/api/v1/admin/rate-cards").authenticated()
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
