@@ -1,3 +1,4 @@
+
 package com.swiftdrop.service.merchant;
 
 import static org.assertj.core.api.Assertions.assertThat;
