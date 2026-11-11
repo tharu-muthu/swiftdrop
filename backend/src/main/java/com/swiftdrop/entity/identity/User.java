@@ -69,4 +69,9 @@ public class User extends CreatedEntity {
     public long getAuthorizationVersion() { return authorizationVersion; }
     public long getVersion() { return version; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public void updateProfile(String fullName, String phone) {
+        this.fullName = fullName;
+        this.phone = phone;
+    }
 }

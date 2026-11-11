@@ -66,13 +66,13 @@ Ownership boundaries:
 
 ### IAM-04 — View/update permitted profile details
 
-**Existing:** user/profile field mappings and security/validation foundation. **Missing:** profile DTO, repository operations, service, endpoint and screen.
+**Implemented on `feat/profile-management`:** authenticated GET and PATCH `/api/v1/me`, an allowlisted profile DTO, service, optimistic locking, and a responsive profile screen. The user verified save and reload in the browser; `IdentitySessionsIT` passed against isolated PostgreSQL on 10 November 2026. See [profile API](../../contracts/identity-profile.md).
 
-- [ ] `/me` resolves the user from the authenticated context. Return `id`, display email, `fullName`, optional `phone`, `roles`, `active`, timestamps and an update `version`; omit credential/session secrets.
-- [ ] Proposed editable fields are `fullName` and optional `phone` only. Email, ID, roles, active status, provider identity and authorization version are read-only. Email change/password change require separate verified flows and are not hidden in generic profile patching.
-- [ ] PATCH uses an allowlist and optimistic version check. Reject unsupported fields; stale updates return `409`. Validate a supplied phone consistently; an explicit null may clear it, while an omitted field stays unchanged.
-- [ ] UI provides load, edit, validation, save, success and expired-session states with accessible labels/focus. Saved addresses, merchant details and courier operating details are excluded.
-- [ ] Test anonymous access, trying another user's ID, mass assignment, stale writes and safe serialization. The caller can only edit their own account through this route.
+- [x] `/me` resolves the user from the authenticated context. Return `id`, display email, `fullName`, optional `phone`, `roles`, `active`, timestamps and an update `version`; omit credential/session secrets. Safe booleans indicate configured password and connected Google account.
+- [x] Editable fields are `fullName` and optional `phone` only. Email, ID, roles, active status, provider identity and authorization version are read-only. Email change/password change require separate verified flows.
+- [x] PATCH uses an allowlist and optimistic version check. Reject unsupported fields; stale updates return `409`. `phone` is required as a key; JSON null or an empty string clears it.
+- [x] UI provides load, edit, validation, save, success and expired-session states with accessible labels/focus. Saved addresses, merchant details and courier operating details are excluded.
+- [x] PostgreSQL integration test covers anonymous access, privileged-field injection, stale writes, persistence and safe serialization. The route has no target user ID and only updates the caller. Service and frontend unit tests pass.
 
 ### IAM-05 — Admin user management and suspension
 
