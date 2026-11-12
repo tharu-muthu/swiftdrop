@@ -1,10 +1,5 @@
 package com.swiftdrop.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.swiftdrop.config.AuthSettings;
-import com.swiftdrop.exception.ApiError;
-import com.swiftdrop.integration.identity.GoogleCallbackHandler;
-import com.swiftdrop.integration.identity.GoogleFailureHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +20,12 @@ import org.springframework.security.web.context.RequestAttributeSecurityContextR
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swiftdrop.config.AuthSettings;
+import com.swiftdrop.exception.ApiError;
+import com.swiftdrop.integration.identity.GoogleCallbackHandler;
+import com.swiftdrop.integration.identity.GoogleFailureHandler;
+
 @Configuration
 public class SecurityConfig {
     private AuthenticationEntryPoint unauthorized(ObjectMapper json) {
@@ -33,12 +34,14 @@ public class SecurityConfig {
             json.writeValue(response.getWriter(), ApiError.of("UNAUTHORIZED", "Authentication required"));
         };
     }
+
     private AccessDeniedHandler forbidden(ObjectMapper json) {
         return (request, response, exception) -> {
             response.setStatus(403); response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             json.writeValue(response.getWriter(), ApiError.of("FORBIDDEN", "Access denied"));
         };
     }
+
     @Bean @Order(1)
     SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper json, AuthSettings settings,
             JwtDecoder decoder, IdentityJwtConverter converter, AuthRateLimiter limiter,
@@ -46,6 +49,7 @@ public class SecurityConfig {
         var csrf = new CookieCsrfTokenRepository();
         csrf.setCookieCustomizer(cookie -> cookie.httpOnly(true).secure(!settings.localhostDevelopment()).sameSite("Lax").path("/"));
         var bearer = new DefaultBearerTokenResolver();
+        
         return http.securityMatcher("/api/**")
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf").permitAll()
@@ -68,10 +72,11 @@ public class SecurityConfig {
                                 "/api/v1/merchant/webhooks/*/test").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/webhooks/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").authenticated()
+                        .requestMatchers("/api/v1/courier/deliveries/**").hasRole("COURIER")
+                        .requestMatchers("/api/v1/dispatch/**").hasRole("DISPATCHER_ADMIN")
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
-                // API identities live only in this request. Existing OAuth framework sessions are left intact.
                 .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .requestCache(AbstractHttpConfigurer::disable)
