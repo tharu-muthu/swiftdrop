@@ -7,6 +7,7 @@ import com.swiftdrop.controller.identity.RegistrationController.CsrfResponse;
 import com.swiftdrop.dto.identity.TokenResponse;
 import com.swiftdrop.service.identity.TokenSecrets;
 import com.swiftdrop.integration.identity.PasswordResetDelivery;
+import com.swiftdrop.integration.identity.EmailVerificationDelivery;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -71,6 +72,7 @@ class IdentitySessionsIT {
     @Autowired com.swiftdrop.service.identity.IdentityAccountService identityAccounts;
     @Autowired com.swiftdrop.security.IdentityJwtConverter identityConverter;
     @MockitoBean PasswordResetDelivery resetDelivery;
+    @MockitoBean EmailVerificationDelivery verificationDelivery;
 
     @Test void passwordRecoveryIsGenericSingleUseAndRevokesSessions() throws Exception {
         reset(resetDelivery);
@@ -208,6 +210,10 @@ class IdentitySessionsIT {
     String account() {
         String email = UUID.randomUUID() + "@example.test";
         assertThat(post("register", Map.of("email", email, "fullName", "Session Test", "password", PASSWORD), null).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        assertThat(post("email-verification/confirm", Map.of("token", raw), null).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         return email;
     }
     ResponseEntity<String> login(String email) { return post("login", Map.of("email", " " + email.toUpperCase(Locale.ROOT) + " ", "password", PASSWORD), null); }

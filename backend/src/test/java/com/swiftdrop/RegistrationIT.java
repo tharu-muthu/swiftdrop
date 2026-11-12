@@ -1,6 +1,7 @@
 package com.swiftdrop;
 
 import com.swiftdrop.controller.identity.RegistrationController.CsrfResponse;
+import com.swiftdrop.service.identity.TokenSecrets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,12 +16,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.swiftdrop.integration.identity.EmailVerificationDelivery;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
@@ -40,6 +44,7 @@ class RegistrationIT {
     @Autowired TestRestTemplate http;
     @Autowired JdbcTemplate sql;
     @Autowired PasswordEncoder passwords;
+    @MockitoBean EmailVerificationDelivery verificationDelivery;
     private static final String PASSWORD = "  Exact secret passphrase 🔐  ";
     private static final String PATH = "/api/v1/auth/register";
 
@@ -61,6 +66,82 @@ class RegistrationIT {
         return http.exchange(PATH, HttpMethod.POST, new HttpEntity<>(body, csrf()), String.class);
     }
     String email() { return UUID.randomUUID() + "@example.test"; }
+
+    @Test void passwordAccountMustProveInboxBeforeLogin() {
+        String email = email();
+        assertThat(send(body(email)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(sql.queryForObject("select email_verified_at from swiftdrop.users where email=?", java.sql.Timestamp.class, email)).isNull();
+        var login = Map.of("email", email, "password", PASSWORD);
+        assertThat(http.exchange("/api/v1/auth/login", HttpMethod.POST, new HttpEntity<>(login, csrf()), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        String hash = sql.queryForObject("select token_hash from swiftdrop.email_verification_tokens where user_id=(select id from swiftdrop.users where email=?)", String.class, email);
+        assertThat(hash).isEqualTo(TokenSecrets.hash(raw)).isNotEqualTo(raw);
+        assertThat(http.exchange("/api/v1/auth/email-verification/confirm", HttpMethod.POST,
+                new HttpEntity<>(Map.of("token", raw), csrf()), String.class).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(sql.queryForObject("select email_verified_at is not null from swiftdrop.users where email=?", Boolean.class, email)).isTrue();
+        assertThat(http.exchange("/api/v1/auth/email-verification/confirm", HttpMethod.POST,
+                new HttpEntity<>(Map.of("token", raw), csrf()), String.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(http.exchange("/api/v1/auth/login", HttpMethod.POST, new HttpEntity<>(login, csrf()), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test void resendIsGenericAndInvalidatesEarlierLink() {
+        String email = email();
+        assertThat(send(body(email)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var links = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), links.capture());
+        String old = links.getValue().split("#token=", 2)[1];
+        var request = new HttpEntity<>(Map.of("email", email), csrf());
+        assertThat(http.exchange("/api/v1/auth/email-verification/request", HttpMethod.POST, request, String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        verify(verificationDelivery, timeout(5000).times(2)).send(org.mockito.ArgumentMatchers.eq(email), links.capture());
+        String current = links.getAllValues().getLast().split("#token=", 2)[1];
+        assertThat(http.exchange("/api/v1/auth/email-verification/confirm", HttpMethod.POST,
+                new HttpEntity<>(Map.of("token", old), csrf()), String.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(http.exchange("/api/v1/auth/email-verification/confirm", HttpMethod.POST,
+                new HttpEntity<>(Map.of("token", current), csrf()), String.class).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        String unknown = email();
+        var generic = http.exchange("/api/v1/auth/email-verification/request", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", unknown), csrf()), String.class);
+        assertThat(generic.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(generic.getBody()).doesNotContain(unknown, "token");
+        verify(verificationDelivery, never()).send(org.mockito.ArgumentMatchers.eq(unknown), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test void expiredVerificationLinkCannotActivateAccount() {
+        String email = email();
+        assertThat(send(body(email)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        sql.update("update swiftdrop.email_verification_tokens set created_at=now()-interval '2 days', expires_at=now()-interval '1 second' where token_hash=?", TokenSecrets.hash(raw));
+        assertThat(http.exchange("/api/v1/auth/email-verification/confirm", HttpMethod.POST,
+                new HttpEntity<>(Map.of("token", raw), csrf()), String.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(sql.queryForObject("select email_verified_at from swiftdrop.users where email=?", java.sql.Timestamp.class, email)).isNull();
+    }
+
+    @Test void concurrentVerificationConsumesLinkOnce() throws Exception {
+        String email = email();
+        assertThat(send(body(email)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var link = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
+        String raw = link.getValue().split("#token=", 2)[1];
+        var start = new CountDownLatch(1);
+        var firstHeaders = csrf(); var secondHeaders = csrf();
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            Callable<HttpStatusCode> attempt1 = () -> { start.await(); return http.exchange("/api/v1/auth/email-verification/confirm",
+                    HttpMethod.POST, new HttpEntity<>(Map.of("token", raw), firstHeaders), String.class).getStatusCode(); };
+            Callable<HttpStatusCode> attempt2 = () -> { start.await(); return http.exchange("/api/v1/auth/email-verification/confirm",
+                    HttpMethod.POST, new HttpEntity<>(Map.of("token", raw), secondHeaders), String.class).getStatusCode(); };
+            var first = pool.submit(attempt1); var second = pool.submit(attempt2);
+            start.countDown();
+            assertThat(List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST);
+        }
+    }
 
     @Test
     void successIsSafeAndCommitsAccountAndOnlyCustomerMembership(CapturedOutput output) {

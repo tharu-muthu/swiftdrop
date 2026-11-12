@@ -27,6 +27,9 @@ public class User extends CreatedEntity {
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -65,6 +68,8 @@ public class User extends CreatedEntity {
     public String getFullName() { return fullName; }
     public String getPhone() { return phone; }
     public String getPasswordHash() { return passwordHash; }
+    public Instant getEmailVerifiedAt() { return emailVerifiedAt; }
+    public boolean isEmailVerified() { return emailVerifiedAt != null; }
     public boolean isActive() { return active; }
     public long getAuthorizationVersion() { return authorizationVersion; }
     public long getVersion() { return version; }
@@ -78,5 +83,12 @@ public class User extends CreatedEntity {
     public void resetPassword(String encodedPassword) {
         this.passwordHash = encodedPassword;
         this.authorizationVersion++;
+    }
+
+    public void verifyEmail(Instant now) {
+        if (emailVerifiedAt == null) {
+            emailVerifiedAt = now;
+            authorizationVersion++;
+        }
     }
 }

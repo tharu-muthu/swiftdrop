@@ -41,7 +41,7 @@ public class PasswordRecoveryService {
 
     public PasswordRecoveryService(UserRepository users, PasswordResetTokenRepository tokens,
             AuthSessionRepository sessions, PasswordEncoder passwords, PasswordResetDelivery delivery,
-            @Qualifier("passwordResetExecutor") TaskExecutor deliveryExecutor,
+            @Qualifier("identityMailExecutor") TaskExecutor deliveryExecutor,
             AuthRateLimiter limiter, Clock clock, AuthSettings authSettings,
             @Value("${swiftdrop.recovery.frontend-origin}") String frontendOrigin) {
         this.users = users; this.tokens = tokens; this.sessions = sessions; this.passwords = passwords;
@@ -97,6 +97,7 @@ public class PasswordRecoveryService {
         if (!user.isActive() || user.getPasswordHash() == null || token.getUsedAt() != null
                 || token.getRevokedAt() != null || !token.getExpiresAt().isAfter(now)) throw new InvalidResetTokenException();
         user.resetPassword(passwords.encode(request.password()));
+        user.verifyEmail(now); // A valid link also proves current ownership of the inbox.
         token.use(now);
         for (var other : tokens.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(user.getId())) {
             if (!other.getId().equals(token.getId())) other.revoke(now);

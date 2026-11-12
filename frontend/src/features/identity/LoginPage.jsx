@@ -54,5 +54,6 @@ export default function LoginPage() {
       <span aria-hidden="true">G</span> Continue with Google
     </a>
     <p className="login-note">New to SwiftDrop? <a href="/register">Sign up</a></p>
+    <p className="login-note">Need to verify your email? <a href="/verify-email/request">Resend link</a></p>
   </div></AuthLayout>;
 }

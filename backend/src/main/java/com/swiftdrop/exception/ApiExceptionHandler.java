@@ -56,6 +56,10 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> invalidResetToken() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_RESET_TOKEN", "This reset link is invalid or has expired. Request a new link."));
     }
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    ResponseEntity<ApiError> invalidVerificationToken() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_VERIFICATION_TOKEN", "This verification link is invalid or has expired. Request a new link."));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");
@@ -90,6 +94,10 @@ public class ApiExceptionHandler {
                         ? "Send a JSON object containing only email."
                         : path.equals("/api/v1/auth/password-reset/confirm")
                         ? "Send a JSON object containing only token and password."
+                        : path.equals("/api/v1/auth/email-verification/request")
+                        ? "Send a JSON object containing only email."
+                        : path.equals("/api/v1/auth/email-verification/confirm")
+                        ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
                         : "Send a JSON object containing only fullName, email and password."));

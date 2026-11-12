@@ -12,6 +12,10 @@ coordination and the current Google/Docker readiness limitations.
 Customer registration, password login/logout, rotating refresh sessions, profile
 management and password recovery are implemented. Open `/register`, `/login`,
 `/profile` and `/forgot-password`.
+The email-verification branch adds a required inbox proof for password accounts.
+**Do not start its backend against shared Neon until mail delivery is verified:**
+existing password users must verify before they can sign in again. See the
+[email-verification rollout guide](contracts/identity-email-verification.md).
 See [authentication setup and request flow](docs/identity/sessions.md) and the
 [current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
 Admin and other business features remain separate work.
@@ -134,9 +138,9 @@ without quotes, spaces or `$`. Never commit `.env`; never put credentials in
 `VITE_*` variables, which would expose them to browsers.
 
 The database is hosted in Neon; no local PostgreSQL container or password is
-needed. Local password-reset email is captured by Mailpit in Docker and requires
-no mail account. Open `http://localhost:8025` to view the local inbox. To send
-real Gmail messages instead, follow the private backend SMTP settings in
+needed. Local password-reset and email-verification messages are captured by
+Mailpit in Docker and require no mail account. Open `http://localhost:8025` to
+view the local inbox. To send real Gmail messages instead, follow the private backend SMTP settings in
 [`contracts/identity-password-recovery.md`](contracts/identity-password-recovery.md).
 
 ## 2A. Run the application with Neon and RabbitMQ

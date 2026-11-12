@@ -31,6 +31,8 @@ Ownership boundaries:
 
 ### IAM-01 — Customer registration
 
+**Email ownership follow-up on `feat/email-verification`:** V9 adds `email_verified_at` and hashed verification tokens. New password accounts are unverified until the email link is confirmed. Existing password accounts must use the resend flow; existing Google-linked accounts are backfilled as verified. See [verification contract](../../contracts/identity-email-verification.md). Apply to shared Neon only after SMTP delivery is checked.
+
 **Implemented:** strict registration DTO/controller, transactional service, existing user/role repositories, adaptive encoder, safe errors, CSRF, bounded signup throttle, responsive React form and feature tests. No schema changes. See [the actual request flow and password policy](registration.md).
 
 - [x] Form follows `Figma design/register.png`: four fields, show/hide, pending, field errors and success. No role picker. Sign-in is explicitly marked coming soon until IAM-02; no broken login link.

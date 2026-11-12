@@ -14,6 +14,7 @@ import BookingDetailsPage from '../features/booking/BookingDetailsPage.jsx';
 import CourierDashboardPage from '../features/execution/CourierDashboardPage.jsx';
 import PublicTrackingPage from '../features/tracking/PublicTrackingPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage } from '../features/identity/PasswordRecoveryPages.jsx';
+import { RequestVerificationPage, VerifyEmailPage } from '../features/identity/EmailVerificationPages.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -27,6 +28,8 @@ export default function App() {
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (path === '/forgot-password') return <ForgotPasswordPage />;
   if (path === '/reset-password') return <ResetPasswordPage />;
+  if (path === '/verify-email/request') return <RequestVerificationPage />;
+  if (path === '/verify-email') return <VerifyEmailPage />;
   if (path === '/tracking' || path.startsWith('/tracking/')) {
     const trackingNumber = path.startsWith('/tracking/')
       ? decodeURIComponent(path.slice('/tracking/'.length))
