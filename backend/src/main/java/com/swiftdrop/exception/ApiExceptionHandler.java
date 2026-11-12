@@ -66,6 +66,11 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(401).body(ApiError.of(login ? "INVALID_CREDENTIALS" : "UNAUTHORIZED",
                 login ? "Email or password is incorrect." : "Your session has ended. Please sign in again."));
     }
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    ResponseEntity<ApiError> emailVerificationRequired() {
+        return ResponseEntity.status(403).body(ApiError.of("EMAIL_VERIFICATION_REQUIRED",
+                "Verify your email before logging in. Check your inbox or request a new link."));
+    }
     @ExceptionHandler(RateLimitException.class)
     ResponseEntity<ApiError> throttled(RateLimitException error) {
         return ResponseEntity.status(429).header("Retry-After", Long.toString(error.retryAfter()))
