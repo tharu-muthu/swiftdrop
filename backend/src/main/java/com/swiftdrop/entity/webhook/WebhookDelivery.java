@@ -52,6 +52,27 @@ public class WebhookDelivery extends UuidEntity {
 
     protected WebhookDelivery() { }
 
+    public static WebhookDelivery create(WebhookSubscription subscription, UUID eventId,
+            String eventType, String payloadBody) {
+        var delivery = new WebhookDelivery();
+        delivery.subscription = subscription;
+        delivery.eventId = eventId;
+        delivery.eventType = eventType;
+        delivery.payloadBody = payloadBody;
+        delivery.deliveryState = "PENDING";
+        delivery.attemptCount = 0;
+        return delivery;
+    }
+
+    public void recordOutcome(String state, int attemptCount, Integer httpStatus, String error,
+            Instant completedAt) {
+        this.deliveryState = state;
+        this.attemptCount = attemptCount;
+        this.lastHttpStatus = httpStatus;
+        this.lastError = error;
+        this.completedAt = completedAt;
+    }
+
     public UUID getId() { return super.getId(); }
     public WebhookSubscription getSubscription() { return subscription; }
     public UUID getEventId() { return eventId; }
