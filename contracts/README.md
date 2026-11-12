@@ -20,3 +20,5 @@ envelope is documented in `webhook-events.md`; its merchant approval and canonic
 parcel-status adapters still require the M2 and M6 handoffs.
 
 Implemented login, refresh, logout and GET /me: see [session contracts](identity-sessions.md), which supersede the earlier no-login status above.
+
+Email ownership verification and its rollout gate: see [email verification](identity-email-verification.md).
