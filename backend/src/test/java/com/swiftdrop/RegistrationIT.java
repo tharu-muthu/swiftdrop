@@ -29,7 +29,8 @@ import static org.mockito.Mockito.*;
 @Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "swiftdrop.registration.requests-per-window=1000")
+        properties = {"swiftdrop.registration.requests-per-window=1000", "logging.level.root=INFO",
+                "logging.level.org.springframework.web=INFO", "logging.level.org.springframework.jdbc=INFO"})
 class RegistrationIT {
     @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17.11-bookworm");
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) {
@@ -72,8 +73,14 @@ class RegistrationIT {
         assertThat(send(body(email)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(sql.queryForObject("select email_verified_at from swiftdrop.users where email=?", java.sql.Timestamp.class, email)).isNull();
         var login = Map.of("email", email, "password", PASSWORD);
-        assertThat(http.exchange("/api/v1/auth/login", HttpMethod.POST, new HttpEntity<>(login, csrf()), String.class)
-                .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        var unverified = http.exchange("/api/v1/auth/login", HttpMethod.POST, new HttpEntity<>(login, csrf()), String.class);
+        assertThat(unverified.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(unverified.getBody()).contains("EMAIL_VERIFICATION_REQUIRED", "Verify your email")
+                .doesNotContain(PASSWORD);
+        var wrongPassword = http.exchange("/api/v1/auth/login", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", email, "password", "wrong password"), csrf()), String.class);
+        assertThat(wrongPassword.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(wrongPassword.getBody()).contains("INVALID_CREDENTIALS").doesNotContain("EMAIL_VERIFICATION_REQUIRED");
         var link = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(verificationDelivery, timeout(5000)).send(org.mockito.ArgumentMatchers.eq(email), link.capture());
         String raw = link.getValue().split("#token=", 2)[1];
