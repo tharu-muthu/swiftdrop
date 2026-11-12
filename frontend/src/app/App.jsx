@@ -5,6 +5,8 @@ import { useAuth } from '../features/identity/AuthProvider.jsx';
 import LoginPage from '../features/identity/LoginPage.jsx';
 import AccountPage from '../features/identity/AccountPage.jsx';
 import AuthCompletePage from '../features/identity/AuthCompletePage.jsx';
+import { ForgotPasswordPage, ResetPasswordPage } from '../features/identity/PasswordRecoveryPages.jsx';
+import { RequestVerificationPage, VerifyEmailPage } from '../features/identity/EmailVerificationPages.jsx';
 import BookingHomePage from '../features/booking/BookingHomePage.jsx';
 import BookingPlaceholder from '../features/booking/BookingPlaceholder.jsx';
 import WebhookSettingsPage from '../features/webhook/WebhookSettingsPage.jsx';
