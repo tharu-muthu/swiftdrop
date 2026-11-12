@@ -3,11 +3,9 @@ package com.swiftdrop.entity.identity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.Generated;
-import org.hibernate.generator.EventType;
+import org.hibernate.annotations.Immutable;
 import java.util.UUID;
 import java.time.Instant;
-import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.util.Map;
@@ -42,11 +40,23 @@ public class IdentityAuditEvent extends UuidEntity {
     @Column(name = "correlation_id", length = 100)
     private String correlationId;
 
-    @Generated(event = EventType.INSERT)
     @Column(name = "occurred_at", nullable = false, insertable = false, updatable = false)
     private Instant occurredAt;
 
     protected IdentityAuditEvent() { }
+
+    public static IdentityAuditEvent record(String actorKind, UUID actorUserId, UUID targetUserId,
+            String action, String reason, Map<String, Object> beforeState, Map<String, Object> afterState) {
+        var event = new IdentityAuditEvent();
+        event.actorKind = actorKind;
+        event.actorUserId = actorUserId;
+        event.targetUserId = targetUserId;
+        event.action = action;
+        event.reason = reason;
+        event.beforeState = Map.copyOf(beforeState);
+        event.afterState = Map.copyOf(afterState);
+        return event;
+    }
 
     public String getActorKind() { return actorKind; }
     public UUID getActorUserId() { return actorUserId; }
