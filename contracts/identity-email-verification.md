@@ -1,6 +1,6 @@
 # Email ownership verification
 
-New password registrations create an unverified CUSTOMER account and return the existing safe `201` account response. After commit, the backend queues an email with a single-use verification link. The frontend displays **Check your email**. Password login and protected requests require `email_verified_at` to be set; the login failure stays generic.
+New password registrations create an unverified CUSTOMER account and return the existing safe `201` account response. After commit, the backend queues an email with a single-use verification link. The frontend displays **Check your email**. Password login and protected requests require `email_verified_at` to be set. A correct password for an active unverified account returns `403 EMAIL_VERIFICATION_REQUIRED`; unknown accounts, wrong passwords and suspended accounts still receive the same generic `401 INVALID_CREDENTIALS` response.
 
 Docker captures verification messages in Mailpit at `http://localhost:8025` by default. To deliver them to real inboxes, set the private Gmail SMTP values described in [password recovery](identity-password-recovery.md) in `backend/.env`; the same sender delivers both verification and password-reset messages. `MAIL_FROM` must match `SPRING_MAIL_USERNAME`. The standard Gmail App Password contains 16 characters without spaces. The Compose configuration uses private `SPRING_MAIL_*` values in preference to its Mailpit host and port. Keep these values out of Git and the frontend.
 
