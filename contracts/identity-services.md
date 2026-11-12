@@ -1,5 +1,7 @@
 # Shared identity integration: Member 1 handoff
 
+Role changes and first-admin setup are described in [the identity role handoff](identity-role-handoff.md).
+
 ## Available now
 
 One Spring application, one shared schema. Backend features inject the Java
@@ -104,16 +106,10 @@ Never put tokens in localStorage, VITE variables, screenshots or logs.
 
 ## Pending: do not implement workarounds
 
-- No general user directory, account administration or profile-update contract.
-- No role grant/revoke API. M2 must agree an approval-to-role operation with M1;
-  merchant approval remains M2-owned. MERCHANT role alone does not prove approval.
-- No first-admin or courier account provisioning procedure is supplied here.
-  Automated fixtures grant roles only in disposable test databases. Never seed a
-  default admin password or manually edit production role tables to unblock a demo.
-- Future role/status mutations must authorize the actor, lock user before session,
-  update authorization version, revoke sessions and append safe audit records in
-  the same transaction. Define the M2 transaction boundary before implementing it.
-- Password recovery, Google linking and business features remain separate work.
+- No general user directory, suspension/reactivation flow or public role-revoke endpoint is published yet. M2 has an in-process merchant revocation method for its future suspension transition.
+- Merchant approval now calls the M1 role-grant service in the same transaction. MERCHANT role alone does not prove approval; M2's approval state remains authoritative.
+- One-time first-admin bootstrap and admin-only courier-role provisioning are documented in [the role handoff](identity-role-handoff.md). Never seed a default password or edit production role tables by hand.
+- Explicit Google account linking remains separate work.
 
 ## Team handoff checklist
 

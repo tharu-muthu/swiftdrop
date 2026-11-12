@@ -91,4 +91,6 @@ public class User extends CreatedEntity {
             authorizationVersion++;
         }
     }
+
+    public void authorizationChanged() { authorizationVersion++; }
 }

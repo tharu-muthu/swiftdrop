@@ -2,6 +2,8 @@
 
 Teammates: start with the [identity integration handoff](contracts/identity-services.md)
 before adding authenticated feature endpoints or calling identity services.
+For administrator setup, merchant approval grants and courier onboarding, use the
+[role handoff](contracts/identity-role-handoff.md).
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 
