@@ -19,7 +19,8 @@ class RegistrationServiceTest {
     RoleRepository roles = mock(RoleRepository.class);
     UserRoleRepository memberships = mock(UserRoleRepository.class);
     PasswordEncoder passwords = mock(PasswordEncoder.class);
-    RegistrationService service = new RegistrationService(users, roles, memberships, passwords);
+    EmailVerificationService verification = mock(EmailVerificationService.class);
+    RegistrationService service = new RegistrationService(users, roles, memberships, passwords, verification);
     String password = "  a long passphrase 🔐  ";
     RegistrationRequest request = new RegistrationRequest("  Test User  ", " PERSON@example.test ", password);
 
@@ -48,6 +49,7 @@ class RegistrationServiceTest {
         assertThat(captured.getValue().getPasswordHash()).isEqualTo("encoded-only");
         assertThat(captured.getValue().isActive()).isTrue();
         verify(memberships).saveAndFlush(argThat(link -> link.getId().getUserId().equals(response.id())));
+        verify(verification).issueForRegistration(captured.getValue());
         assertThat(request.toString()).doesNotContain(password, request.email());
     }
     @Test
