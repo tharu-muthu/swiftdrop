@@ -1,6 +1,6 @@
 -- M3: zones, postcode mapping, versioned rate cards, saved quotes.
 -- Money is LKR minor units (BIGINT); weight is integer grams.
--- Requires V2 (users) and V6 (merchants). V8 must be applied before V9.
+-- Requires V2 (users) and V6 (merchants). V9 (email verification) must be applied before V10.
 
 CREATE TABLE zones (
     id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
