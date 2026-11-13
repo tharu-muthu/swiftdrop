@@ -9,7 +9,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "quotations", schema = "swiftdrop")
@@ -30,6 +32,7 @@ public class Quotation extends UuidEntity {
     private int weightGrams;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "size", nullable = false, updatable = false, length = 1)
     private ParcelSize size;
 
