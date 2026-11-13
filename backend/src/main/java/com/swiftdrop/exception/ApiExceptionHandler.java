@@ -28,6 +28,10 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> profileConflict() {
         return ResponseEntity.status(409).body(ApiError.of("PROFILE_CONFLICT", "Your profile changed. Reload it before saving again."));
     }
+    @ExceptionHandler(IdentityRoleConflictException.class)
+    ResponseEntity<ApiError> roleConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ROLE_CHANGE_CONFLICT", "The account or role changed. Reload before trying again."));
+    }
     @ExceptionHandler(WebhookEndpointException.class)
     ResponseEntity<ApiError> webhookEndpoint() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_WEBHOOK_ENDPOINT", "The webhook endpoint is invalid."));
@@ -52,11 +56,24 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> invalidArgument() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST", "The request is invalid."));
     }
+    @ExceptionHandler(InvalidResetTokenException.class)
+    ResponseEntity<ApiError> invalidResetToken() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_RESET_TOKEN", "This reset link is invalid or has expired. Request a new link."));
+    }
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    ResponseEntity<ApiError> invalidVerificationToken() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_VERIFICATION_TOKEN", "This verification link is invalid or has expired. Request a new link."));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");
         return ResponseEntity.status(401).body(ApiError.of(login ? "INVALID_CREDENTIALS" : "UNAUTHORIZED",
                 login ? "Email or password is incorrect." : "Your session has ended. Please sign in again."));
+    }
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    ResponseEntity<ApiError> emailVerificationRequired() {
+        return ResponseEntity.status(403).body(ApiError.of("EMAIL_VERIFICATION_REQUIRED",
+                "Verify your email before logging in. Check your inbox or request a new link."));
     }
     @ExceptionHandler(RateLimitException.class)
     ResponseEntity<ApiError> throttled(RateLimitException error) {
@@ -82,6 +99,14 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST",
                 path.equals("/api/v1/me")
                         ? "Send a JSON object containing only fullName, phone and version."
+                        : path.equals("/api/v1/auth/password-reset/request")
+                        ? "Send a JSON object containing only email."
+                        : path.equals("/api/v1/auth/password-reset/confirm")
+                        ? "Send a JSON object containing only token and password."
+                        : path.equals("/api/v1/auth/email-verification/request")
+                        ? "Send a JSON object containing only email."
+                        : path.equals("/api/v1/auth/email-verification/confirm")
+                        ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
                         : "Send a JSON object containing only fullName, email and password."));

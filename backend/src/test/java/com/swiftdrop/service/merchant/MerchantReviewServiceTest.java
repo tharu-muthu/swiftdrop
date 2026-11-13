@@ -17,6 +17,7 @@ import com.swiftdrop.exception.MerchantNotFoundException;
 import com.swiftdrop.repository.merchant.MerchantRepository;
 import com.swiftdrop.security.IdentityContext;
 import com.swiftdrop.service.identity.IdentityAccountService;
+import com.swiftdrop.service.identity.IdentityRoleManagement;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,7 +31,8 @@ import org.springframework.security.access.AccessDeniedException;
 class MerchantReviewServiceTest {
     final IdentityAccountService identities = mock(IdentityAccountService.class);
     final MerchantRepository merchants = mock(MerchantRepository.class);
-    final MerchantReviewService service = new MerchantReviewService(identities, merchants);
+    final IdentityRoleManagement roleManagement = mock(IdentityRoleManagement.class);
+    final MerchantReviewService service = new MerchantReviewService(identities, merchants, roleManagement);
 
     final UUID adminId = UUID.randomUUID();
     final UUID merchantId = UUID.randomUUID();
@@ -52,6 +54,7 @@ class MerchantReviewServiceTest {
         assertThat(merchant.getReviewedBy()).isEqualTo(adminId);
         assertThat(merchant.getReviewedAt()).isNotNull();
         verify(merchants).saveAndFlush(merchant);
+        verify(roleManagement).grantMerchantForApprovedOwner(merchant.getOwnerUserId(), "Merchant application approved");
     }
 
     @Test

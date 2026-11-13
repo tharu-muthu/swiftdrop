@@ -48,6 +48,18 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:swiftdrop}
     connection-timeout: 5s
+  mail:
+    # Private SPRING_MAIL_* values in backend/.env override Compose's Mailpit defaults.
+    host: ${SPRING_MAIL_HOST:${MAIL_HOST:localhost}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:1025}}
+    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:}}
+    password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:}}
+    properties:
+      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:${MAIL_SMTP_AUTH:false}}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:${MAIL_SMTP_STARTTLS:false}}
+      mail.smtp.starttls.required: ${SPRING_MAIL_SMTP_STARTTLS_REQUIRED:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
 server:
   port: ${BACKEND_PORT:8081}
   error:
@@ -63,6 +75,9 @@ logging:
     org.hibernate.SQL: OFF
 
 swiftdrop:
+  bootstrap:
+    admin-enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
   auth:
     jwt-secret: ${AUTH_JWT_SECRET:}
     issuer: ${AUTH_JWT_ISSUER:https://swiftdrop.local}
@@ -77,3 +92,6 @@ swiftdrop:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     frontend-origin: ${GOOGLE_FRONTEND_ORIGIN:http://127.0.0.1:5173}
+  recovery:
+    frontend-origin: ${RESET_FRONTEND_ORIGIN:http://localhost:8080}
+    from: ${MAIL_FROM:no-reply@swiftdrop.local}
