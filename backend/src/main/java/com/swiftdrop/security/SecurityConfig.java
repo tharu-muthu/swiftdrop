@@ -54,9 +54,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
-                                "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                                "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                                "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm",
+                                "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/courier-role").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/users/*/roles").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/merchants").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/merchants/*/approve", "/api/v1/admin/merchants/*/reject")
+                            .hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings/dashboard").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{trackingNumber}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tracking/*/events").permitAll()

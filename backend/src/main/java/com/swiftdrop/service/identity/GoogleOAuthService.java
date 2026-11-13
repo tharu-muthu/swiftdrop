@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.time.Instant;
 
 @Service
 public class GoogleOAuthService {
@@ -50,6 +51,8 @@ public class GoogleOAuthService {
             // Returning Google user
             user = users.lockById(existingLink.get().getUserId())
                     .orElseThrow(() -> new IllegalStateException("Linked user not found"));
+            // A verified provider email proves the stored address only if it still matches.
+            if (users.normalizeEmail(rawEmail).equals(user.getEmailNormalized())) user.verifyEmail(Instant.now());
         } else {
             // New Google login — check for email collision with a password account
             String normalized = users.normalizeEmail(rawEmail);
@@ -60,6 +63,7 @@ public class GoogleOAuthService {
             }
             // Create new CUSTOMER (Google-only, null password hash)
             User newUser = users.saveAndFlush(User.registerGoogleCustomer(fullName, rawEmail));
+            newUser.verifyEmail(Instant.now());
             var customerRole = roles.findByName("CUSTOMER")
                     .orElseThrow(() -> new IllegalStateException("CUSTOMER role missing"));
             memberships.saveAndFlush(new UserRole(newUser.getId(), customerRole.getId()));
@@ -68,6 +72,7 @@ public class GoogleOAuthService {
             user = users.lockById(newUser.getId()).orElseThrow();
         }
 
+        if (!user.isEmailVerified()) return new Result(Outcome.UNVERIFIED_EMAIL, null);
         if (!user.isActive()) {
             return new Result(Outcome.SUSPENDED, null);
         }
