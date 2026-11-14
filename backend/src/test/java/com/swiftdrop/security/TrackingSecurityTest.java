@@ -1,4 +1,3 @@
-
 package com.swiftdrop.security;
 
 import static org.mockito.Mockito.mock;
