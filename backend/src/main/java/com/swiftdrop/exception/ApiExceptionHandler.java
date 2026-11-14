@@ -28,6 +28,10 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> profileConflict() {
         return ResponseEntity.status(409).body(ApiError.of("PROFILE_CONFLICT", "Your profile changed. Reload it before saving again."));
     }
+    @ExceptionHandler(IdentityRoleConflictException.class)
+    ResponseEntity<ApiError> roleConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ROLE_CHANGE_CONFLICT", "The account or role changed. Reload before trying again."));
+    }
     @ExceptionHandler(WebhookEndpointException.class)
     ResponseEntity<ApiError> webhookEndpoint() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_WEBHOOK_ENDPOINT", "The webhook endpoint is invalid."));

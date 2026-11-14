@@ -75,6 +75,9 @@ logging:
     org.hibernate.SQL: OFF
 
 swiftdrop:
+  bootstrap:
+    admin-enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
   auth:
     jwt-secret: ${AUTH_JWT_SECRET:}
     issuer: ${AUTH_JWT_ISSUER:https://swiftdrop.local}

@@ -162,7 +162,7 @@ Both re-read live key and approval state. Never cache the result for authorizati
 
 2\. M3: `PricingService` interface for MER-04.
 
-3\. M1: role grant on approval, and how the first admin account is created.
+3\. M1: [merchant role grant and first-admin bootstrap](identity-role-handoff.md) are implemented. A verified first-admin account must still be bootstrapped in each environment before an administrator can approve merchants.
 
 4\. Suspend endpoint, and an audit table (`api\_request\_audit`), are not built yet.
 

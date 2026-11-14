@@ -9,6 +9,7 @@ import com.swiftdrop.exception.MerchantDecisionConflictException;
 import com.swiftdrop.exception.MerchantNotFoundException;
 import com.swiftdrop.repository.merchant.MerchantRepository;
 import com.swiftdrop.service.identity.IdentityAccountService;
+import com.swiftdrop.service.identity.IdentityRoleManagement;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -23,10 +24,13 @@ public class MerchantReviewService {
 
     private final IdentityAccountService identities;
     private final MerchantRepository merchants;
+    private final IdentityRoleManagement roleManagement;
 
-    public MerchantReviewService(IdentityAccountService identities, MerchantRepository merchants) {
+    public MerchantReviewService(IdentityAccountService identities, MerchantRepository merchants,
+            IdentityRoleManagement roleManagement) {
         this.identities = identities;
         this.merchants = merchants;
+        this.roleManagement = roleManagement;
     }
 
     @Transactional(readOnly = true)
@@ -46,6 +50,7 @@ public class MerchantReviewService {
         var merchant = loadPending(merchantId);
         merchant.approve(admin.userId(), Instant.now());
         merchants.saveAndFlush(merchant);
+        roleManagement.grantMerchantForApprovedOwner(merchant.getOwnerUserId(), "Merchant application approved");
         return MerchantAdminResponse.from(merchant);
     }
 
