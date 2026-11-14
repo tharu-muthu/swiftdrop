@@ -28,14 +28,17 @@ public class RateCardVersion extends UuidEntity {
     @Column(name = "extra_kg_minor", nullable = false)
     private long extraKgMinor;
 
-    @Column(name = "size_surcharge_s", nullable = false)
-    private long sizeSurchargeS;
+    @Column(name = "size_surcharge_small", nullable = false)
+    private long sizeSurchargeSmall;
 
-    @Column(name = "size_surcharge_m", nullable = false)
-    private long sizeSurchargeM;
+    @Column(name = "size_surcharge_medium", nullable = false)
+    private long sizeSurchargeMedium;
 
-    @Column(name = "size_surcharge_l", nullable = false)
-    private long sizeSurchargeL;
+    @Column(name = "size_surcharge_large", nullable = false)
+    private long sizeSurchargeLarge;
+
+    @Column(name = "size_surcharge_extra_large", nullable = false)
+    private long sizeSurchargeExtraLarge;
 
     @Column(name = "effective_from", nullable = false)
     private Instant effectiveFrom;
@@ -46,24 +49,26 @@ public class RateCardVersion extends UuidEntity {
     protected RateCardVersion() { }
 
     public RateCardVersion(UUID pickupZoneId, UUID dropoffZoneId, long baseMinor, int includedKg,
-            long extraKgMinor, long sizeSurchargeS, long sizeSurchargeM, long sizeSurchargeL,
-            Instant effectiveFrom) {
+            long extraKgMinor, long sizeSurchargeSmall, long sizeSurchargeMedium, long sizeSurchargeLarge,
+            long sizeSurchargeExtraLarge, Instant effectiveFrom) {
         this.pickupZoneId = pickupZoneId;
         this.dropoffZoneId = dropoffZoneId;
         this.baseMinor = baseMinor;
         this.includedKg = includedKg;
         this.extraKgMinor = extraKgMinor;
-        this.sizeSurchargeS = sizeSurchargeS;
-        this.sizeSurchargeM = sizeSurchargeM;
-        this.sizeSurchargeL = sizeSurchargeL;
+        this.sizeSurchargeSmall = sizeSurchargeSmall;
+        this.sizeSurchargeMedium = sizeSurchargeMedium;
+        this.sizeSurchargeLarge = sizeSurchargeLarge;
+        this.sizeSurchargeExtraLarge = sizeSurchargeExtraLarge;
         this.effectiveFrom = effectiveFrom;
     }
 
     public long surchargeFor(ParcelSize size) {
         return switch (size) {
-            case S -> sizeSurchargeS;
-            case M -> sizeSurchargeM;
-            case L -> sizeSurchargeL;
+            case SMALL -> sizeSurchargeSmall;
+            case MEDIUM -> sizeSurchargeMedium;
+            case LARGE -> sizeSurchargeLarge;
+            case EXTRA_LARGE -> sizeSurchargeExtraLarge;
         };
     }
 
@@ -73,9 +78,10 @@ public class RateCardVersion extends UuidEntity {
     public long getBaseMinor() { return baseMinor; }
     public int getIncludedKg() { return includedKg; }
     public long getExtraKgMinor() { return extraKgMinor; }
-    public long getSizeSurchargeS() { return sizeSurchargeS; }
-    public long getSizeSurchargeM() { return sizeSurchargeM; }
-    public long getSizeSurchargeL() { return sizeSurchargeL; }
+    public long getSizeSurchargeSmall() { return sizeSurchargeSmall; }
+    public long getSizeSurchargeMedium() { return sizeSurchargeMedium; }
+    public long getSizeSurchargeLarge() { return sizeSurchargeLarge; }
+    public long getSizeSurchargeExtraLarge() { return sizeSurchargeExtraLarge; }
     public Instant getEffectiveFrom() { return effectiveFrom; }
     public boolean isActive() { return active; }
 }

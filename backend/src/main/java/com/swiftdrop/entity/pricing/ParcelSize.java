@@ -1,3 +1,4 @@
 package com.swiftdrop.entity.pricing;
 
-public enum ParcelSize { S, M, L }
+/** Names match M4's booking form exactly. */
+public enum ParcelSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE }

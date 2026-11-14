@@ -33,7 +33,7 @@ public class Quotation extends UuidEntity {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "size", nullable = false, updatable = false, length = 1)
+    @Column(name = "size", nullable = false, updatable = false, length = 12)
     private ParcelSize size;
 
     @Column(name = "currency", nullable = false, updatable = false, length = 3)

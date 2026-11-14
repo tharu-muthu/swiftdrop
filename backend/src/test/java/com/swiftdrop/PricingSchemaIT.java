@@ -75,7 +75,7 @@ class PricingSchemaIT {
 
     private RateCardVersion rateCard(Zone from, Zone to) {
         return rateCards.saveAndFlush(new RateCardVersion(from.getId(), to.getId(),
-                45_000, 1, 15_000, 0, 10_000, 25_000, START));
+                45_000, 1, 15_000, 0, 10_000, 25_000, 40_000, START));
     }
 
     @Test
@@ -120,7 +120,7 @@ class PricingSchemaIT {
                 insert into swiftdrop.quotations
                   (rate_version_id, input_hash, weight_grams, size, currency, base_minor,
                    extra_weight_minor, size_surcharge_minor, amount_minor, expires_at)
-                values (?, repeat('a', 64), 1000, 'S', 'LKR', 1, 0, 0, 1, now())
+                values (?, repeat('a', 64), 1000, 'SMALL', 'LKR', 1, 0, 0, 1, now())
                 """, rate.getId())).isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -133,7 +133,7 @@ class PricingSchemaIT {
         rateCard(colombo, galle);
 
         QuoteOwner owner = QuoteOwner.customer(newUser());
-        var quote = pricing.createQuote(owner, new QuoteRequest("T0002", "T0003", 1_500, ParcelSize.M));
+        var quote = pricing.createQuote(owner, new QuoteRequest("T0002", "T0003", 1_500, ParcelSize.MEDIUM));
         quotations.flush();
 
         // base 45000 + one extra kg 15000 + medium surcharge 10000

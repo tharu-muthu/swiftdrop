@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PricingService {
     static final Duration QUOTE_TTL = Duration.ofMinutes(10);
-    static final int MAX_WEIGHT_GRAMS = 30_000; // demo assumption; confirm with the team
+    static final int MAX_WEIGHT_GRAMS = 100_000; // demo assumption; confirm with the team
 
     private final ZonePostcodeRepository postcodes;
     private final ZoneRepository zones;

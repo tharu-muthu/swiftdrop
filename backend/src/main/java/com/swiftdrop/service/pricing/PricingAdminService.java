@@ -83,8 +83,8 @@ public class PricingAdminService {
             throw new PricingException(PricingErrorCode.RATE_CARD_EXISTS);
         }
         return toResponse(rateCards.save(new RateCardVersion(request.pickupZoneId(), request.dropoffZoneId(),
-                request.baseMinor(), request.includedKg(), request.extraKgMinor(), request.sizeSurchargeS(),
-                request.sizeSurchargeM(), request.sizeSurchargeL(), effectiveFrom)));
+                request.baseMinor(), request.includedKg(), request.extraKgMinor(), request.sizeSurchargeSmall(),
+                request.sizeSurchargeMedium(), request.sizeSurchargeLarge(), request.sizeSurchargeExtraLarge(), effectiveFrom)));
     }
 
     private void requireAdmin() {
@@ -103,7 +103,7 @@ public class PricingAdminService {
 
     private static RateCardResponse toResponse(RateCardVersion r) {
         return new RateCardResponse(r.getId(), r.getPickupZoneId(), r.getDropoffZoneId(), r.getCurrency(),
-                r.getBaseMinor(), r.getIncludedKg(), r.getExtraKgMinor(), r.getSizeSurchargeS(),
-                r.getSizeSurchargeM(), r.getSizeSurchargeL(), r.getEffectiveFrom(), r.isActive());
+                r.getBaseMinor(), r.getIncludedKg(), r.getExtraKgMinor(), r.getSizeSurchargeSmall(),
+                r.getSizeSurchargeMedium(), r.getSizeSurchargeLarge(), r.getSizeSurchargeExtraLarge(), r.getEffectiveFrom(), r.isActive());
     }
 }

@@ -11,7 +11,8 @@ public record RateCardRequest(
         @Min(0) long baseMinor,
         @Min(0) int includedKg,
         @Min(0) long extraKgMinor,
-        @Min(0) long sizeSurchargeS,
-        @Min(0) long sizeSurchargeM,
-        @Min(0) long sizeSurchargeL,
+        @Min(0) long sizeSurchargeSmall,
+        @Min(0) long sizeSurchargeMedium,
+        @Min(0) long sizeSurchargeLarge,
+        @Min(0) long sizeSurchargeExtraLarge,
         Instant effectiveFrom) { }

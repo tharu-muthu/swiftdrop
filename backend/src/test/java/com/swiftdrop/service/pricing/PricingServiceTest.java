@@ -40,7 +40,7 @@ class PricingServiceTest {
     private final UUID zoneB = UUID.randomUUID();
     private final QuoteOwner alice = QuoteOwner.customer(UUID.randomUUID());
     private final QuoteOwner bob = QuoteOwner.customer(UUID.randomUUID());
-    private final QuoteRequest request = new QuoteRequest("00100", "80000", 1_500, ParcelSize.M);
+    private final QuoteRequest request = new QuoteRequest("00100", "80000", 1_500, ParcelSize.MEDIUM);
 
     @BeforeEach
     void stubData() {
@@ -48,7 +48,7 @@ class PricingServiceTest {
         when(postcodes.findByPostcode("80000")).thenReturn(Optional.of(new ZonePostcode("80000", zoneB)));
         when(zones.findById(any())).thenReturn(Optional.of(new Zone("Test zone")));
         when(rateCards.findCurrent(any(), any(), any())).thenReturn(Optional.of(new RateCardVersion(zoneA, zoneB,
-                45_000, 1, 15_000, 0, 10_000, 25_000, Instant.parse("2026-01-01T00:00:00Z"))));
+                45_000, 1, 15_000, 0, 10_000, 25_000, 40_000, Instant.parse("2026-01-01T00:00:00Z"))));
         when(quotations.save(any(Quotation.class))).thenAnswer(call -> {
             saved.set(call.getArgument(0));
             return saved.get();
@@ -70,14 +70,14 @@ class PricingServiceTest {
 
     @Test
     void unknownPostcodeIsRejected() {
-        var bad = new QuoteRequest("99999", "80000", 1_000, ParcelSize.S);
+        var bad = new QuoteRequest("99999", "80000", 1_000, ParcelSize.SMALL);
         var error = assertThrows(PricingException.class, () -> serviceAt(NOW).createQuote(alice, bad));
         assertEquals(PricingErrorCode.UNSUPPORTED_POSTCODE, error.code());
     }
 
     @Test
     void excessiveWeightIsRejected() {
-        var heavy = new QuoteRequest("00100", "80000", 30_001, ParcelSize.S);
+        var heavy = new QuoteRequest("00100", "80000", 100_001, ParcelSize.SMALL);
         var error = assertThrows(PricingException.class, () -> serviceAt(NOW).createQuote(alice, heavy));
         assertEquals(PricingErrorCode.WEIGHT_NOT_SUPPORTED, error.code());
     }
@@ -109,7 +109,7 @@ class PricingServiceTest {
     @Test
     void changedWeightFailsBookingValidation() {
         serviceAt(NOW).createQuote(alice, request);
-        var changed = new QuoteRequest("00100", "80000", 3_000, ParcelSize.M);
+        var changed = new QuoteRequest("00100", "80000", 3_000, ParcelSize.MEDIUM);
         var error = assertThrows(PricingException.class,
                 () -> serviceAt(NOW).validateForBooking(UUID.randomUUID(), alice, changed));
         assertEquals(PricingErrorCode.QUOTE_INPUTS_CHANGED, error.code());
