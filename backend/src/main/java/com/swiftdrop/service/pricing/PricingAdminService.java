@@ -1,5 +1,6 @@
 package com.swiftdrop.service.pricing;
 
+import com.swiftdrop.dto.identity.IdentityRole;
 import com.swiftdrop.dto.pricing.PostcodeRequest;
 import com.swiftdrop.dto.pricing.RateCardRequest;
 import com.swiftdrop.dto.pricing.RateCardResponse;
@@ -17,15 +18,12 @@ import com.swiftdrop.service.identity.IdentityAccountService;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** PRI-01 / PRI-02: maintain zones, postcode mappings and rate cards. DISPATCHER_ADMIN only. */
 @Service
 public class PricingAdminService {
-    private static final String ADMIN_ROLE = "DISPATCHER_ADMIN";
-
     private final ZoneRepository zones;
     private final ZonePostcodeRepository postcodes;
     private final RateCardRepository rateCards;
@@ -90,9 +88,7 @@ public class PricingAdminService {
     }
 
     private void requireAdmin() {
-        if (!identities.requireCurrentIdentity().roles().contains(ADMIN_ROLE)) {
-            throw new AccessDeniedException("Administrator role required");
-        }
+        identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
     }
 
     private void requireZone(UUID zoneId) {
