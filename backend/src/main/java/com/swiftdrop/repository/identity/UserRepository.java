@@ -2,6 +2,8 @@ package com.swiftdrop.repository.identity;
 
 import com.swiftdrop.entity.identity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.UUID;
@@ -20,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> lockById(@Param("id") UUID id);
+    @Query("select u from User u where :query = '' or lower(u.fullName) like concat('%', :query, '%') escape '!' or u.emailNormalized like concat('%', :query, '%') escape '!'")
+    Page<User> searchForAdmin(@Param("query") String query, Pageable pageable);
 }
