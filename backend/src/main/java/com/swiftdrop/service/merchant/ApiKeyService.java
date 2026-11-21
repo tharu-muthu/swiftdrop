@@ -1,5 +1,6 @@
 package com.swiftdrop.service.merchant;
 
+import com.swiftdrop.dto.identity.IdentityRole;
 import com.swiftdrop.dto.merchant.ApiKeyCreatedResponse;
 import com.swiftdrop.dto.merchant.ApiKeySummary;
 import com.swiftdrop.entity.merchant.ApiCredential;
@@ -38,7 +39,7 @@ public class ApiKeyService {
 
     @Transactional
     public ApiKeyCreatedResponse create() {
-        var owner = identities.requireCurrentIdentity();
+        var owner = identities.requireCurrentRole(IdentityRole.MERCHANT);
         var found = merchants.findByOwnerUserId(owner.userId()).orElseThrow(MerchantNotFoundException::new);
         // Lock the merchant row so concurrent requests cannot exceed the active-key limit.
         Merchant merchant = merchants.findForUpdate(found.getId()).orElseThrow(MerchantNotFoundException::new);
@@ -75,7 +76,9 @@ public class ApiKeyService {
     }
 
     private Merchant ownMerchant() {
-        var owner = identities.requireCurrentIdentity();
-        return merchants.findByOwnerUserId(owner.userId()).orElseThrow(MerchantNotFoundException::new);
+        var owner = identities.requireCurrentRole(IdentityRole.MERCHANT);
+        var merchant = merchants.findByOwnerUserId(owner.userId()).orElseThrow(MerchantNotFoundException::new);
+        if (merchant.getApprovalStatus() != MerchantApprovalStatus.APPROVED) throw new MerchantNotApprovedException();
+        return merchant;
     }
 }
