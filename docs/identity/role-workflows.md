@@ -4,7 +4,7 @@ One identity can hold CUSTOMER, MERCHANT, COURIER and DISPATCHER_ADMIN membershi
 
 ## Sign in and use access
 
-Password sign-in and Google completion both open `/workspaces`. Cards show assigned roles, and shared navigation hides functions for unassigned roles. `/account` and `/profile` remain profile aliases. Customer, merchant, courier, and admin screens provide a route back to workspace selection. Unassigned protected screens show an access message; unknown signed-in paths show a missing-page screen. These UI checks supplement backend authorization and never grant permission.
+Password sign-in and Google completion both enter `/workspaces`. Users with exactly one assigned role go directly to its portal (CUSTOMER: `/booking`, MERCHANT: `/merchant`, COURIER: `/courier`, DISPATCHER_ADMIN: `/dispatch`), replacing the landing history entry. Users with multiple roles see “Choose your portal” with only their assigned roles. “Switch portal” appears only for those users. Refreshing a portal keeps its current route. `/account` and `/profile` remain profile aliases. Shared navigation hides functions for unassigned roles. Unassigned protected screens show an access message; unknown signed-in paths show a missing-page screen. Portal selection is navigation; it does not change memberships or server authorization.
 
 - CUSTOMER: open Customer, create a booking, review bookings and receipts.
 - MERCHANT: open Merchant for orders, credentials and webhook settings. Live business approval and account/role checks still gate server operations.
@@ -12,6 +12,8 @@ Password sign-in and Google completion both open `/workspaces`. Cards show assig
 - DISPATCHER_ADMIN: open Administration & dispatch; use navigation for users, business approvals, pricing and notifications.
 
 ## Assign access
+
+Portal redirects are resolved by the app router, including repeated login landing navigation. Portal cards and shared navigation use same-document links so switching does not repeat cookie refresh and `/me`. A full browser reload still restores and validates the session before showing protected content.
 
 1. The person registers and verifies email (or uses verified Google signup).
 2. An administrator opens User management and searches name/email.
