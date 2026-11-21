@@ -118,10 +118,12 @@ public class SecurityConfig {
                 .csrf(config -> config.csrfTokenRepository(csrf)
                         // Resource-server defaults otherwise exempt Bearer requests from CSRF.
                         // Browser mutations follow the same CSRF contract as cookie auth operations.
-                        .withObjectPostProcessor(new org.springframework.security.config.ObjectPostProcessor<CsrfFilter>() {
-                            @Override public <O extends CsrfFilter> O postProcess(O filter) {
-                                filter.setRequireCsrfProtectionMatcher(CsrfFilter.DEFAULT_CSRF_MATCHER);
-                                return filter;
+                        .withObjectPostProcessor(new org.springframework.security.config.ObjectPostProcessor<Object>() {
+                            @Override public <O> O postProcess(O object) {
+                                if (object instanceof CsrfFilter filter) {
+                                    filter.setRequireCsrfProtectionMatcher(CsrfFilter.DEFAULT_CSRF_MATCHER);
+                                }
+                                return object;
                             }
                         }))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
