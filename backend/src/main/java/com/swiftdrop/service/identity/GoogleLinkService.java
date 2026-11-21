@@ -4,7 +4,6 @@ import com.swiftdrop.entity.identity.*;
 import com.swiftdrop.exception.IdentityAuthenticationException;
 import com.swiftdrop.exception.IdentityRoleConflictException;
 import com.swiftdrop.repository.identity.*;
-import com.swiftdrop.security.IdentityContext;
 import java.time.*;
 import java.util.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
