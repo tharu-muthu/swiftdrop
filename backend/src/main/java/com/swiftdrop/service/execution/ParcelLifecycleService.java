@@ -74,8 +74,15 @@ public class ParcelLifecycleService {
     /** M4 calls this in its booking transaction after M5 supplies the assigned courier. */
     @Transactional
     public UUID initialize(UUID bookingId, UUID courierId, UUID actorUserId) {
-        if (lifecycles.existsByBookingId(bookingId)) {
-            throw new LifecycleConflictException("A lifecycle already exists for this booking.");
+        var existing = lifecycles.findByBookingId(bookingId);
+        if (existing.isPresent()) {
+            var lifecycle = existing.get();
+            if (lifecycle.getStatus() == ParcelStatus.DELIVERED || lifecycle.getStatus() == ParcelStatus.FAILED) {
+                throw new LifecycleConflictException("Terminal deliveries cannot be reassigned.");
+            }
+            lifecycle.assignCourier(courierId);
+            lifecycles.save(lifecycle);
+            return lifecycle.getId();
         }
         var lifecycle = lifecycles.save(ParcelLifecycle.create(bookingId, courierId));
         history.save(ParcelStatusHistory.create(lifecycle.getId(), 1, null, ParcelStatus.CREATED,
