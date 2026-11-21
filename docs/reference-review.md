@@ -135,3 +135,7 @@ is an operational threshold, not an inferred contractual SLA.
 New V11/V12 migrations are additive. V8 is not reused and V1–V10 are unchanged.
 Tests target disposable databases; shared Neon migration/SMTP coordination and
 live-provider deployment remain separate from implementation verification.
+
+## Assignment RBAC implementation reconciliation
+
+The current [RBAC review](identity/rbac-assignment-review.md) maps the assignment's four role scopes to implemented APIs and service ownership rules. V3 page 9's abbreviated signed-in quote description is refined by page 10's CUSTOMER-owned quote scope: browser `/quotes` requires CUSTOMER, while approved merchants use the separate merchant pricing paths. V3 page 23 explicitly includes carried-over active courier tasks; the dated workday uses existing assignment/activity timestamps because no scheduled-delivery-date column exists. V3 page 22's before-pickup reassignment limit is now enforced by the canonical lifecycle lock. No new schema or role definition is inferred.

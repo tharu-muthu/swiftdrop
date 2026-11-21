@@ -114,7 +114,7 @@ Ownership boundaries:
 
 ### IAM-08 — Password recovery
 
-**Implemented on `feat/password-recovery`:** request/completion endpoints, single-use hashed-token service, SMTP delivery adapter, Docker Mailpit inbox, React forms and feature tests. The request screen follows `forget password.png`; the completion form uses the same SwiftDrop layout. See [password recovery contract](../../contracts/identity-password-recovery.md). IAM-08 explicitly adds recovery to M1 even though v3 enumerates IAM-01 through IAM-07.
+**Implemented on `feat/password-recovery`:** request/completion endpoints, single-use hashed-token service, SMTP delivery adapter, React forms and feature tests. The request screen follows `forget password.png`; the completion form uses the same SwiftDrop layout. See [password recovery contract](../../contracts/identity-password-recovery.md). IAM-08 explicitly adds recovery to M1 even though v3 enumerates IAM-01 through IAM-07.
 
 - [x] Implement the supplied email request form, generic acknowledgement and back-to-login link. Valid email input gets the same `202` body for eligible, unknown, suspended and Google-only accounts. Per-source and per-email rate limits apply.
 - [x] Send reset instructions only for active accounts with a local password. Google-only users continue with Google; recovery never adds a local credential or reactivates a suspended account.
@@ -122,7 +122,7 @@ Ownership boundaries:
 - [x] The completion UI includes new password, confirmation, visibility toggle, pending, invalid/expired/used-link and success states. It uses registration's password policy.
 - [x] In one transaction, consume a valid token, change the password hash, increment authorization version and revoke all sessions/other reset tokens. A concurrent integration test confirms only one submission succeeds. Users sign in normally afterwards.
 - [x] Construct links from a configured trusted frontend origin, not the request Host header. The token is in a URL fragment, referrers are disabled, and the fragment is cleared from browser history. Delivery failures are recorded without sensitive details and the API does not claim confirmed delivery.
-- [x] PostgreSQL integration tests cover unknown, suspended and Google-only accounts, expired/reused/invalid and superseded tokens, CSRF, concurrent consumption, old-password rejection, session invalidation and mail failure; 25 `IdentitySessionsIT` tests passed on 10 November 2026. A separate unit test verifies the per-email limit. Real SMTP delivery remains a separate configured smoke check; Docker Mailpit supports the local browser check.
+- [x] PostgreSQL integration tests cover unknown, suspended and Google-only accounts, expired/reused/invalid and superseded tokens, CSRF, concurrent consumption, old-password rejection, session invalidation and mail failure; 25 `IdentitySessionsIT` tests passed on 10 November 2026. A separate unit test verifies the per-email limit. Real SMTP delivery remains a separate configured smoke check; Use the configured SMTP provider for the browser delivery check.
 
 Recovery safeguards follow [OWASP's Forgot Password guidance](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html); the 30-minute expiry and eligibility choices above are project proposals, not requirements from that source.
 
@@ -378,3 +378,15 @@ migration, database credential or hashing algorithm changed.
 ### IAM-02 / IAM-07 implementation follow-up
 
 The [session guide](sessions.md) and [API contract](../../contracts/identity-sessions.md) supersede earlier proposed session/security descriptions above. V2 is reused unchanged. Final checks passed 38 backend unit/security tests, 47 integration tests and 30 frontend tests, plus both builds. Live Neon, browser visual checks, full Compose image deployment and process-restart checks were not run. No Google, recovery, admin or profile editing is implemented.
+
+### Role workflow implementation follow-up
+
+The current [role workspace guide](role-workflows.md) supersedes historical proposed role-navigation descriptions above. Password and Google sign-in now share `/workspaces`; canonical grant/revoke endpoints and compatibility role endpoints enforce the same identity policy. User management connects courier grants to operational profile setup, and merchant grants remain owned by approval. No public elevated-role signup or invitation endpoint is introduced.
+
+### Real SMTP development setup
+
+Mailpit has been removed from Compose at the user's request. Verification and recovery now use the real SMTP sender configured privately in `backend/.env`. Existing private credentials are preserved. See the password recovery contract for setup; use `--remove-orphans` when upgrading an existing Compose stack. Real provider delivery still requires an inbox smoke check.
+
+### Assignment RBAC alignment follow-up
+
+See [the RBAC implementation review](rbac-assignment-review.md) for the current four-role access matrix, service ownership checks, protected merchant key management, daily courier work with carryover, before-pickup reassignment, and explicit CSRF enforcement on browser Bearer mutations. Its verification record supersedes older role-access testing descriptions above.

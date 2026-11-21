@@ -11,7 +11,7 @@ All routes require an active authenticated `COURIER` and use `/api/v1`.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| GET | `/courier/deliveries` | List deliveries assigned to the current courier |
+| GET | `/courier/deliveries?date=YYYY-MM-DD` | Current courier workday; defaults to today in Asia/Colombo, including carried-over unfinished work |
 | GET | `/courier/deliveries/{lifecycleId}` | Read delivery details and ordered history |
 | POST | `/courier/deliveries/{lifecycleId}/status` | Apply one validated status transition |
 
@@ -38,3 +38,5 @@ address and recipient details are not published.
 Terminal execution also releases active assignment workload through M5; successful
 delivery issues M4's delivery receipt in that same transaction. See
 [the integrated event and recovery contract](../docs/full-system-implementation.md#event-delivery-and-recovery).
+
+Workday details and assignment rules are specified in [the RBAC review](../docs/identity/rbac-assignment-review.md#courier-workday-and-reassignment). Earlier dates do not expose parcels reassigned to another courier. Future dates return 400. Unknown acting-user/role fields in status and assignment requests are rejected. Reassignment is allowed only before pickup (CREATED), enforced under the canonical lifecycle lock.
