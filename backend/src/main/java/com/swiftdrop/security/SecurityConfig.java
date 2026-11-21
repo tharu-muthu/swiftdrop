@@ -56,10 +56,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm",
-                                "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm").permitAll()
+                                "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm", "/api/v1/auth/email-change/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/me").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/me/google-link").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/me/google-link", "/api/v1/me/security/email-change",
+                                "/api/v1/me/security/password", "/api/v1/me/security/google-reauth").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/me/addresses").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/me/addresses").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/me/addresses/{id}").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/me/addresses/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/roles/grant", "/api/v1/admin/users/*/roles/revoke").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/courier-role").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/operational-roles").hasRole("DISPATCHER_ADMIN")
@@ -136,13 +141,15 @@ public class SecurityConfig {
     @ConditionalOnProperty(prefix = "swiftdrop.google", name = "enabled", havingValue = "true")
     SecurityFilterChain futureOAuthSecurity(HttpSecurity http, ObjectMapper json,
             GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler,
-            com.swiftdrop.config.GoogleSettings googleSettings) throws Exception {
+            com.swiftdrop.config.GoogleSettings googleSettings,
+            org.springframework.security.oauth2.client.registration.ClientRegistrationRepository clients) throws Exception {
         return http
                 .securityMatcher("/oauth2/**", "/login/oauth2/**")
                 .addFilterBefore(new GoogleOriginFilter(googleSettings),
                         org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(new com.swiftdrop.integration.identity.GoogleSecurityRequestResolver(clients)))
                         .successHandler(successHandler)
                         .failureHandler(failureHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
