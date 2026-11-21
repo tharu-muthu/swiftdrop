@@ -1,6 +1,5 @@
 package com.swiftdrop.service.webhook;
 
-import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
