@@ -1,10 +1,11 @@
 import WorkspacesPage from '../features/identity/WorkspacesPage.jsx';
 import AppLoading from './AppLoading.jsx';
 import WorkspacePage from '../components/WorkspacePage.jsx';
-import { canAccess } from './workspaces.js';
+import { availableWorkspaces, canAccess } from './workspaces.js';
+import { navigate } from './navigation.js';
 import FoundationPage from './FoundationPage.jsx';
 import RegisterPage from '../features/identity/RegisterPage.jsx';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useAuth } from '../features/identity/AuthProvider.jsx';
 import LoginPage from '../features/identity/LoginPage.jsx';
 import AccountPage from '../features/identity/AccountPage.jsx';
@@ -27,13 +28,19 @@ import NotificationAdminPage from '../features/notification/NotificationAdminPag
 import CustomerToolsPage from '../features/booking/CustomerToolsPage.jsx';
 
 export default function App() {
-  const [path, setPath] = useState(window.location.pathname);
+  const [requestedPath, setPath] = useState(window.location.pathname);
   const auth = useAuth();
-  useEffect(() => {
+  const portals = auth.status === 'authenticated' ? availableWorkspaces(auth.user) : [];
+  const path = portals.length === 1 && ['/', '/login', '/register', '/workspaces'].includes(requestedPath)
+    ? portals[0].path : requestedPath;
+  useLayoutEffect(() => {
     const update = () => setPath(window.location.pathname);
     window.addEventListener('popstate', update);
     return () => window.removeEventListener('popstate', update);
   }, []);
+  useLayoutEffect(() => {
+    if (path !== requestedPath) navigate(path, { replace: true });
+  }, [path, requestedPath]);
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (path === '/forgot-password') return <ForgotPasswordPage />;
