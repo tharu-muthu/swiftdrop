@@ -37,5 +37,6 @@ describe('password login screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
     expect(screen.getByRole('button', { name: 'Logging in…' })).toBeDisabled();
     finish(); expect(await screen.findByRole('button', { name: 'Log in', exact: true })).toBeEnabled();
+    expect(window.location.pathname).toBe('/workspaces');
   });
 });

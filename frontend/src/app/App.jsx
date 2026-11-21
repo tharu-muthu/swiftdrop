@@ -1,3 +1,7 @@
+import WorkspacesPage from '../features/identity/WorkspacesPage.jsx';
+import AppLoading from './AppLoading.jsx';
+import WorkspacePage from '../components/WorkspacePage.jsx';
+import { canAccess } from './workspaces.js';
 import FoundationPage from './FoundationPage.jsx';
 import RegisterPage from '../features/identity/RegisterPage.jsx';
 import { useEffect, useState } from 'react';
@@ -42,8 +46,10 @@ export default function App() {
       : new URLSearchParams(window.location.search).get('number') || '';
     return <PublicTrackingPage trackingNumber={trackingNumber} />;
   }
-  if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
+  if (auth.status === 'loading') return <AppLoading />;
   if (auth.status === 'authenticated') {
+    if (!canAccess(auth.user, path)) return <WorkspacePage title="Access unavailable"><p role="alert">Your account does not have the role required for this workspace.</p><a href="/workspaces">View your workspaces</a></WorkspacePage>;
+    if (['/', '/login', '/register', '/workspaces'].includes(path)) return <WorkspacesPage />;
     if (path === '/merchant') return <MerchantDashboardPage />;
     if (path === '/merchant/orders/new') return <BookingFormPage merchant />;
     if (auth.user.roles.includes('DISPATCHER_ADMIN')) {
@@ -61,7 +67,8 @@ export default function App() {
       if (path === '/bookings/new') return <BookingFormPage />;
       return path === '/bookings' ? <MyBookingsPage /> : <CustomerToolsPage path={path} />;
     }
-    return <AccountPage />;
+    if (path === '/account' || path === '/profile') return <AccountPage />;
+    return <WorkspacePage title="Page not found"><a href="/workspaces">View your workspaces</a></WorkspacePage>;
   }
   return path === '/register' || path === '/' ? <RegisterPage /> : <LoginPage />;
 }
