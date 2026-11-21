@@ -25,6 +25,14 @@ export default function AccountPage() {
   const [message, setMessage] = useState('');
   const [conflict, setConflict] = useState(false);
   const [pending, setPending] = useState(false);
+  const [linkPassword, setLinkPassword] = useState('');
+  async function linkGoogle(event) {
+    event.preventDefault(); setPending(true); setMessage('');
+    try {
+      const result=await client.request('/api/v1/me/google-link', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password:linkPassword }) });
+      setLinkPassword(''); window.location.assign(result.authorizationUrl);
+    } catch(error) { setLinkPassword(''); setMessage(error.status===404 ? 'Google sign-in is not configured for this environment.' : error.message); setPending(false); }
+  }
   useEffect(() => { if (!editing) setDraft({ fullName: user.fullName, phone: user.phone || '' }); }, [user, editing]);
   useEffect(() => {
     const warn = event => {
@@ -77,6 +85,9 @@ export default function AccountPage() {
       <nav><span className="profile-nav-label">WORKSPACE</span>
         {customer && <><a href="/booking">Dashboard</a><a href="/bookings">My bookings</a></>}
         <a href="/tracking">Track parcel</a><span className="profile-nav-label">ACCOUNT</span>
+        <a href="/merchant">Merchant workspace</a>
+        {user.roles.includes('COURIER') && <a href="/courier">Courier deliveries</a>}
+        {user.roles.includes('DISPATCHER_ADMIN') && <><a href="/dispatch">Dispatch</a><a href="/admin/merchants">Merchant approvals</a><a href="/admin/pricing">Pricing</a><a href="/admin/notifications">Notifications</a></>}
         {user.roles.includes('DISPATCHER_ADMIN') && <a href="/admin/users">User management</a>}
         <a href="/profile" className="selected" aria-current="page">My profile</a></nav>
       <button className="profile-rail-signout" onClick={signOut} disabled={pending}>Sign out</button>
@@ -103,7 +114,10 @@ export default function AccountPage() {
           : <p className="profile-note">Your roles and account status are managed by SwiftDrop.</p>}</form>
       </section>
       <section className="profile-card" aria-labelledby="security-heading"><h2 id="security-heading">Security & sign-in</h2>
+        {new URLSearchParams(window.location.search).get('google') === 'linked' && <p className="profile-banner" role="status">Google account linked. Reload your profile to see the connection.</p>}
+        {new URLSearchParams(window.location.search).get('google') === 'failed' && <p className="profile-banner error" role="alert">Google linking failed. Sign in again and retry.</p>}
         <div className="profile-security-grid"><div><strong>Password</strong><span>{user.passwordConfigured ? 'Password configured' : 'No password configured'}</span></div><div><strong>Google account</strong><span>{user.googleConnected ? 'Connected' : 'Not connected'}</span></div></div>
+        {!user.googleConnected && user.passwordConfigured && <form onSubmit={linkGoogle}><label htmlFor="link-password">Confirm your password to connect Google</label><input id="link-password" type="password" autoComplete="current-password" required value={linkPassword} onChange={event=>setLinkPassword(event.target.value)} /><button className="profile-primary" disabled={pending}>Connect Google account</button></form>}
         <div className="profile-security-footer"><span>Using a shared computer? Sign out when you finish.</span><button type="button" className="profile-secondary" onClick={signOut} disabled={pending}>Sign out</button></div>
       </section>
     </div></main>

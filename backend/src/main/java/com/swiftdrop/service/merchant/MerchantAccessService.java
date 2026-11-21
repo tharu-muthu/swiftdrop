@@ -59,11 +59,19 @@ public class MerchantAccessService {
         }
         throw new InvalidApiKeyException();
     }
+    /** Trusted background integration contract; never requires a browser principal. */
+    @Transactional(readOnly=true)
+    public boolean isApprovedForDelivery(java.util.UUID merchantId) {
+        var merchant=merchants.findById(merchantId).orElse(null);
+        if(merchant==null||merchant.getApprovalStatus()!=MerchantApprovalStatus.APPROVED)return false;
+        return identities.isActiveMerchantAccount(merchant.getOwnerUserId());
+    }
 
     private Merchant requireApproved(Merchant merchant) {
         if (merchant.getApprovalStatus() != MerchantApprovalStatus.APPROVED) {
             throw new MerchantNotApprovedException();
         }
+        identities.requireActiveMerchant(merchant.getOwnerUserId());
         return merchant;
     }
 }

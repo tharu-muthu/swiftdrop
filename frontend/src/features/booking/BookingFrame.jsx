@@ -26,8 +26,11 @@ export default function BookingFrame({ activePath, children, headerTitle = 'Crea
   // Dynamically add the Dispatch link if the user has the admin role
   const isDispatcher = user?.roles?.includes('DISPATCHER_ADMIN');
   const navItems = [...baseNavItems];
+  navItems.push(['◇', 'Merchant workspace', '/merchant']);
+  if (user?.roles?.includes('COURIER')) navItems.push(['▱', 'Courier deliveries', '/courier']);
   if (isDispatcher) {
     navItems.splice(1, 0, ['⚡', 'Dispatch Dashboard', '/dispatch']); 
+    navItems.push(['✓', 'Merchant approvals', '/admin/merchants'], ['₨', 'Pricing', '/admin/pricing'], ['✉', 'Notifications', '/admin/notifications'], ['♙', 'Users', '/admin/users']);
   }
 
   return <div className="booking-shell">
@@ -48,7 +51,7 @@ export default function BookingFrame({ activePath, children, headerTitle = 'Crea
       <header className="booking-header">
         <div className="header-title">
           <BrandMark compact />
-          <span><strong>{headerTitle}</strong><small>{isDispatcher ? 'M5 Dispatch Module' : 'M4 Parcel Booking Module'}</small></span>
+          <span><strong>{headerTitle}</strong><small>SwiftDrop delivery workspace</small></span>
         </div>
         <div className="header-user">
           <span className="bell" aria-label="Notifications">♧</span>
