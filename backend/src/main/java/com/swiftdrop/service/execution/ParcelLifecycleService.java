@@ -4,10 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swiftdrop.dto.execution.*;
 import com.swiftdrop.dto.identity.IdentityRole;
-import com.swiftdrop.entity.booking.ParcelBooking;
+import com.swiftdrop.dto.booking.BookingSnapshot;
 import com.swiftdrop.entity.execution.*;
 import com.swiftdrop.exception.LifecycleConflictException;
-import com.swiftdrop.repository.booking.ParcelBookingRepository;
+import com.swiftdrop.service.booking.BookingReadService;
+import com.swiftdrop.service.dispatch.DispatchCompletionService;
 import com.swiftdrop.repository.execution.*;
 import com.swiftdrop.service.identity.IdentityAccountService;
 import java.util.List;
@@ -23,14 +24,16 @@ public class ParcelLifecycleService {
     private final ParcelStatusHistoryRepository history;
     private final DeliveryProofRepository proofs;
     private final OutboxEventRepository outbox;
-    private final ParcelBookingRepository bookings;
+    private final BookingReadService bookings;
+    private final DispatchCompletionService dispatch;
     private final ObjectMapper objectMapper;
 
     public ParcelLifecycleService(IdentityAccountService identities, ParcelLifecycleRepository lifecycles,
             ParcelStatusHistoryRepository history, DeliveryProofRepository proofs, OutboxEventRepository outbox,
-            ParcelBookingRepository bookings, ObjectMapper objectMapper) {
+            BookingReadService bookings, ObjectMapper objectMapper, DispatchCompletionService dispatch) {
         this.identities = identities; this.lifecycles = lifecycles; this.history = history;
         this.proofs = proofs; this.outbox = outbox; this.bookings = bookings; this.objectMapper = objectMapper;
+        this.dispatch=dispatch;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +46,7 @@ public class ParcelLifecycleService {
     @Transactional(readOnly = true)
     public CourierDeliveryDetails details(UUID lifecycleId) {
         var courier = identities.requireCurrentRole(IdentityRole.COURIER);
-        var lifecycle = lifecycles.findByIdAndAssignedCourierId(lifecycleId, courier.userId())
+        var lifecycle = lifecycles.findFirstByIdAndAssignedCourierId(lifecycleId, courier.userId())
                 .orElseThrow(() -> new AccessDeniedException("Delivery is not assigned to this courier"));
         return details(lifecycle);
     }
@@ -66,15 +69,19 @@ public class ParcelLifecycleService {
                 request.status(), courier.userId(), normalized(request.failureReason())));
         if (request.status() == ParcelStatus.DELIVERED) {
             proofs.save(DeliveryProof.create(statusHistory.getId(), request.recipientName().trim()));
+            bookings.deliveryCompleted(lifecycle.getBookingId());
         }
-        outbox.save(OutboxEvent.parcelStatusChanged(lifecycleId, eventPayload(lifecycle, previous, request.status())));
+        if (request.status() == ParcelStatus.DELIVERED || request.status() == ParcelStatus.FAILED) {
+            dispatch.complete(lifecycle.getBookingId());
+        }
+        outbox.save(OutboxEvent.parcelStatusChanged(lifecycleId, eventPayload(lifecycle, request.status(), next)));
         return details(lifecycle);
     }
 
-    /** M4 calls this in its booking transaction after M5 supplies the assigned courier. */
+    /** M4 creates an unassigned lifecycle in its transaction; M5 later supplies the courier. */
     @Transactional
     public UUID initialize(UUID bookingId, UUID courierId, UUID actorUserId) {
-        var existing = lifecycles.findByBookingId(bookingId);
+        var existing = lifecycles.lockByBookingId(bookingId);
         if (existing.isPresent()) {
             var lifecycle = existing.get();
             if (lifecycle.getStatus() == ParcelStatus.DELIVERED || lifecycle.getStatus() == ParcelStatus.FAILED) {
@@ -87,12 +94,13 @@ public class ParcelLifecycleService {
         var lifecycle = lifecycles.save(ParcelLifecycle.create(bookingId, courierId));
         history.save(ParcelStatusHistory.create(lifecycle.getId(), 1, null, ParcelStatus.CREATED,
                 actorUserId, null));
+        outbox.save(OutboxEvent.parcelStatusChanged(lifecycle.getId(), eventPayload(lifecycle, ParcelStatus.CREATED, 1)));
         return lifecycle.getId();
     }
 
     private CourierDeliverySummary summary(ParcelLifecycle lifecycle) {
         var booking = booking(lifecycle);
-        return new CourierDeliverySummary(lifecycle.getId(), lifecycle.getBookingId(), booking.getTrackingNumber(),
+        return new CourierDeliverySummary(lifecycle.getId(), lifecycle.getBookingId(), booking.trackingNumber(),
                 lifecycle.getStatus(), lifecycle.getUpdatedAt());
     }
 
@@ -102,23 +110,23 @@ public class ParcelLifecycleService {
                 .map(item -> new StatusHistoryItem(item.getSequenceNo(), item.getPreviousStatus(),
                         item.getNewStatus(), item.getActorUserId(), item.getFailureReason(), item.getOccurredAt()))
                 .toList();
-        return new CourierDeliveryDetails(lifecycle.getId(), lifecycle.getBookingId(), booking.getTrackingNumber(),
-                booking.getCustomerId(), booking.getPickupAddressSnapshot(), booking.getDropoffAddressSnapshot(),
-                booking.getParcelDescription(), booking.getParcelWeightGrams(), lifecycle.getStatus(),
-                lifecycle.getUpdatedAt(), items);
+        return new CourierDeliveryDetails(lifecycle.getId(), lifecycle.getBookingId(), booking.trackingNumber(),
+                booking.customerId(), booking.pickupAddressSnapshot(), booking.dropoffAddressSnapshot(),
+                booking.parcelDescription(), booking.parcelWeightGrams(), lifecycle.getStatus(),
+                lifecycle.getUpdatedAt(), items,booking.recipientName(),booking.recipientPhone(),booking.senderName(),booking.senderPhone());
     }
 
-    private ParcelBooking booking(ParcelLifecycle lifecycle) {
-        return bookings.findById(lifecycle.getBookingId())
+    private BookingSnapshot booking(ParcelLifecycle lifecycle) {
+        return bookings.find(lifecycle.getBookingId())
                 .orElseThrow(() -> new LifecycleConflictException("The booking for this delivery is unavailable."));
     }
 
-    private String eventPayload(ParcelLifecycle lifecycle, ParcelStatus previous, ParcelStatus next) {
+    private String eventPayload(ParcelLifecycle lifecycle, ParcelStatus next, long sequence) {
         try {
-            return objectMapper.writeValueAsString(java.util.Map.of(
-                    "eventId", UUID.randomUUID(), "lifecycleId", lifecycle.getId(),
-                    "bookingId", lifecycle.getBookingId(), "previousStatus", previous,
-                    "newStatus", next, "occurredAt", java.time.Instant.now()));
+            var booking=booking(lifecycle);
+            return objectMapper.writeValueAsString(new ParcelEvent(UUID.randomUUID(), "parcel.status.changed", 1,
+                    java.time.Instant.now(), booking.merchantId(), lifecycle.getBookingId(), lifecycle.getId(),
+                    booking.trackingNumber(), next.name(), sequence));
         } catch (JsonProcessingException error) {
             throw new LifecycleConflictException("Unable to create the parcel status event.");
         }

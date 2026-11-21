@@ -11,4 +11,7 @@ public interface IdentityAccountService {
     IdentityContext requireCurrentRole(IdentityRole role);
     /** Only an active DISPATCHER_ADMIN may inspect a courier for dispatch. */
     AccountSummary requireActiveCourier(UUID userId);
+    /** Trusted merchant integration handoff: verify the current state of an API-key owner. */
+    void requireActiveMerchant(UUID userId);
+    boolean isActiveMerchantAccount(UUID userId);
 }

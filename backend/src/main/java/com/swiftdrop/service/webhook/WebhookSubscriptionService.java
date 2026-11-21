@@ -144,22 +144,26 @@ public class WebhookSubscriptionService {
         String payloadBody = new String(body, java.nio.charset.StandardCharsets.UTF_8);
         WebhookDelivery record = WebhookDelivery.create(subscription, eventId, TEST_EVENT, payloadBody);
         deliveries.saveAndFlush(record);
-        String secret = secrets.decrypt(new WebhookSecretProtector.ProtectedSecret(
-                subscription.getEncryptedSigningSecret(), subscription.getSigningSecretNonce()));
-        Instant started = clock.instant();
-        WebhookDeliveryService.DeliveryResult result = delivery.deliver(eventId, subscription.getCallbackUrl(), secret, body);
-        Instant completed = clock.instant();
-        String state = result.successful() ? "DELIVERED" : "FAILED";
-        record.recordOutcome(state, 1, result.statusCode() == 0 ? null : result.statusCode(), result.failureType(), completed);
-        deliveries.saveAndFlush(record);
-        attempts.save(WebhookDeliveryAttempt.create(record, 1, started, completed,
-                result.statusCode() == 0 ? null : result.statusCode(), state, result.failureType()));
+        // The worker claims this committed job. HTTP never runs in the subscription transaction.
         return new WebhookTestDeliveryResponse(WebhookDeliveryResponse.from(record));
     }
 
     private WebhookSubscription owned(UUID id, UUID merchantId) {
         return subscriptions.findById(id).filter(found -> merchantId.equals(found.getMerchantId()))
                 .orElseThrow(WebhookSubscriptionNotFoundException::new);
+    }
+    @Transactional(readOnly=true)
+    public List<WebhookAttemptResponse> attempts(UUID subscriptionId,UUID deliveryId) {
+        var merchant=merchants.requireApprovedOwnerMerchant(); owned(subscriptionId,merchant.merchantId());
+        var record=deliveries.findById(deliveryId).filter(row->row.getSubscription().getId().equals(subscriptionId)).orElseThrow(WebhookSubscriptionNotFoundException::new);
+        return attempts.findByDeliveryIdOrderByAttemptNumberAsc(record.getId()).stream().map(row->new WebhookAttemptResponse(row.getAttemptNumber(),row.getStartedAt(),row.getCompletedAt(),row.getHttpStatus(),row.getOutcome(),row.getErrorMessage())).toList();
+    }
+    @Transactional public WebhookDeliveryResponse retry(UUID subscriptionId,UUID deliveryId) {
+        var merchant=merchants.requireApprovedOwnerMerchant(); var subscription=owned(subscriptionId,merchant.merchantId());
+        if(!subscription.isActive()) throw new IllegalArgumentException("Subscription must be active");
+        var record=deliveries.findById(deliveryId).filter(row->row.getSubscription().getId().equals(subscriptionId)).orElseThrow(WebhookSubscriptionNotFoundException::new);
+        if(!"FAILED".equals(record.getDeliveryState())) throw new IllegalArgumentException("Only failed deliveries may be retried");
+        record.retryAt(clock.instant()); deliveries.saveAndFlush(record); return WebhookDeliveryResponse.from(record);
     }
 
     private String endpoint(String raw) {
@@ -170,7 +174,7 @@ public class WebhookSubscriptionService {
     private List<String> eventTypes(List<String> raw) {
         if (raw == null || raw.isEmpty()) throw new IllegalArgumentException("At least one event type is required.");
         List<String> normalized = raw.stream().map(String::trim).filter(value -> !value.isBlank()).distinct().sorted().toList();
-        if (normalized.isEmpty() || normalized.stream().anyMatch(value -> !value.matches("[a-z0-9][a-z0-9._-]{0,99}"))) {
+        if (normalized.isEmpty() || normalized.stream().anyMatch(value -> !value.equals("parcel.status.changed"))) {
             throw new IllegalArgumentException("Webhook event types are invalid.");
         }
         return normalized;

@@ -1,4 +1,8 @@
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 4
   application:
     name: swiftdrop
   # Explicit loading for mvnw spring-boot:run (pom.xml anchors its cwd to backend/).
@@ -48,6 +52,20 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:swiftdrop}
     connection-timeout: 5s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        prefetch: 10
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 1s
+          max-interval: 10s
+          multiplier: 2
   mail:
     # Private SPRING_MAIL_* values in backend/.env override Compose's Mailpit defaults.
     host: ${SPRING_MAIL_HOST:${MAIL_HOST:localhost}}
@@ -61,6 +79,11 @@ spring:
       mail.smtp.connectiontimeout: 5000
       mail.smtp.timeout: 5000
 server:
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+        http-only: true
   port: ${BACKEND_PORT:8081}
   error:
     include-message: never

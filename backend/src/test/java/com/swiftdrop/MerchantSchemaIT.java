@@ -60,6 +60,11 @@ class MerchantSchemaIT {
     @Autowired MerchantRepository merchants;
     @Autowired ApiCredentialRepository credentials;
     @Autowired MerchantApiKeyAuthenticator authenticator;
+    @Autowired jakarta.persistence.EntityManager entities;
+    void eligibleOwner(UUID owner) {
+        jdbc.update("update swiftdrop.users set email_verified_at=current_timestamp where id=?",owner);
+        jdbc.update("insert into swiftdrop.user_roles(user_id,role_id) select ?,id from swiftdrop.roles where name='MERCHANT' on conflict do nothing",owner);
+    }
 
     UUID newUser() {
         var id = UUID.randomUUID();
@@ -167,6 +172,7 @@ class MerchantSchemaIT {
         var merchant = Merchant.register(owner, "Shop", "shop@example.test", null, null);
         merchant.approve(newUser(), Instant.now());
         merchants.saveAndFlush(merchant);
+        eligibleOwner(owner);
         var generated = new ApiKeyGenerator().generate();
         var credential = credentials.saveAndFlush(
                 ApiCredential.issue(merchant.getId(), generated.prefix(), generated.hash(), "quote,order"));
@@ -202,11 +208,20 @@ class MerchantSchemaIT {
         var second = Merchant.register(newUser(), "Second", "second@example.test", null, null);
         second.approve(newUser(), Instant.now());
         merchants.saveAndFlush(second);
+        eligibleOwner(first.getOwnerUserId()); eligibleOwner(second.getOwnerUserId());
         var secondKey = new ApiKeyGenerator().generate();
         credentials.saveAndFlush(ApiCredential.issue(second.getId(), secondKey.prefix(), secondKey.hash(), "quote,order"));
 
         var principal = authenticator.authenticate(secondKey.key());
 
         assertThat(principal.merchantId()).isEqualTo(second.getId()).isNotEqualTo(first.getId());
+    }
+    @Test void suspendedOwnerCannotKeepUsingAnOtherwiseValidApiKey() {
+        var owner=newUser(); eligibleOwner(owner);
+        var merchant=Merchant.register(owner,"Shop","shop@example.test",null,null); merchant.approve(newUser(),Instant.now()); merchants.saveAndFlush(merchant);
+        var generated=new ApiKeyGenerator().generate(); credentials.saveAndFlush(ApiCredential.issue(merchant.getId(),generated.prefix(),generated.hash(),"quote,order"));
+        assertThat(authenticator.authenticate(generated.key()).merchantId()).isEqualTo(merchant.getId());
+        jdbc.update("update swiftdrop.users set active=false where id=?",owner); entities.clear();
+        assertThatThrownBy(()->authenticator.authenticate(generated.key())).isInstanceOf(MerchantNotApprovedException.class);
     }
 }

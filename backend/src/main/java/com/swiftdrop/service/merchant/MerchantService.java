@@ -48,4 +48,12 @@ public class MerchantService {
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
+    @Transactional public MerchantResponse update(com.swiftdrop.dto.merchant.MerchantProfileUpdate request) {
+        var owner=identities.requireCurrentIdentity();
+        var merchant=merchants.findByOwnerUserId(owner.userId()).orElseThrow(com.swiftdrop.exception.MerchantNotFoundException::new);
+        if(merchant.getVersion()!=request.expectedVersion()) throw new com.swiftdrop.exception.LifecycleConflictException("Business profile changed. Reload before saving.");
+        if(!merchant.getBusinessName().equals(request.profile().businessName().trim())) throw new IllegalArgumentException("The approved business name cannot be changed through contact editing");
+        merchant.updateContact(request.profile().contactEmail().trim(),blankToNull(request.profile().contactPhone()),blankToNull(request.profile().businessAddress()));
+        merchants.saveAndFlush(merchant); return MerchantResponse.from(merchant);
+    }
 }

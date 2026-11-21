@@ -27,7 +27,7 @@ class MerchantApiKeyAuthenticatorTest {
     final MerchantRepository merchants = mock(MerchantRepository.class);
     final Instant now = Instant.parse("2026-11-07T10:00:00Z");
     final MerchantApiKeyAuthenticator authenticator =
-            new MerchantApiKeyAuthenticator(credentials, merchants, Clock.fixed(now, ZoneOffset.UTC));
+            new MerchantApiKeyAuthenticator(credentials, merchants, Clock.fixed(now, ZoneOffset.UTC),mock(com.swiftdrop.service.identity.IdentityAccountService.class));
 
     final UUID merchantId = UUID.randomUUID();
     final ApiKeyGenerator.GeneratedKey generated = new ApiKeyGenerator().generate();

@@ -1,97 +1,28 @@
 package com.swiftdrop.controller.dispatch;
 
-import java.util.List;
-import java.util.UUID;
-
+import com.swiftdrop.dto.dispatch.*;
+import com.swiftdrop.service.dispatch.*;
 import jakarta.validation.Valid;
-import org.springframework.http.CacheControl;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.swiftdrop.dto.dispatch.AssignmentRequest;
-import com.swiftdrop.dto.dispatch.AssignmentResponse;
-import com.swiftdrop.dto.dispatch.CourierSummaryDto;
-import com.swiftdrop.dto.dispatch.ReassignmentRequest;
-import com.swiftdrop.dto.identity.IdentityRole;
-import com.swiftdrop.entity.execution.ParcelAssignment;
-import com.swiftdrop.service.execution.CourierAssignmentService;
-import com.swiftdrop.service.identity.IdentityAccountService;
+import jakarta.validation.constraints.*;
+import java.time.LocalDate;
+import java.util.*;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/dispatch")
 public class DispatchController {
-
-    private final CourierAssignmentService assignmentService;
-    private final IdentityAccountService identityAccountService;
-
-    public DispatchController(CourierAssignmentService assignmentService, IdentityAccountService identityAccountService) {
-        this.assignmentService = assignmentService;
-        this.identityAccountService = identityAccountService;
-    }
-
-    @GetMapping("/couriers/active")
-    public ResponseEntity<List<CourierSummaryDto>> getActiveCouriers() {
-        List<CourierSummaryDto> activeCouriers = assignmentService.getActiveCouriers().stream()
-                .map(profile -> new CourierSummaryDto(
-                        profile.getUserId(),
-                        profile.getVehicleType(),
-                        profile.getLicensePlate(),
-                        profile.isActive()))
-                .toList();
-                
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(activeCouriers);
-    }
-
-    @GetMapping("/couriers/{courierId}/workload")
-    public ResponseEntity<Long> getCourierWorkload(@PathVariable UUID courierId) {
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(assignmentService.getCourierWorkload(courierId));
-    }
-
-    @PostMapping("/assignments")
-    public ResponseEntity<AssignmentResponse> assignCourier(@Valid @RequestBody AssignmentRequest request) {
-        var dispatcher = identityAccountService.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
-        
-        ParcelAssignment assignment = assignmentService.assignCourier(
-                request.bookingId(), 
-                request.courierId(), 
-                dispatcher.userId()
-        );
-        
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(new AssignmentResponse(
-                        assignment.getId(), 
-                        assignment.getBooking().getId(), 
-                        assignment.getCourier().getId()
-                ));
-    }
-
-    @PostMapping("/assignments/reassign")
-    public ResponseEntity<AssignmentResponse> reassignCourier(@Valid @RequestBody ReassignmentRequest request) {
-        var dispatcher = identityAccountService.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
-        
-        ParcelAssignment assignment = assignmentService.reassignCourier(
-                request.bookingId(),
-                request.newCourierId(),
-                dispatcher.userId(),
-                request.reason()
-        );
-        
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(new AssignmentResponse(
-                        assignment.getId(), 
-                        assignment.getBooking().getId(), 
-                        assignment.getCourier().getId()
-                ));
-    }
+    private final DispatchService dispatch; private final DispatchQueryService queries;
+    public DispatchController(DispatchService dispatch,DispatchQueryService queries) { this.dispatch=dispatch; this.queries=queries; }
+    @GetMapping("/couriers/active") public List<Map<String,Object>> active() { return dispatch.couriers(true); }
+    @GetMapping("/couriers") public List<Map<String,Object>> couriers() { return dispatch.couriers(false); }
+    @GetMapping("/couriers/{id}/workload") public long workload(@PathVariable UUID id) { return dispatch.workload(id); }
+    public record CourierProfileRequest(@NotBlank @Size(max=50) String vehicleType,@Size(max=20) String licensePlate,boolean active) { }
+    @PutMapping("/couriers/{id}") public void profile(@PathVariable UUID id,@Valid @RequestBody CourierProfileRequest request) { dispatch.profile(id,request.vehicleType(),request.licensePlate(),request.active()); }
+    @PostMapping("/assignments") public AssignmentResponse assign(@Valid @RequestBody AssignmentRequest request) { return dispatch.assign(request.bookingId(),request.courierId(),null,false); }
+    @PostMapping("/assignments/reassign") public AssignmentResponse reassign(@Valid @RequestBody ReassignmentRequest request) { return dispatch.assign(request.bookingId(),request.newCourierId(),request.reason(),true); }
+    @GetMapping("/bookings/{id}/assignments") public List<Map<String,Object>> history(@PathVariable UUID id) { return dispatch.history(id); }
+    @GetMapping("/bookings/{id}") public Map<String,Object> detail(@PathVariable UUID id) { return queries.detail(id); }
+    @GetMapping("/bookings") public Map<String,Object> board(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="50") int size,@RequestParam(defaultValue="false") boolean unassigned) { return queries.board(page,size,unassigned); }
+    @GetMapping("/reports/daily") public Map<String,Object> report(@RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate date) { return queries.daily(date); }
 }
