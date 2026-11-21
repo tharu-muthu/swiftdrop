@@ -16,13 +16,16 @@ public class RegistrationService {
     private final RoleRepository roles;
     private final UserRoleRepository memberships;
     private final PasswordEncoder passwords;
+    private final EmailVerificationService verification;
 
     public RegistrationService(UserRepository users, RoleRepository roles,
-                               UserRoleRepository memberships, PasswordEncoder passwords) {
+                               UserRoleRepository memberships, PasswordEncoder passwords,
+                               EmailVerificationService verification) {
         this.users = users;
         this.roles = roles;
         this.memberships = memberships;
         this.passwords = passwords;
+        this.verification = verification;
     }
 
     @Transactional
@@ -32,6 +35,7 @@ public class RegistrationService {
         String email = users.normalizeEmail(request.email());
         var user = users.saveAndFlush(User.registerCustomer(request.fullName(), email, passwords.encode(request.password())));
         memberships.saveAndFlush(new UserRole(user.getId(), customer.getId()));
+        verification.issueForRegistration(user);
         // Transaction commits before the controller sends 201; the unique constraint arbitrates races.
         return new RegistrationResponse(user.getId(), user.getEmail(), user.getFullName(), Set.of("CUSTOMER"));
     }

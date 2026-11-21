@@ -1,16 +1,19 @@
 package com.swiftdrop.entity.execution;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
+
 import com.swiftdrop.entity.identity.UuidEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import java.time.Instant;
-import java.util.UUID;
-import org.hibernate.annotations.Generated;
-import org.hibernate.generator.EventType;
 
 @Entity
 @Table(name = "parcel_lifecycles", schema = "swiftdrop")
@@ -18,7 +21,8 @@ public class ParcelLifecycle extends UuidEntity {
     @Column(name = "booking_id", nullable = false, updatable = false, unique = true)
     private UUID bookingId;
 
-    @Column(name = "assigned_courier_id", nullable = false)
+    // Fixed: Removed nullable = false to support unassigned states
+    @Column(name = "assigned_courier_id")
     private UUID assignedCourierId;
 
     @Enumerated(EnumType.STRING)
@@ -44,6 +48,7 @@ public class ParcelLifecycle extends UuidEntity {
     public ParcelStatus getStatus() { return status; }
     public long getVersion() { return version; }
     public Instant getUpdatedAt() { return updatedAt; }
+
     public static ParcelLifecycle create(UUID bookingId, UUID courierId) {
         var lifecycle = new ParcelLifecycle();
         lifecycle.bookingId = bookingId;
@@ -51,5 +56,7 @@ public class ParcelLifecycle extends UuidEntity {
         lifecycle.status = ParcelStatus.CREATED;
         return lifecycle;
     }
+    
     public void transition(ParcelStatus next) { status = next; }
+    public void assignCourier(UUID courierId) { this.assignedCourierId = courierId; }
 }

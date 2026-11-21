@@ -54,7 +54,7 @@ describe('customer registration', () => {
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value } });
     expect(screen.queryByText('Password must contain at least 8 characters.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
-    expect(await screen.findByText('Account created')).toBeVisible();
+    expect(await screen.findByText('Check your email')).toBeVisible();
     expect(JSON.parse(fetch.mock.calls[1][1].body).password).toBe(value);
   });
   it('clears the confirmation mismatch when editing the password makes them match', () => {
@@ -68,14 +68,14 @@ describe('customer registration', () => {
     const fetch = vi.fn().mockResolvedValueOnce(csrf()).mockResolvedValueOnce({ status: 201, json: async () => ({ id: 'fixture', roles: ['CUSTOMER'] }) });
     vi.stubGlobal('fetch', fetch);
     render(<RegisterPage />); fill(); fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
-    expect(await screen.findByRole('heading', { name: 'Account created' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeVisible();
     const [url, options] = fetch.mock.calls[1];
     expect(url).toBe('/api/v1/auth/register');
     expect(JSON.parse(options.body)).toEqual({ fullName: 'Test Customer', email: 'person@example.test', password });
     expect(options.headers['X-XSRF-TOKEN']).toBe('csrf-fixture');
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('Your customer account is ready. You have not been signed in.')).toBeVisible();
+    expect(screen.getByText('Your account was created. Open the verification link in your email before signing in.')).toBeVisible();
   });
   it('disables resubmission while pending', async () => {
     let resolve;
@@ -84,7 +84,7 @@ describe('customer registration', () => {
     expect(screen.getByRole('button', { name: 'Creating account…' })).toBeDisabled();
     await waitFor(() => expect(resolve).toBeTypeOf('function'));
     resolve({ status: 201, json: async () => ({}) });
-    expect(await screen.findByText('Account created')).toBeVisible();
+    expect(await screen.findByText('Check your email')).toBeVisible();
   });
   it('shows backend validation and duplicate errors without navigating', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(csrf()).mockResolvedValueOnce({ status: 400, json: async () => ({ message: 'Check the highlighted fields.', fieldErrors: [{ field: 'email', message: 'Enter a valid email address.' }] }) });

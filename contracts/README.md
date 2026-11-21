@@ -4,6 +4,8 @@ Backend feature integration: [shared identity services](identity-services.md)
 documents the implemented current-user/role/courier lookup contract, React API
 client usage, examples, permissions and pending role-changing workflows.
 
+Admin account directory and status API: [identity admin users](identity-admin-users.md).
+
 Current endpoint: `GET /api/v1/health`, public, HTTP 200:
 
 ```json
@@ -20,3 +22,5 @@ envelope is documented in `webhook-events.md`; its merchant approval and canonic
 parcel-status adapters still require the M2 and M6 handoffs.
 
 Implemented login, refresh, logout and GET /me: see [session contracts](identity-sessions.md), which supersede the earlier no-login status above.
+
+Email ownership verification and its rollout gate: see [email verification](identity-email-verification.md).

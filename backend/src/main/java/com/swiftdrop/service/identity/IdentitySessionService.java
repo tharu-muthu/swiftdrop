@@ -4,6 +4,7 @@ import com.swiftdrop.config.AuthSettings;
 import com.swiftdrop.dto.identity.*;
 import com.swiftdrop.entity.identity.*;
 import com.swiftdrop.exception.IdentityAuthenticationException;
+import com.swiftdrop.exception.EmailVerificationRequiredException;
 import com.swiftdrop.repository.identity.*;
 import com.swiftdrop.security.AuthRateLimiter;
 import com.swiftdrop.security.IdentityContext;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class IdentitySessionService {
     private final UserRepository users;
     private final RoleRepository roles;
+    private final OAuthAccountRepository oauthAccounts;
     private final AuthSessionRepository sessions;
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder passwords;
@@ -28,11 +30,11 @@ public class IdentitySessionService {
     private final int accountLimit;
     private final String dummyHash;
 
-    public IdentitySessionService(UserRepository users, RoleRepository roles, AuthSessionRepository sessions,
+    public IdentitySessionService(UserRepository users, RoleRepository roles, OAuthAccountRepository oauthAccounts, AuthSessionRepository sessions,
             RefreshTokenRepository refreshTokens, PasswordEncoder passwords, AccessTokenService accessTokens,
             AuthSettings settings, Clock clock, AuthRateLimiter limiter,
             @Value("${swiftdrop.auth.account-login-limit:10}") int accountLimit) {
-        this.users = users; this.roles = roles; this.sessions = sessions; this.refreshTokens = refreshTokens;
+        this.users = users; this.roles = roles; this.oauthAccounts = oauthAccounts; this.sessions = sessions; this.refreshTokens = refreshTokens;
         this.passwords = passwords; this.accessTokens = accessTokens; this.settings = settings; this.clock = clock;
         this.limiter = limiter; this.accountLimit = accountLimit;
         this.dummyHash = passwords.encode(TokenSecrets.generate());
@@ -56,6 +58,7 @@ public class IdentitySessionService {
         // No User entity was loaded before this lock: account/password changes cannot hide in the persistence cache.
         var user = users.lockById(credential.getId()).orElseThrow(IdentityAuthenticationException::new);
         if (!user.isActive() || !hash.equals(user.getPasswordHash())) throw new IdentityAuthenticationException();
+        if (!user.isEmailVerified()) throw new EmailVerificationRequiredException();
         var session = sessions.saveAndFlush(new AuthSession(user.getId(), user.getAuthorizationVersion(), clock.instant().plus(settings.refreshTtl())));
         return issueRefresh(session);
     }
@@ -112,7 +115,7 @@ public class IdentitySessionService {
     }
 
     private boolean usable(User user, AuthSession session, Instant now) {
-        return user.isActive() && session.getUserId().equals(user.getId()) && session.getRevokedAt() == null
+        return user.isActive() && user.isEmailVerified() && session.getUserId().equals(user.getId()) && session.getRevokedAt() == null
                 && session.getExpiresAt().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).isAfter(now)
                 && session.getAuthorizationVersion() == user.getAuthorizationVersion();
     }
@@ -130,6 +133,7 @@ public class IdentitySessionService {
         var current = currentIdentity(identity.userId(), identity.sessionId(), identity.authorizationVersion());
         var user = users.findById(current.userId()).orElseThrow(IdentityAuthenticationException::new);
         return new UserProfile(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), current.roles(),
-                user.isActive(), user.getCreatedAt(), user.getUpdatedAt(), user.getVersion());
+                user.isActive(), user.getCreatedAt(), user.getUpdatedAt(), user.getVersion(),
+                user.getPasswordHash() != null, oauthAccounts.existsByUserIdAndProvider(user.getId(), "google"));
     }
 }

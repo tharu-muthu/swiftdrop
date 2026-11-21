@@ -151,8 +151,20 @@ export function createAuthClient({ fetchImpl = (...args) => globalThis.fetch(...
       throw error;
     }
   }
+  async function updateProfile(changes) {
+    const profile = await request('/api/v1/me', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes),
+    });
+    if (snapshot.status === 'authenticated') publish({ ...snapshot, user: profile });
+    return profile;
+  }
+  async function reloadProfile() {
+    const user = await request('/api/v1/me');
+    if (snapshot.status === 'authenticated') publish({ ...snapshot, user });
+    return user;
+  }
   return { subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); },
-    getSnapshot: () => snapshot, bootstrap, login, logout, request };
+    getSnapshot: () => snapshot, bootstrap, login, logout, request, updateProfile, reloadProfile };
 }
 
 const authChannel = typeof window !== 'undefined' && window.BroadcastChannel ? new window.BroadcastChannel('swiftdrop-identity') : null;
