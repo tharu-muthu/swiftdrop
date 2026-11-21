@@ -1,6 +1,7 @@
 package com.swiftdrop.controller.identity;
 
 import com.swiftdrop.dto.identity.CourierRoleRequest;
+import com.swiftdrop.dto.identity.AdminRoleChangeRequest;
 import com.swiftdrop.dto.identity.RoleAssignmentResponse;
 import com.swiftdrop.service.identity.IdentityRoleManagement;
 import jakarta.validation.Valid;
@@ -28,5 +29,19 @@ public class AdminRoleController {
             @Valid @RequestBody CourierRoleRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(roles.grantCourier(id, request.expectedVersion(), request.reason()));
+    }
+
+    @PostMapping("/api/v1/admin/users/{id}/roles/grant")
+    public ResponseEntity<RoleAssignmentResponse> grant(@PathVariable UUID id,
+            @Valid @RequestBody AdminRoleChangeRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(roles.changeAdminManagedRole(
+                id, request.role(), true, request.expectedVersion(), request.reason()));
+    }
+
+    @PostMapping("/api/v1/admin/users/{id}/roles/revoke")
+    public ResponseEntity<RoleAssignmentResponse> revoke(@PathVariable UUID id,
+            @Valid @RequestBody AdminRoleChangeRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(roles.changeAdminManagedRole(
+                id, request.role(), false, request.expectedVersion(), request.reason()));
     }
 }

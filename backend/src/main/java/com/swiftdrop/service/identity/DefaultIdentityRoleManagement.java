@@ -77,6 +77,43 @@ public class DefaultIdentityRoleManagement implements IdentityRoleManagement {
         return grant(targetUserId, IdentityRole.COURIER, actor.userId(), expectedVersion, reason);
     }
 
+    @Override @Transactional
+    public RoleAssignmentResponse changeAdminManagedRole(UUID targetUserId, IdentityRole role,
+            boolean granting, long expectedVersion, String reason) {
+        var actor = identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        if (targetUserId == null || role == null || role == IdentityRole.MERCHANT || expectedVersion < 0
+                || reason == null || reason.isBlank() || reason.length() > 500)
+            throw new IllegalArgumentException("Invalid role change request");
+        if (!granting && role == IdentityRole.DISPATCHER_ADMIN && actor.userId().equals(targetUserId))
+            throw new IdentityRoleConflictException();
+        // Status changes use this same lock. Concurrent last-admin role removals and suspensions serialize.
+        roles.lockByName(IdentityRole.DISPATCHER_ADMIN.name())
+                .orElseThrow(() -> new IllegalStateException("Administrator role definition missing"));
+        var user = users.lockById(targetUserId).orElseThrow(IdentityRoleConflictException::new);
+        if (user.getVersion() != expectedVersion || !user.isActive() || (granting && !user.isEmailVerified()))
+            throw new IdentityRoleConflictException();
+        var roleEntity = roles.findByName(role.name()).orElseThrow(() -> new IllegalStateException("Role definition missing"));
+        var association = new UserRoleId(targetUserId, roleEntity.getId());
+        boolean assigned = userRoles.existsById(association);
+        if (assigned == granting) throw new IdentityRoleConflictException();
+        Set<String> before = roles.namesForUser(targetUserId);
+        if (!granting && role == IdentityRole.DISPATCHER_ADMIN && roles.countActiveAdministrators() <= 1)
+            throw new IdentityRoleConflictException();
+        if (!granting && before.size() <= 1) throw new IdentityRoleConflictException();
+        if (granting) userRoles.saveAndFlush(new UserRole(targetUserId, roleEntity.getId()));
+        else { userRoles.deleteById(association); userRoles.flush(); }
+        user.authorizationChanged();
+        users.saveAndFlush(user);
+        var now = clock.instant();
+        for (var session : sessions.findByUserIdAndRevokedAtIsNull(targetUserId)) session.revoke(now, "ROLE_CHANGED");
+        sessions.flush();
+        Set<String> after = roles.namesForUser(targetUserId);
+        audit.saveAndFlush(IdentityAuditEvent.record("USER", actor.userId(), targetUserId,
+                granting ? "ROLE_GRANTED" : "ROLE_REVOKED", reason.strip(),
+                Map.of("roles", before), Map.of("roles", after)));
+        return new RoleAssignmentResponse(targetUserId, after, user.getVersion());
+    }
+
     private RoleAssignmentResponse grant(UUID targetUserId, IdentityRole role, UUID actorId,
             Long expectedVersion, String reason) {
         if (targetUserId == null || reason == null || reason.isBlank() || reason.length() > 500)

@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/courier-role").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/roles/grant", "/api/v1/admin/users/*/roles/revoke").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/users/*/roles").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/users", "/api/v1/admin/users/*").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/*/suspend", "/api/v1/admin/users/*/reactivate").hasRole("DISPATCHER_ADMIN")

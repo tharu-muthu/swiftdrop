@@ -7,6 +7,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -25,6 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "swiftdrop.auth.account-login-limit=1000")
 class AdminUserIT {
@@ -77,7 +81,7 @@ class AdminUserIT {
         return http.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 
-    @Test void directoryAndStatusChangesAreAdminOnlyAuditedAndRevokeSessions() throws Exception {
+    @Test @Order(2) void directoryAndStatusChangesAreAdminOnlyAuditedAndRevokeSessions() throws Exception {
         String adminEmail = UUID.randomUUID() + "@example.test";
         UUID admin = account(adminEmail, true);
         String adminToken = login(adminEmail);
@@ -111,5 +115,31 @@ class AdminUserIT {
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(get("/api/v1/me", customerToken).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(sql.queryForObject("select count(*) from swiftdrop.identity_audit_events where target_user_id=? and action='ACCOUNT_REACTIVATED'", Long.class, customer)).isEqualTo(1);
+    }
+
+    @Test @Order(1) void roleChangesRequireAdminAndVersionAndRevokeSessions() throws Exception {
+        String adminEmail = UUID.randomUUID() + "@example.test";
+        UUID admin = account(adminEmail, true);
+        String adminToken = login(adminEmail);
+        String targetEmail = UUID.randomUUID() + "@example.test";
+        UUID target = account(targetEmail, false);
+        String targetToken = login(targetEmail);
+        String grant = "/api/v1/admin/users/" + target + "/roles/grant";
+        String revoke = "/api/v1/admin/users/" + target + "/roles/revoke";
+        var request = Map.of("role", "DISPATCHER_ADMIN", "reason", "Approved second administrator", "expectedVersion", 0);
+        assertThat(post(grant, request, targetToken).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(post(grant, request, adminToken).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(get("/api/v1/me", targetToken).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(post(grant, request, adminToken).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(post(revoke, Map.of("role", "DISPATCHER_ADMIN", "reason", "Remove second administrator", "expectedVersion", 0), adminToken)
+                .getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(post(grant, Map.of("role", "MERCHANT", "reason", "Invalid source", "expectedVersion", 1), adminToken)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(post(revoke, Map.of("role", "DISPATCHER_ADMIN", "reason", "Remove second administrator", "expectedVersion", 1), adminToken)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(post("/api/v1/admin/users/" + admin + "/roles/revoke",
+                Map.of("role", "DISPATCHER_ADMIN", "reason", "Self removal", "expectedVersion", 0), adminToken)
+                .getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(sql.queryForObject("select count(*) from swiftdrop.identity_audit_events where target_user_id=? and action in ('ROLE_GRANTED','ROLE_REVOKED')", Long.class, target)).isEqualTo(2);
     }
 }

@@ -5,7 +5,7 @@ before adding authenticated feature endpoints or calling identity services.
 For administrator setup, merchant approval grants and courier onboarding, use the
 [role handoff](contracts/identity-role-handoff.md).
 Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
-to search accounts and suspend or reactivate them with an audited reason.
+to search accounts, suspend or reactivate them, and manage permitted roles with an audited reason.
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 

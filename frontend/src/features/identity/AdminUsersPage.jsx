@@ -14,6 +14,9 @@ export default function AdminUsersPage() {
   const [result, setResult] = useState(null);
   const [selected, setSelected] = useState(null);
   const [reason, setReason] = useState('');
+  const [roleReason, setRoleReason] = useState('');
+  const [roleChoice, setRoleChoice] = useState('COURIER');
+  const [roleAction, setRoleAction] = useState('grant');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,7 +34,7 @@ export default function AdminUsersPage() {
   }, [client, search, page, revision]);
 
   async function choose(id) {
-    setError(''); setNotice(''); setSelected(null); setReason('');
+    setError(''); setNotice(''); setSelected(null); setReason(''); setRoleReason('');
     try { setSelected(await client.request(`/api/v1/admin/users/${id}`)); }
     catch (failure) { setError(failure.message || 'Unable to load the account.'); }
   }
@@ -49,6 +52,22 @@ export default function AdminUsersPage() {
       setNotice(`Account ${updated.active ? 'reactivated' : 'suspended'}. Previous sessions were revoked.`);
     } catch (failure) {
       setError(failure.status === 409 ? 'The account changed or this is the last active administrator. Reload the account and review it.' : failure.message || 'Unable to change account status.');
+    } finally { setBusy(false); }
+  }
+
+  async function changeRole() {
+    if (!selected || !roleReason.trim() || roleReason.length > 500) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const result = await client.request(`/api/v1/admin/users/${selected.id}/roles/${roleAction}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: roleChoice, reason: roleReason.trim(), expectedVersion: selected.version }),
+      });
+      setSelected({ ...selected, roles: [...result.roles], version: result.version });
+      setRoleReason(''); setRevision(value => value + 1);
+      setNotice(`${roleChoice.replaceAll('_', ' ')} ${roleAction === 'grant' ? 'granted' : 'removed'}. The account must sign in again.`);
+    } catch (failure) {
+      setError(failure.status === 409 ? 'The account or roles changed. Reload this account before trying again.' : failure.message || 'Unable to change roles.');
     } finally { setBusy(false); }
   }
 
@@ -72,6 +91,11 @@ export default function AdminUsersPage() {
         {selected && <section className="profile-card" aria-label="Account details"><div className="profile-card-heading"><div><h2>{selected.fullName}</h2><p>{selected.email}</p></div><button className="profile-secondary" onClick={() => choose(selected.id)}>Reload</button></div>
           <dl className="admin-details"><div><dt>Status</dt><dd>{selected.active ? 'Active' : 'Suspended'}</dd></div><div><dt>Email verification</dt><dd>{selected.emailVerified ? 'Verified' : 'Not verified'}</dd></div>
             <div><dt>Roles</dt><dd>{selected.roles.join(', ')}</dd></div><div><dt>Phone</dt><dd>{selected.phone || 'Not provided'}</dd></div><div><dt>Joined</dt><dd>{date(selected.createdAt)}</dd></div></dl>
+          {selected.active && <div className="admin-action"><h3>Manage roles</h3><p>Merchant access is managed through merchant approval.</p>
+            <label htmlFor="admin-role-action">Action</label><select id="admin-role-action" value={roleAction} onChange={event => setRoleAction(event.target.value)}><option value="grant">Grant</option><option value="revoke">Remove</option></select>
+            <label htmlFor="admin-role-choice">Role</label><select id="admin-role-choice" value={roleChoice} onChange={event => setRoleChoice(event.target.value)}><option value="CUSTOMER">Customer</option><option value="COURIER">Courier</option><option value="DISPATCHER_ADMIN">Dispatcher admin</option></select>
+            <label htmlFor="admin-role-reason">Reason *</label><textarea id="admin-role-reason" value={roleReason} onChange={event => setRoleReason(event.target.value)} maxLength={500} rows={2} />
+            <button className="profile-primary" disabled={busy || !roleReason.trim() || (roleAction === 'grant' && selected.roles.includes(roleChoice)) || (roleAction === 'revoke' && (!selected.roles.includes(roleChoice) || (roleChoice === 'DISPATCHER_ADMIN' && selected.id === actor.id)))} onClick={changeRole}>{busy ? 'Saving…' : `${roleAction === 'grant' ? 'Grant' : 'Remove'} role`}</button></div>}
           {selected.active && selected.id === actor.id ? <p className="profile-note">You cannot suspend your own account.</p> : <div className="admin-action"><label htmlFor="admin-reason">Reason for {selected.active ? 'suspension' : 'reactivation'} *</label>
             <textarea id="admin-reason" value={reason} onChange={event => setReason(event.target.value)} maxLength={500} rows={3} placeholder="Record why this change is needed" />
             <button className={selected.active ? 'admin-danger' : 'profile-primary'} disabled={busy || !reason.trim()} onClick={changeStatus}>{busy ? 'Saving…' : selected.active ? 'Suspend account' : 'Reactivate account'}</button></div>}</section>}

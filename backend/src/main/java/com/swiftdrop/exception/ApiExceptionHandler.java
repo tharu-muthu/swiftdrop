@@ -118,6 +118,8 @@ public class ApiExceptionHandler {
                         ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
+                        : path.endsWith("/roles/grant") || path.endsWith("/roles/revoke")
+                        ? "Send a JSON object containing only role, reason and expectedVersion."
                         : path.startsWith("/api/v1/admin/users/")
                         ? "Send a JSON object containing only reason and expectedVersion."
                         : "Send a JSON object containing only fullName, email and password."));
