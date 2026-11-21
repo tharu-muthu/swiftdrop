@@ -45,4 +45,15 @@ class DispatchServiceTest {
         eligible(); when(repository.assigned(booking)).thenReturn(Optional.of(UUID.randomUUID())); service.assign(booking,courier,"Vehicle change",true);
         var order=inOrder(lifecycle,repository); order.verify(lifecycle).initialize(booking,courier,admin); order.verify(repository).revoke(booking,"Vehicle change"); order.verify(repository).assign(booking,courier,admin);
     }
+    @Test void selectableCouriersRequireBothOperationalAndLiveIdentityEligibility() {
+        UUID good=UUID.randomUUID(), blocked=UUID.randomUUID(), inactive=UUID.randomUUID();
+        when(repository.couriers()).thenReturn(List.of(
+                Map.of("courierId",good,"active",true),Map.of("courierId",blocked,"active",true),Map.of("courierId",inactive,"active",false)));
+        when(identities.eligibleCourierIds(List.of(good,blocked,inactive))).thenReturn(Set.of(good,inactive));
+        var all=service.couriers(false);
+        assertThat(all).extracting(row->row.get("eligible")).containsExactly(true,false,false);
+        assertThat(all.get(1).get("unavailableReason")).isEqualTo("ACCOUNT_UNAVAILABLE");
+        assertThat(all.get(2).get("unavailableReason")).isEqualTo("PROFILE_INACTIVE");
+        assertThat(service.couriers(true)).extracting(row->row.get("courierId")).containsExactly(good);
+    }
 }

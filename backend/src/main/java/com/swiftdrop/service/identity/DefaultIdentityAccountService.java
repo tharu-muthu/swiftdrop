@@ -51,6 +51,12 @@ public class DefaultIdentityAccountService implements IdentityAccountService {
     }
 
     private static AccessDeniedException unavailable() { return new AccessDeniedException("Courier account is unavailable"); }
+    @Override public java.util.Set<UUID> eligibleCourierIds(java.util.Collection<UUID> candidateIds) {
+        requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        if(candidateIds==null) throw new IllegalArgumentException("Courier candidates required");
+        if(candidateIds.isEmpty()) return java.util.Set.of();
+        return java.util.Set.copyOf(users.eligibleCourierIds(java.util.Set.copyOf(candidateIds)));
+    }
     @Override public void requireActiveMerchant(UUID id) {
         if(!isActiveMerchantAccount(id))throw new AccessDeniedException("Merchant account unavailable");
     }

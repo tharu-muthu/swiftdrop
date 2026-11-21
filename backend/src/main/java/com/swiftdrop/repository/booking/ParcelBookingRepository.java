@@ -13,6 +13,7 @@ public interface ParcelBookingRepository extends JpaRepository<ParcelBooking, UU
     java.util.Optional<ParcelBooking> findByCustomerIdAndIdempotencyKey(UUID customerId, String idempotencyKey);
     java.util.Optional<ParcelBooking> findByMerchantIdAndIdempotencyKey(UUID merchantId, String idempotencyKey);
     java.util.Optional<ParcelBooking> findByTrackingNumber(String trackingNumber);
+    Page<ParcelBooking> findByMerchantId(UUID merchantId, Pageable pageable);
     java.util.List<ParcelBooking> findTop100ByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
     @Query(value = "select 1 from pg_advisory_xact_lock(hashtextextended(:key, 0))", nativeQuery = true)
     Integer lockRequest(@Param("key") String key);

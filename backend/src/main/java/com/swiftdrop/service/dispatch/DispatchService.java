@@ -38,7 +38,16 @@ public class DispatchService {
     }
     @Transactional(readOnly=true) public List<Map<String,Object>> couriers(boolean activeOnly) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
-        return dispatch.couriers().stream().filter(row->!activeOnly||Boolean.TRUE.equals(row.get("active"))).toList();
+        var profiles=dispatch.couriers();
+        var accounts=identities.eligibleCourierIds(profiles.stream().map(row->(UUID)row.get("courierId")).toList());
+        return profiles.stream().map(profile->{
+            Map<String,Object> row=new LinkedHashMap<>(profile);
+            boolean operational=Boolean.TRUE.equals(profile.get("active"));
+            boolean eligible=operational&&accounts.contains((UUID)profile.get("courierId"));
+            row.put("eligible",eligible);
+            row.put("unavailableReason",eligible?null:operational?"ACCOUNT_UNAVAILABLE":"PROFILE_INACTIVE");
+            return row;
+        }).filter(row->!activeOnly||Boolean.TRUE.equals(row.get("eligible"))).toList();
     }
     @Transactional(readOnly=true) public long workload(UUID id) { identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); return dispatch.workload(id); }
     @Transactional public void profile(UUID id,String vehicle,String plate,boolean active) {
