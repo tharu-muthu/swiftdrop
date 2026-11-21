@@ -18,10 +18,10 @@ export function canAccess(user, path) {
   return !role || (Array.isArray(role) ? role.some(item => user.roles.includes(item)) : user.roles.includes(role));
 }
 export const workspaceLinks = user => [
-  ['/workspaces', 'Switch workspace'],
+  ...(availableWorkspaces(user).length > 1 ? [['/workspaces', 'Switch portal']] : []),
   ...(user.roles.includes('CUSTOMER') ? [['/booking', 'Customer dashboard'], ['/bookings/new', 'Book parcel'], ['/bookings', 'My bookings']] : []),
   ['/tracking', 'Track parcel'],
-  ...(canAccess(user, '/merchant') ? [['/merchant', user.roles.includes('MERCHANT') ? 'Merchant workspace' : 'Apply for merchant access']] : []),
+  ...(canAccess(user, '/merchant') ? [['/merchant', user.roles.includes('MERCHANT') ? 'Merchant workspace' : 'Apply for merchant']] : []),
   ...(user.roles.includes('COURIER') ? [['/courier', 'Courier deliveries']] : []),
   ...(user.roles.includes('DISPATCHER_ADMIN') ? [['/dispatch', 'Dispatch'], ['/admin/users', 'User management'], ['/admin/merchants', 'Merchant approvals'], ['/admin/pricing', 'Pricing'], ['/admin/notifications', 'Notifications']] : []),
   ['/account', 'My account'],
