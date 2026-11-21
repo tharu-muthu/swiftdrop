@@ -4,8 +4,8 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: #f4f7fc;
-  color: #142c52;
+  background: var(--sd-background);
+  color: var(--sd-text);
 }
 .app-loading-brand {
   width: max-content;
@@ -24,7 +24,7 @@
   width: 40%;
   height: 100%;
   border-radius: inherit;
-  background: #ff752d;
+  background: var(--sd-accent);
   animation: app-loading-progress 1.4s ease-in-out infinite;
 }
 .app-loading-announcement {

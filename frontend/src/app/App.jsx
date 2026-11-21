@@ -1,5 +1,6 @@
 import WorkspacesPage from '../features/identity/WorkspacesPage.jsx';
 import AppLoading from './AppLoading.jsx';
+import ConfirmEmailChangePage from '../features/identity/ConfirmEmailChangePage.jsx';
 import WorkspacePage from '../components/WorkspacePage.jsx';
 import { availableWorkspaces, canAccess } from './workspaces.js';
 import { navigate } from './navigation.js';
@@ -41,6 +42,7 @@ export default function App() {
   useLayoutEffect(() => {
     if (path !== requestedPath) navigate(path, { replace: true });
   }, [path, requestedPath]);
+  if (path === '/change-email') return <ConfirmEmailChangePage />;
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (path === '/forgot-password') return <ForgotPasswordPage />;
@@ -51,7 +53,7 @@ export default function App() {
     const trackingNumber = path.startsWith('/tracking/')
       ? decodeURIComponent(path.slice('/tracking/'.length))
       : new URLSearchParams(window.location.search).get('number') || '';
-    return <PublicTrackingPage trackingNumber={trackingNumber} />;
+    return <PublicTrackingPage trackingNumber={trackingNumber} inPortal={auth.status === 'authenticated'} />;
   }
   if (auth.status === 'loading') return <AppLoading />;
   if (auth.status === 'authenticated') {

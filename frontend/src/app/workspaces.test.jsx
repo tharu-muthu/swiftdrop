@@ -74,9 +74,11 @@ describe('role workspaces', () => {
   });
   it('keeps customer tools out of the merchant-only booking layout', () => {
     state.user.roles = ['MERCHANT']; render(<BookingFrame><p>Merchant order</p></BookingFrame>);
-    expect(screen.queryByRole('button', { name: /Book Parcel/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /My Bookings/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Switch portal/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Book parcel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'My bookings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Switch portal' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Merchant workspace' })).toHaveAttribute('href', '/merchant');
+    expect(screen.queryByRole('link', { name: 'Apply for merchant' })).not.toBeInTheDocument();
   });
   it('does not offer merchant applications to staff without customer access', () => {
     state.user.roles = ['COURIER']; render(<App />);
