@@ -5,8 +5,8 @@ import './execution.css';
 
 const nextStatuses = {
   CREATED: ['PICKED_UP'],
-  PICKED_UP: ['IN_TRANSIT'],
-  IN_TRANSIT: ['OUT_FOR_DELIVERY'],
+  PICKED_UP: ['IN_TRANSIT', 'FAILED'],
+  IN_TRANSIT: ['OUT_FOR_DELIVERY', 'FAILED'],
   OUT_FOR_DELIVERY: ['DELIVERED', 'FAILED'],
 };
 
@@ -70,6 +70,7 @@ function DeliveryDetails({ delivery, recipientName, setRecipientName, failureRea
   return <article className="delivery-detail"><button className="back-button" onClick={onBack}>← Assigned deliveries</button>
     <h2>{delivery.trackingNumber}</h2><p className="status-pill">{delivery.status.replaceAll('_', ' ')}</p>
     <dl><dt>Pickup</dt><dd>{delivery.pickupAddress}</dd><dt>Drop-off</dt><dd>{delivery.dropoffAddress}</dd>
+      <dt>Sender contact</dt><dd>{delivery.senderName} {delivery.senderPhone}</dd><dt>Recipient contact</dt><dd>{delivery.recipientName} {delivery.recipientPhone}</dd>
       <dt>Parcel</dt><dd>{delivery.parcelDescription} · {delivery.parcelWeightGrams} g</dd></dl>
     <h3>Status history</h3><ol className="status-history">{delivery.history.map(item =>
       <li key={item.sequenceNo}><strong>{item.newStatus.replaceAll('_', ' ')}</strong><small>{new Date(item.occurredAt).toLocaleString()}</small>

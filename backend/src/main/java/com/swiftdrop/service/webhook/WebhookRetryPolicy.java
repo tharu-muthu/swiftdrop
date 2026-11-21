@@ -2,7 +2,7 @@ package com.swiftdrop.service.webhook;
 
 import java.time.Duration;
 
-/** Deterministic retry classification. Persistence and scheduling remain M9 adapter concerns. */
+/** Retry classification for the durable M9 worker. */
 public final class WebhookRetryPolicy {
     private final int maxAttempts;
     private final Duration initialDelay;
@@ -23,6 +23,7 @@ public final class WebhookRetryPolicy {
     }
 
     public Decision response(int attempt, int status) {
+        if(status>=200&&status<300) return new Decision(false,Duration.ZERO,"DELIVERED");
         boolean retryable = status == 408 || status == 429 || status >= 500;
         return decide(attempt, retryable);
     }

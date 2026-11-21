@@ -1,5 +1,9 @@
 # SwiftDrop
 
+The customer, merchant, dispatch, courier, tracking, notification and webhook
+workflows are now connected. Use the [integrated system guide](docs/full-system-implementation.md)
+for the demonstration order, new screens, API contracts, queues and migration notes.
+
 Teammates: start with the [identity integration handoff](contracts/identity-services.md)
 before adding authenticated feature endpoints or calling identity services.
 For administrator setup, merchant approval grants and courier onboarding, use the
@@ -22,7 +26,7 @@ existing password users must verify before they can sign in again. See the
 [email-verification rollout guide](contracts/identity-email-verification.md).
 See [authentication setup and request flow](docs/identity/sessions.md) and the
 [current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
-General admin role editing remains separate work.
+Administrator controls now include guarded courier/administrator grants and revocation.
 
 **New setup step:** from the root run
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
@@ -34,7 +38,7 @@ preserving Neon credentials. For full Compose use `-Compose` instead.
 ```text
 Browser (React) -> /api proxy -> Spring Security -> Controller -> Service
                                                                -> Repository -> PostgreSQL
-                               One Java application            -> RabbitMQ (future async work)
+                               One Java application            -> RabbitMQ (committed parcel events)
 ```
 
 Controllers handle HTTP, services apply business rules, and repositories access
@@ -200,7 +204,7 @@ FROM swiftdrop.flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-Expect successful V1 through V7 entries. Health reports **application liveness**; it
+Expect successful V1 through V12 entries after coordinating the new versions. Health reports **application liveness**; it
 does not probe broker availability or assert that business integrations work.
 
 Useful commands:

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './AuthProvider.jsx';
 import LoginPage from './LoginPage.jsx';
 
@@ -10,12 +10,14 @@ function setup(login = vi.fn()) {
   return client;
 }
 describe('password login screen', () => {
-  it('uses neutral wording, accessible visibility and registration navigation', () => {
+  beforeEach(()=>vi.stubGlobal('fetch',vi.fn().mockResolvedValue({ok:true,json:async()=>({googleEnabled:true})})));
+  afterEach(()=>vi.unstubAllGlobals());
+  it('uses neutral wording, accessible visibility and registration navigation', async () => {
     setup(); expect(screen.getByText('Log in to your SwiftDrop account')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/register');
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('button', { name: 'Continue with Google' }))
+    expect(await screen.findByRole('button', { name: 'Continue with Google' }))
       .toHaveAttribute('href', '/oauth2/authorization/google');
   });
   it('announces generic login errors without changing the password', async () => {

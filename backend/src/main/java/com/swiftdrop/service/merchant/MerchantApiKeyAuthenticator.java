@@ -24,11 +24,13 @@ public class MerchantApiKeyAuthenticator {
     private final ApiCredentialRepository credentials;
     private final MerchantRepository merchants;
     private final Clock clock;
+    private final com.swiftdrop.service.identity.IdentityAccountService identities;
 
-    public MerchantApiKeyAuthenticator(ApiCredentialRepository credentials, MerchantRepository merchants, Clock clock) {
+    public MerchantApiKeyAuthenticator(ApiCredentialRepository credentials, MerchantRepository merchants, Clock clock,com.swiftdrop.service.identity.IdentityAccountService identities) {
         this.credentials = credentials;
         this.merchants = merchants;
         this.clock = clock;
+        this.identities=identities;
     }
 
     @Transactional
@@ -53,6 +55,8 @@ public class MerchantApiKeyAuthenticator {
         if (merchant.getApprovalStatus() != MerchantApprovalStatus.APPROVED) {
             throw new MerchantNotApprovedException();
         }
+        try { identities.requireActiveMerchant(merchant.getOwnerUserId()); }
+        catch(org.springframework.security.access.AccessDeniedException unavailable) { throw new MerchantNotApprovedException(); }
         recordUse(credential);
         return new MerchantApiPrincipal(credential.getMerchantId(), credential.getId(), credential.scopeSet());
     }

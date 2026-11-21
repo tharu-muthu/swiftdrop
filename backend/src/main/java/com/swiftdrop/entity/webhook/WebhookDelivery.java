@@ -74,6 +74,7 @@ public class WebhookDelivery extends UuidEntity {
     }
 
     public UUID getId() { return super.getId(); }
+    public void retryAt(Instant time) { deliveryState="RETRYING"; nextAttemptAt=time; completedAt=null; }
     public WebhookSubscription getSubscription() { return subscription; }
     public UUID getEventId() { return eventId; }
     public String getEventType() { return eventType; }
