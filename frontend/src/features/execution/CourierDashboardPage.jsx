@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
+import { availableWorkspaces } from '../../app/workspaces.js';
+import AppLink from '../../components/AppLink.jsx';
 import { loadAssignedDeliveries, loadDelivery, updateDeliveryStatus } from './executionApi.js';
 import './execution.css';
 
@@ -66,7 +68,7 @@ export default function CourierDashboardPage() {
 
   return <main className="execution-shell">
     <header className="execution-header"><span className="execution-brand">◇ SwiftDrop</span>
-      <span>{user.fullName} · Courier</span><a href="/workspaces">Switch workspace</a><a href="/account">My account</a></header>
+      <span>{user.fullName} · Courier</span>{availableWorkspaces(user).length > 1 && <AppLink href="/workspaces">Switch portal</AppLink>}<AppLink href="/account">My account</AppLink></header>
     <section className="execution-content">
       <div><p className="execution-kicker">M6 · COURIER OPERATIONS</p><h1>Assigned deliveries</h1>
         <p className="execution-muted">Update only parcels currently assigned to you.</p></div>

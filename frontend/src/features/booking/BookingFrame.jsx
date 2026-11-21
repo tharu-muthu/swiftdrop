@@ -1,5 +1,5 @@
 import { navigate } from '../../app/navigation.js';
-import { canAccess } from '../../app/workspaces.js';
+import { availableWorkspaces, canAccess } from '../../app/workspaces.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import './booking.css';
 import './booking-brand-theme.css';
@@ -26,8 +26,8 @@ export default function BookingFrame({ activePath, children, headerTitle = 'Crea
   
   // Dynamically add the Dispatch link if the user has the admin role
   const isDispatcher = user?.roles?.includes('DISPATCHER_ADMIN');
-  const navItems = [['+', 'Switch workspace', '/workspaces'], ...baseNavItems.filter(([, , path]) => canAccess(user, path))];
-  if (canAccess(user, '/merchant')) navItems.push(['◇', 'Merchant workspace', '/merchant']);
+  const navItems = [...(availableWorkspaces(user).length > 1 ? [['+', 'Switch portal', '/workspaces']] : []), ...baseNavItems.filter(([, , path]) => canAccess(user, path))];
+  if (canAccess(user, '/merchant')) navItems.push(['◇', user.roles.includes('MERCHANT') ? 'Merchant workspace' : 'Apply for merchant', '/merchant']);
   if (user?.roles?.includes('COURIER')) navItems.push(['▱', 'Courier deliveries', '/courier']);
   if (isDispatcher) {
     navItems.splice(1, 0, ['⚡', 'Dispatch Dashboard', '/dispatch']); 
