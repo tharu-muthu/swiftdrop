@@ -81,6 +81,28 @@ class AdminUserIT {
         return http.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 
+    @Test @Order(0) void concurrentAdministratorRemovalsPreserveOneActiveAdministrator() throws Exception {
+        String firstEmail = UUID.randomUUID() + "@example.test";
+        String secondEmail = UUID.randomUUID() + "@example.test";
+        UUID first = account(firstEmail, true), second = account(secondEmail, true);
+        for (UUID id : java.util.List.of(first, second)) {
+            sql.update("insert into swiftdrop.user_roles(user_id,role_id) select ?,id from swiftdrop.roles where name='CUSTOMER'", id);
+        }
+        String firstToken = login(firstEmail), secondToken = login(secondEmail);
+        var body = Map.of("role", "DISPATCHER_ADMIN", "reason", "Concurrent access review", "expectedVersion", 0);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var one = pool.submit(() -> { start.await(); return post("/api/v1/admin/users/" + second + "/roles/revoke", body, firstToken).getStatusCode().value(); });
+            var two = pool.submit(() -> { start.await(); return post("/api/v1/admin/users/" + first + "/roles/revoke", body, secondToken).getStatusCode().value(); });
+            start.countDown();
+            var statuses = java.util.List.of(one.get(20, java.util.concurrent.TimeUnit.SECONDS), two.get(20, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(statuses).contains(200);
+            assertThat(statuses.stream().filter(status -> status == 200).count()).isEqualTo(1);
+            assertThat(statuses).allMatch(status -> status == 200 || status == 401 || status == 403 || status == 409);
+        }
+        assertThat(sql.queryForObject("select count(*) from swiftdrop.user_roles ur join swiftdrop.roles r on r.id=ur.role_id join swiftdrop.users u on u.id=ur.user_id where r.name='DISPATCHER_ADMIN' and u.active", Long.class)).isEqualTo(1);
+    }
+
     @Test @Order(2) void directoryAndStatusChangesAreAdminOnlyAuditedAndRevokeSessions() throws Exception {
         String adminEmail = UUID.randomUUID() + "@example.test";
         UUID admin = account(adminEmail, true);
@@ -127,6 +149,7 @@ class AdminUserIT {
         String grant = "/api/v1/admin/users/" + target + "/roles/grant";
         String revoke = "/api/v1/admin/users/" + target + "/roles/revoke";
         var request = Map.of("role", "DISPATCHER_ADMIN", "reason", "Approved second administrator", "expectedVersion", 0);
+        assertThat(post(grant, Map.of("role", "COURIER", "reason", "Missing record version"), adminToken).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(post(grant, request, targetToken).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(post(grant, request, adminToken).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(get("/api/v1/me", targetToken).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
