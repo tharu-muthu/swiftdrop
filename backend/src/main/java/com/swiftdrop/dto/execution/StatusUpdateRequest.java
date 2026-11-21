@@ -8,4 +8,9 @@ public record StatusUpdateRequest(
         @NotNull ParcelStatus expectedStatus,
         @NotNull ParcelStatus status,
         @Size(max = 200) String recipientName,
-        @Size(max = 500) String failureReason) { }
+        @Size(max = 500) String failureReason) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String name, Object value) {
+        throw new IllegalArgumentException("Only documented request fields are accepted.");
+    }
+}
