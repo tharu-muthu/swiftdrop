@@ -390,3 +390,12 @@ Mailpit has been removed from Compose at the user's request. Verification and re
 ### Assignment RBAC alignment follow-up
 
 See [the RBAC implementation review](rbac-assignment-review.md) for the current four-role access matrix, service ownership checks, protected merchant key management, daily courier work with carryover, before-pickup reassignment, and explicit CSRF enforcement on browser Bearer mutations. Its verification record supersedes older role-access testing descriptions above.
+
+### Authorised profile expansion
+
+The user authorised the previously excluded email/password change and saved
+address flows. Reviewed policy, schema and API decisions are recorded in
+[the account-settings contract](../../contracts/identity-account-settings.md).
+V13 adds hashed action tokens and owned saved addresses. Ordinary PATCH /me
+remains unchanged. Coordinate the migration number and SMTP/Google metadata
+before a shared deployment; tests and environment checks are user-run.

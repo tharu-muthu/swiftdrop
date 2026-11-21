@@ -139,3 +139,29 @@ live-provider deployment remain separate from implementation verification.
 ## Assignment RBAC implementation reconciliation
 
 The current [RBAC review](identity/rbac-assignment-review.md) maps the assignment's four role scopes to implemented APIs and service ownership rules. V3 page 9's abbreviated signed-in quote description is refined by page 10's CUSTOMER-owned quote scope: browser `/quotes` requires CUSTOMER, while approved merchants use the separate merchant pricing paths. V3 page 23 explicitly includes carried-over active courier tasks; the dated workday uses existing assignment/activity timestamps because no scheduled-delivery-date column exists. V3 page 22's before-pickup reassignment limit is now enforced by the canonical lifecycle lock. No new schema or role definition is inferred.
+
+## Shared UI theme follow-up (22 November 2026)
+
+The user selected the existing login, registration, customer dashboard and booking
+screens as the visual baseline for the remaining interfaces. The supplied login
+reference was inspected again. Navy navigation, blue actions, orange branding and
+pale surfaces are now shared through theme tokens and PortalShell, replacing the
+separate green workspace, white profile and minimal courier layouts. Public
+tracking keeps its public entry point with matching branding and isolated styles.
+This changes presentation and navigation reuse, not assignment permissions or
+business contracts. Original reference files remain unchanged. See
+[UI guidelines](frontend/ui-guidelines.md) for component ownership and the manual
+review list. Tests/build/Docker and browser checks are left to the user as requested.
+
+## Authorised account-settings expansion
+
+The user's request now brings verified email/password change and a saved address
+book into scope, superseding the original profile-only/address deferrals. The
+reviewed API/policy choices are in [the account-settings contract](../contracts/identity-account-settings.md).
+V13 is additive and pending migration-number coordination. M1 owns saved-address
+records; M4 copies the selected contact/address into existing booking snapshots.
+MERCHANT/COURIER business data ownership and role grants stay unchanged. Google
+step-up binds the existing verified subject and signed recent authentication
+time; it never links accounts by email. See the contract's Google reference.
+No source PDFs, applied migrations, private configuration or live database were
+modified. Compilation, tests and provider smoke checks remain user-run.
