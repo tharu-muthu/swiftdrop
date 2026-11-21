@@ -13,7 +13,8 @@ repositories, copy session validation or create parallel user tables.
 | --- | --- | --- |
 | `requireCurrentIdentity()` | Any authenticated application user. Returns current `IdentityContext(userId, sessionId, roles, authorizationVersion)`. | Missing/wrong principal: authentication exception; inactive/revoked/expired/version mismatch: identity authentication exception. |
 | `requireCurrentRole(IdentityRole role)` | Current authenticated user must have the requested role. Returns the current context. Multiple-role users are supported. | Missing role: `AccessDeniedException`. |
-| `requireActiveCourier(UUID userId)` | Current active `DISPATCHER_ADMIN` only. Returns `AccountSummary(id, fullName, active, roles)` for an active COURIER account. | Unauthorized caller: denied before target lookup. Missing/inactive/non-courier target: same access-denied failure. |
+| `requireActiveCourier(UUID userId)` | Current active `DISPATCHER_ADMIN` only. Returns `AccountSummary(id, fullName, active, roles)` for an active, verified COURIER account. | Unauthorized caller: denied before target lookup. Missing/inactive/unverified/non-courier target: same access-denied failure. |
+| `eligibleCourierIds(Collection<UUID> candidateIds)` | Current active `DISPATCHER_ADMIN` only. Returns immutable IDs among the candidates that are active, verified and currently have COURIER role. M5 combines these with its own operational profile state. | Unauthorized caller: denied before lookup, including empty inputs. Null input is invalid. Ineligible targets are omitted; DB failures propagate. |
 
 Roles: `CUSTOMER`, `MERCHANT`, `COURIER`, `DISPATCHER_ADMIN`. Checks reload live
 account/session/version/role state through existing identity services. The
@@ -74,6 +75,13 @@ M5 dispatch example: call `identities.requireActiveCourier(courierUserId)` befor
 checking the M5-owned courier profile, availability, capacity and assignment.
 The selected courier ID is a TARGET, never the acting user. M5 still authorizes
 the dispatch operation and enforces its own resource constraints.
+
+For a selector, pass operational-profile IDs to `eligibleCourierIds` in one bulk
+read, then exclude unavailable/inactive profiles. Do not catch per-account
+authorization exceptions inside the dispatch transaction to build a list: an
+exception can mark the shared transaction rollback-only. Eligibility lists are
+snapshots, so assignment must still call `requireActiveCourier` at submission.
+See [dispatch monitoring](dispatch-monitoring.md).
 
 New APIs remain denied by default. Coordinate the exact method/path permission
 in `SecurityConfig` with M1 and add HTTP security tests. Do not use broad

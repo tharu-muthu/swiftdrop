@@ -8,7 +8,6 @@ import AuthCompletePage from '../features/identity/AuthCompletePage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage } from '../features/identity/PasswordRecoveryPages.jsx';
 import { RequestVerificationPage, VerifyEmailPage } from '../features/identity/EmailVerificationPages.jsx';
 import BookingHomePage from '../features/booking/BookingHomePage.jsx';
-import BookingPlaceholder from '../features/booking/BookingPlaceholder.jsx';
 import WebhookSettingsPage from '../features/webhook/WebhookSettingsPage.jsx';
 import BookingFormPage from '../features/booking/BookingFormPage.jsx';
 import MyBookingsPage from '../features/booking/MyBookingsPage.jsx';
@@ -17,6 +16,11 @@ import CourierDashboardPage from '../features/execution/CourierDashboardPage.jsx
 import PublicTrackingPage from '../features/tracking/PublicTrackingPage.jsx';
 import DispatchDashboardPage from '../features/dispatch/DispatchDashboardPage.jsx';
 import AdminUsersPage from '../features/identity/AdminUsersPage.jsx';
+import MerchantDashboardPage from '../features/merchant/MerchantDashboardPage.jsx';
+import MerchantReviewPage from '../features/merchant/MerchantReviewPage.jsx';
+import PricingAdminPage from '../features/pricing/PricingAdminPage.jsx';
+import NotificationAdminPage from '../features/notification/NotificationAdminPage.jsx';
+import CustomerToolsPage from '../features/booking/CustomerToolsPage.jsx';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -35,11 +39,18 @@ export default function App() {
   if (path === '/tracking' || path.startsWith('/tracking/')) {
     const trackingNumber = path.startsWith('/tracking/')
       ? decodeURIComponent(path.slice('/tracking/'.length))
-      : '';
+      : new URLSearchParams(window.location.search).get('number') || '';
     return <PublicTrackingPage trackingNumber={trackingNumber} />;
   }
   if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
   if (auth.status === 'authenticated') {
+    if (path === '/merchant') return <MerchantDashboardPage />;
+    if (path === '/merchant/orders/new') return <BookingFormPage merchant />;
+    if (auth.user.roles.includes('DISPATCHER_ADMIN')) {
+      if (path === '/admin/merchants') return <MerchantReviewPage />;
+      if (path === '/admin/pricing') return <PricingAdminPage />;
+      if (path === '/admin/notifications') return <NotificationAdminPage />;
+    }
     if (path === '/merchant/webhooks') return <WebhookSettingsPage />;
     if (path === '/courier' && auth.user.roles.includes('COURIER')) return <CourierDashboardPage />;
     if (path === '/dispatch' && auth.user.roles.includes('DISPATCHER_ADMIN')) return <DispatchDashboardPage />;
@@ -48,7 +59,7 @@ export default function App() {
     if (['/booking', '/bookings/new', '/bookings', '/quote', '/receipts', '/help'].includes(path)) {
       if (path === '/booking') return <BookingHomePage />;
       if (path === '/bookings/new') return <BookingFormPage />;
-      return path === '/bookings' ? <MyBookingsPage /> : <BookingPlaceholder path={path} />;
+      return path === '/bookings' ? <MyBookingsPage /> : <CustomerToolsPage path={path} />;
     }
     return <AccountPage />;
   }

@@ -72,4 +72,11 @@ public class PricingController {
     private QuoteOwner currentCustomer() {
         return QuoteOwner.customer(identities.requireCurrentIdentity().userId());
     }
+    public record ActiveRequest(@jakarta.validation.constraints.NotNull Boolean active) { }
+    @org.springframework.web.bind.annotation.PatchMapping("/admin/zones/{id}")
+    public ZoneResponse zoneState(@PathVariable UUID id,@Valid @RequestBody ActiveRequest request) { return admin.zoneState(id,request.active()); }
+    @org.springframework.web.bind.annotation.PatchMapping("/admin/rate-cards/{id}")
+    public RateCardResponse rateState(@PathVariable UUID id,@Valid @RequestBody ActiveRequest request) { return admin.rateState(id,request.active()); }
+    @GetMapping("/admin/postcodes") public java.util.List<java.util.Map<String,Object>> postcodes() { return admin.postcodes(); }
+    @org.springframework.web.bind.annotation.DeleteMapping("/admin/postcodes/{code}") public void remove(@PathVariable String code) { admin.removePostcode(code); }
 }

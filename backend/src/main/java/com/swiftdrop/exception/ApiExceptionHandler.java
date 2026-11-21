@@ -65,6 +65,13 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> invalidArgument() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST", "The request is invalid."));
     }
+    @ExceptionHandler({jakarta.validation.ConstraintViolationException.class,
+            org.springframework.web.method.annotation.HandlerMethodValidationException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingRequestValueException.class})
+    ResponseEntity<ApiError> invalidParameters() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST","Check request parameters and required headers."));
+    }
     @ExceptionHandler(InvalidResetTokenException.class)
     ResponseEntity<ApiError> invalidResetToken() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_RESET_TOKEN", "This reset link is invalid or has expired. Request a new link."));
@@ -118,9 +125,15 @@ public class ApiExceptionHandler {
                         ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
+                        : path.endsWith("/operational-roles")
+                        ? "Send role, grant, reason and expectedVersion."
+                        : path.startsWith("/api/v1/bookings") || path.endsWith("/orders")
+                        ? "Send quoteId, pickup, recipient and parcel details."
                         : path.startsWith("/api/v1/admin/users/")
                         ? "Send a JSON object containing only reason and expectedVersion."
-                        : "Send a JSON object containing only fullName, email and password."));
+                        : path.equals("/api/v1/auth/register")
+                        ? "Send a JSON object containing only fullName, email and password."
+                        : "Send a valid JSON object with the documented request fields."));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -130,6 +143,9 @@ public class ApiExceptionHandler {
                     && "uq_users_email_normalized".equals(constraint.getConstraintName())) {
                 return ResponseEntity.status(409).body(ApiError.of("REGISTRATION_UNAVAILABLE",
                         "An account could not be created with these details."));
+            }
+            if(cause instanceof java.sql.SQLException sql && "23505".equals(sql.getSQLState())) {
+                return ResponseEntity.status(409).body(ApiError.of("RESOURCE_CONFLICT", "A record with this quote, reference or configuration already exists. Reload before trying again."));
             }
         }
         return internal();

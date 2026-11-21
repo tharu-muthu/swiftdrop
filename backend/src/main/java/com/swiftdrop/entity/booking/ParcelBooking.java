@@ -15,8 +15,19 @@ import org.hibernate.generator.EventType;
 @Entity
 @Table(name = "parcel_bookings", schema = "swiftdrop")
 public class ParcelBooking extends UuidEntity {
-    @Column(name = "customer_id", nullable = false, updatable = false)
+    @Column(name = "customer_id", updatable = false)
     private UUID customerId;
+
+    @Column(name = "merchant_id", updatable = false) private UUID merchantId;
+    @Column(name = "quote_id", updatable = false) private UUID quoteId;
+    @Column(name = "idempotency_key", length = 100, updatable = false) private String idempotencyKey;
+    @Column(name = "request_hash", length = 64, updatable = false) private String requestHash;
+    @Column(name = "sender_name", length = 120, updatable = false) private String senderName;
+    @Column(name = "sender_phone", length = 32, updatable = false) private String senderPhone;
+    @Column(name = "pickup_postal_code", length = 10, updatable = false) private String pickupPostalCode;
+    @Column(name = "delivery_postal_code", length = 10, updatable = false) private String deliveryPostalCode;
+    @Column(name = "parcel_size", length = 24, updatable = false) private String parcelSize;
+    @Column(name = "external_reference", length = 100, updatable = false) private String externalReference;
 
     @Column(name = "tracking_number", nullable = false, updatable = false, length = 40)
     private String trackingNumber;
@@ -67,6 +78,35 @@ public class ParcelBooking extends UuidEntity {
     private Instant updatedAt;
 
     protected ParcelBooking() { }
+
+    public static ParcelBooking create(UUID customerId, UUID merchantId, String key, String hash,
+            com.swiftdrop.dto.booking.BookingCreateRequest request, com.swiftdrop.dto.pricing.QuoteResponse quote) {
+        var booking = new ParcelBooking();
+        booking.customerId = customerId; booking.merchantId = merchantId; booking.quoteId = quote.quoteId();
+        booking.idempotencyKey = key; booking.requestHash = hash;
+        booking.trackingNumber = "SDP-" + UUID.randomUUID().toString().replace("-", "").toUpperCase(java.util.Locale.ROOT);
+        booking.bookingState = "CONFIRMED"; booking.receiptState = "PENDING";
+        booking.senderName = request.pickup().fullName().trim(); booking.senderPhone = request.pickup().contactNumber();
+        booking.pickupAddressSnapshot = request.pickup().address().trim();
+        booking.dropoffAddressSnapshot = request.recipient().address().trim();
+        booking.pickupCity = request.pickup().city().trim(); booking.deliveryCity = request.recipient().city().trim();
+        booking.pickupPostalCode = request.pickup().postalCode(); booking.deliveryPostalCode = request.recipient().postalCode();
+        booking.recipientName = request.recipient().fullName().trim(); booking.recipientPhone = request.recipient().contactNumber();
+        booking.parcelDescription = request.parcel().description().trim(); booking.parcelWeightGrams = request.parcel().weightGrams();
+        booking.parcelSize = request.parcel().size(); booking.quotedAmountMinor = Math.toIntExact(quote.amountMinor());
+        booking.currencyCode = quote.currency();
+        booking.externalReference=request.externalReference()==null||request.externalReference().isBlank()?null:request.externalReference().trim();
+        return booking;
+    }
+    public UUID getMerchantId() { return merchantId; }
+    public String getRequestHash() { return requestHash; }
+    public String getExternalReference() { return externalReference; }
+    public String getSenderName() { return senderName; }
+    public String getSenderPhone() { return senderPhone; }
+    public String getPickupPostalCode() { return pickupPostalCode; }
+    public String getDeliveryPostalCode() { return deliveryPostalCode; }
+    public String getParcelSize() { return parcelSize; }
+    public void issueReceipt() { receiptState = "ISSUED"; }
 
     public UUID getCustomerId() { return customerId; }
     public String getTrackingNumber() { return trackingNumber; }

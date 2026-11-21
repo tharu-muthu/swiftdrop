@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../identity/AuthProvider.jsx';
 import BookingFormPage from './BookingFormPage.jsx';
 
-function renderForm() {
+function renderForm(request = vi.fn()) {
   const snapshot = { status: 'authenticated', user: { fullName: 'Student User', phone: '0771234567', roles: ['CUSTOMER'] }, error: '' };
-  const client = { getSnapshot: () => snapshot, subscribe: () => () => {}, bootstrap: () => Promise.resolve(), request: vi.fn() };
+  const client = { getSnapshot: () => snapshot, subscribe: () => () => {}, bootstrap: () => Promise.resolve(), request };
   render(<AuthProvider client={client}><BookingFormPage /></AuthProvider>);
 }
 
@@ -68,7 +68,26 @@ describe('BookingFormPage', () => {
     expect(review.getByText('Student User')).toBeInTheDocument();
     expect(review.getByText('2 Main Road, Kandy, 20000')).toBeInTheDocument();
     expect(review.getByText('600 g · medium')).toBeInTheDocument();
-    expect(screen.getByText(/Your booking has not been created/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quote service pending' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Get quote' })).toBeEnabled();
+  });
+
+  it('requests a real quote using the price-driving inputs', async () => {
+    const request = vi.fn().mockResolvedValue({ currency: 'LKR', amountMinor: 45000, expiresAt: '2026-12-01T10:00:00Z' });
+    renderForm(request);
+    completeBookingDetails();
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    expect(await screen.findByText('Delivery quote: LKR 450.00')).toBeInTheDocument();
+    expect(request).toHaveBeenCalledWith('/api/v1/quotes', expect.objectContaining({ method: 'POST', body: JSON.stringify({ pickupPostalCode: '00600', dropoffPostalCode: '20000', weightGrams: 600, size: 'MEDIUM' }) }));
+  });
+  it('confirms with a stable idempotency key when a network failure is retried', async()=>{
+    const quote={quoteId:'quote-1',currency:'LKR',amountMinor:45000,baseMinor:40000,extraWeightMinor:5000,sizeSurchargeMinor:0,expiresAt:'2026-12-01T10:00:00Z'};
+    const request=vi.fn().mockResolvedValueOnce(quote).mockRejectedValue(new Error('Connection lost. Retry.'));
+    renderForm(request);completeBookingDetails();fireEvent.click(screen.getByRole('button',{name:'Get quote'}));
+    await screen.findByText('Delivery quote: LKR 450.00');fireEvent.click(screen.getByRole('button',{name:'Confirm booking'}));
+    await screen.findByRole('alert');fireEvent.click(screen.getByRole('button',{name:'Confirm booking'}));
+    await screen.findByRole('alert');
+    const submissions=request.mock.calls.filter(([path])=>path==='/api/v1/bookings');
+    expect(submissions).toHaveLength(2);expect(submissions[0][1].headers['Idempotency-Key']).toBe(submissions[1][1].headers['Idempotency-Key']);
+    expect(JSON.parse(submissions[0][1].body)).toEqual(expect.objectContaining({quoteId:'quote-1',parcel:{weightGrams:600,size:'MEDIUM',description:'Books'}}));
   });
 });

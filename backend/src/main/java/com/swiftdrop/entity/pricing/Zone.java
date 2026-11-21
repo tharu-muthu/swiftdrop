@@ -20,4 +20,5 @@ public class Zone extends UuidEntity {
 
     public String getName() { return name; }
     public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active=active; }
 }

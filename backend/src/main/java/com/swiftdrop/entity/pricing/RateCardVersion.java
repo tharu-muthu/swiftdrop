@@ -84,4 +84,5 @@ public class RateCardVersion extends UuidEntity {
     public long getSizeSurchargeExtraLarge() { return sizeSurchargeExtraLarge; }
     public Instant getEffectiveFrom() { return effectiveFrom; }
     public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active=active; }
 }

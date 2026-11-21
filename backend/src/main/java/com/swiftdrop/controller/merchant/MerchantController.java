@@ -39,4 +39,8 @@ public class MerchantController {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of("MERCHANT_ALREADY_REGISTERED", "A business is already registered for this account."));
     }
+    @org.springframework.web.bind.annotation.PatchMapping("/api/v1/merchant/registration")
+    public ResponseEntity<MerchantResponse> update(@Valid @RequestBody com.swiftdrop.dto.merchant.MerchantProfileUpdate request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(merchants.update(request));
+    }
 }

@@ -3,9 +3,11 @@ package com.swiftdrop.service.execution;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swiftdrop.dto.execution.StatusUpdateRequest;
 import com.swiftdrop.dto.identity.IdentityRole;
-import com.swiftdrop.entity.booking.ParcelBooking;
+import com.swiftdrop.dto.booking.BookingSnapshot;
 import com.swiftdrop.entity.execution.*;
-import com.swiftdrop.repository.booking.ParcelBookingRepository;
+import com.swiftdrop.exception.LifecycleConflictException;
+import com.swiftdrop.service.booking.BookingReadService;
+import com.swiftdrop.service.dispatch.DispatchCompletionService;
 import com.swiftdrop.repository.execution.*;
 import com.swiftdrop.security.IdentityContext;
 import com.swiftdrop.service.identity.IdentityAccountService;
@@ -22,14 +24,14 @@ class ParcelLifecycleServiceTest {
     private final ParcelStatusHistoryRepository history = mock(ParcelStatusHistoryRepository.class);
     private final DeliveryProofRepository proofs = mock(DeliveryProofRepository.class);
     private final OutboxEventRepository outbox = mock(OutboxEventRepository.class);
-    private final ParcelBookingRepository bookings = mock(ParcelBookingRepository.class);
+    private final BookingReadService bookings = mock(BookingReadService.class);
     private final ParcelLifecycleService service = new ParcelLifecycleService(identities, lifecycles, history,
-            proofs, outbox, bookings, new ObjectMapper());
+            proofs, outbox, bookings, new ObjectMapper().findAndRegisterModules(), mock(DispatchCompletionService.class));
     private final UUID courier = UUID.randomUUID(), lifecycleId = UUID.randomUUID();
 
     @ParameterizedTest
     @CsvSource({"CREATED,PICKED_UP", "PICKED_UP,IN_TRANSIT", "IN_TRANSIT,OUT_FOR_DELIVERY",
-            "OUT_FOR_DELIVERY,DELIVERED", "OUT_FOR_DELIVERY,FAILED"})
+            "OUT_FOR_DELIVERY,DELIVERED", "OUT_FOR_DELIVERY,FAILED", "PICKED_UP,FAILED", "IN_TRANSIT,FAILED"})
     void acceptsEverySupportedTransition(ParcelStatus expected, ParcelStatus next) {
         var request = new StatusUpdateRequest(expected, next,
                 next == ParcelStatus.DELIVERED ? "Recipient" : null,
@@ -77,5 +79,56 @@ class ParcelLifecycleServiceTest {
         assertThatThrownBy(() -> service.details(lifecycleId))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         verifyNoInteractions(bookings, history);
+    }
+
+    @Test
+    void createsLifecycleAndInitialHistoryDuringCourierAssignment() {
+        UUID bookingId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        when(lifecycles.lockByBookingId(bookingId)).thenReturn(Optional.empty());
+        var lifecycle = mock(ParcelLifecycle.class);
+        when(lifecycle.getId()).thenReturn(lifecycleId);
+        when(lifecycle.getBookingId()).thenReturn(bookingId);
+        var booking=mock(BookingSnapshot.class);
+        when(booking.trackingNumber()).thenReturn("SDP-ABC12345");
+        when(bookings.find(bookingId)).thenReturn(Optional.of(booking));
+        when(lifecycles.save(any(ParcelLifecycle.class))).thenReturn(lifecycle);
+        when(history.save(any(com.swiftdrop.entity.execution.ParcelStatusHistory.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        UUID result = service.initialize(bookingId, courier, actorId);
+
+        assertThat(result).isEqualTo(lifecycleId);
+        verify(lifecycles).save(any(ParcelLifecycle.class));
+        verify(history).save(any(com.swiftdrop.entity.execution.ParcelStatusHistory.class));
+    }
+
+    @Test
+    void reassignsExistingActiveLifecycle() {
+        UUID bookingId = UUID.randomUUID();
+        var lifecycle = mock(ParcelLifecycle.class);
+        when(lifecycle.getId()).thenReturn(lifecycleId);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.IN_TRANSIT);
+        when(lifecycles.lockByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
+
+        UUID result = service.initialize(bookingId, courier, UUID.randomUUID());
+
+        assertThat(result).isEqualTo(lifecycleId);
+        verify(lifecycle).assignCourier(courier);
+        verify(lifecycles).save(lifecycle);
+        verifyNoInteractions(history);
+    }
+
+    @Test
+    void rejectsReassignmentOfTerminalLifecycle() {
+        UUID bookingId = UUID.randomUUID();
+        var lifecycle = mock(ParcelLifecycle.class);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.DELIVERED);
+        when(lifecycles.lockByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
+
+        assertThatThrownBy(() -> service.initialize(bookingId, courier, UUID.randomUUID()))
+                .isInstanceOf(LifecycleConflictException.class)
+                .hasMessage("Terminal deliveries cannot be reassigned.");
+        verify(lifecycles, never()).save(any());
     }
 }

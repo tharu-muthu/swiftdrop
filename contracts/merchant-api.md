@@ -1,7 +1,7 @@
 
 # Merchant API contract (M2)
 
-Owner: M2. Implemented: registration, approval (with the MERCHANT role grant), API keys, API key authentication and merchant quotes. The order endpoints are reserved and **not implemented yet** (they need M4 booking).
+Owner: M2. Implemented: registration, approval (with the MERCHANT role grant), API keys, API key authentication, merchant quotes and merchant orders through M4 booking. Orders expose M6's canonical delivery status through the M2 read service.
 
 All paths are under `/api/v1`. Errors use the shared shape `{code, message, correlationId, fieldErrors}`.
 
@@ -10,7 +10,7 @@ All paths are under `/api/v1`. Errors use the shared shape `{code, message, corr
 | Mode | Used by | How |
 | --- | --- | --- |
 | Signed-in user | Registration, API keys, admin review | Bearer access JWT, plus CSRF header on POST |
-| Partner API key | `/merchant/verify`, `/merchant/quotes`, reserved `/merchant/orders` | `X-API-Key` header. No cookies, no CSRF |
+| Partner API key | `/merchant/verify`, `/merchant/quotes`, `/merchant/orders` | `X-API-Key` header. No cookies, no CSRF |
 
 The merchant is **always** derived from the session or the key. A `merchantId` in a request body is never trusted.
 
@@ -55,7 +55,9 @@ Key format: `sdk_` + 10 hex characters + `.` + 43 URL-safe characters. The key i
 | `GET /merchant/verify` | any valid key | 200 `{merchantId, businessName, scopes}` | 401 `INVALID_API_KEY`, 403 `MERCHANT_NOT_APPROVED`, 429 `RATE_LIMITED` |
 | `POST /merchant/quotes` | `quote` | 201 quote (see below) | 400 `VALIDATION_FAILED`, 401, 403 `MERCHANT_NOT_APPROVED` or `FORBIDDEN` (key lacks the scope), 422 pricing errors, 429 |
 | `GET /merchant/quotes/{quoteId}` | `quote` | 200 quote | 401, 403, 404 `QUOTE_NOT_FOUND` (also for another merchant's quote), 429 |
-| `/merchant/orders`, `/merchant/orders/**` | `order` | **reserved** (MER-05) | 403 `FORBIDDEN` if the key lacks the scope |
+| `POST /merchant/orders` | `order` | 200 booking snapshot; `Idempotency-Key` required | 400 validation/header, 401, 403, 409 conflict, pricing errors, 429 |
+| `GET /merchant/orders?page=&size=` | `order` | 200 array of owned orders with delivery status and pagination headers | 400 invalid page/size, 401, 403, 429 |
+| `GET /merchant/orders/{id}` | `order` | 200 owned order with delivery status | 401, 403 (including another merchant's order), 429 |
 
 Checked on **every** request: key format, prefix lookup, constant-time hash comparison, key not revoked, business still APPROVED. Revoking a key or suspending a business takes effect on the next request.
 
@@ -97,6 +99,34 @@ Money is in LKR minor units. Pricing errors share the standard error shape:
 | `QUOTE_EXPIRED` | 409 | The quote is older than 10 minutes (raised when an order uses it) |
 | `QUOTE_INPUTS_CHANGED` | 409 | The order details differ from the quoted ones (raised when an order uses it) |
 
+### Order history and current delivery status
+
+Approved owners use `GET /merchant/dashboard/orders?page=0&size=20` and
+`GET /merchant/dashboard/orders/{id}` with their signed-in session. The list is:
+
+```json
+{ "items": [], "page": 0, "size": 20, "totalPages": 0, "totalElements": 0 }
+```
+
+`page` is zero-based and must be nonnegative; `size` is 1–100 (browser default 20).
+Sorting is `createdAt DESC, id DESC`, with a stable tie-breaker. There is no
+100-order history limit. Each item/detail keeps the existing booking fields at
+the response root and adds `deliveryStatus` and UTC `statusUpdatedAt` from M6.
+Possible statuses: `CREATED`, `PICKED_UP`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`,
+`DELIVERED`, `FAILED`. These fields are null for legacy orders without a lifecycle;
+the UI says "Not initialized". `bookingState` remains the separate booking state.
+List/status reads share a consistent transaction snapshot. Details read the
+current state when opened; the list has an explicit refresh action.
+
+The partner list preserves its existing **array** body, with default `size=100`.
+It accepts the same paging bounds and returns `X-Total-Count`, `X-Total-Pages`,
+`X-Page`, `X-Page-Size`. Partner details include the same two delivery fields.
+Creation responses remain booking snapshots. Authorization still resolves the
+merchant from the approved owner/key; no caller-supplied merchant ID is accepted.
+
+Quote/creation bodies and idempotency behavior are documented in
+[the integrated guide](../docs/full-system-implementation.md#booking-and-partner-api-contract).
+
 ## For other modules: MerchantAccessService
 
 `com.swiftdrop.service.merchant.MerchantAccessService` (in-process, read-only):
@@ -114,6 +144,6 @@ Both re-read live key and approval state. Never cache the result for authorizati
 
 ## Open items
 
-1. M4: `parcel_bookings` needs `merchant_id` (customer XOR merchant), `external_reference` and an idempotency key, plus a `BookingService` interface, before MER-05 and MER-06.
+1. M4 order integration is implemented with merchant ownership, external references, idempotency and canonical initial lifecycle creation (V11/V12). No schema migration is needed for status display or pagination.
 2. M1: [merchant role grant and first-admin bootstrap](identity-role-handoff.md) are implemented. A verified first-admin account must still be bootstrapped in each environment before an administrator can approve merchants.
 3. Suspend endpoint (it must call `revokeMerchantForOwner` in the same transaction) and an audit table (`api_request_audit`) are not built yet.

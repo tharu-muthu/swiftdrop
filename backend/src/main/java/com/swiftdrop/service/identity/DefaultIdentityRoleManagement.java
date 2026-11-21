@@ -99,4 +99,25 @@ public class DefaultIdentityRoleManagement implements IdentityRoleManagement {
                 Map.of("roles", before), Map.of("roles", after)));
         return new RoleAssignmentResponse(targetUserId, after, user.getVersion());
     }
+    @Override @Transactional public RoleAssignmentResponse grantAdministrator(UUID id,long version,String reason) {
+        var actor=identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        roles.lockByName(IdentityRole.DISPATCHER_ADMIN.name()).orElseThrow();
+        return grant(id,IdentityRole.DISPATCHER_ADMIN,actor.userId(),version,reason);
+    }
+    @Override @Transactional public RoleAssignmentResponse revokeOperationalRole(UUID id,IdentityRole role,long version,String reason) {
+        var actor=identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        if(role!=IdentityRole.COURIER&&role!=IdentityRole.DISPATCHER_ADMIN) throw new IllegalArgumentException("Unsupported role change");
+        if(reason==null||reason.isBlank()||reason.length()>500) throw new IllegalArgumentException("Reason required");
+        var roleEntity=roles.lockByName(role.name()).orElseThrow();
+        var user=users.lockById(id).orElseThrow(IdentityRoleConflictException::new);
+        var association=new UserRoleId(id,roleEntity.getId());
+        if(user.getVersion()!=version||!userRoles.existsById(association)) throw new IdentityRoleConflictException();
+        if(role==IdentityRole.DISPATCHER_ADMIN&&user.isActive()&&roles.countActiveAdministrators()<=1) throw new IdentityRoleConflictException();
+        var before=roles.namesForUser(id); userRoles.deleteById(association); userRoles.flush();
+        user.authorizationChanged(); users.saveAndFlush(user);
+        for(var session:sessions.findByUserIdAndRevokedAtIsNull(id)) session.revoke(clock.instant(),"ROLE_CHANGED");
+        sessions.flush(); var after=roles.namesForUser(id);
+        audit.saveAndFlush(IdentityAuditEvent.record("USER",actor.userId(),id,"OPERATIONAL_ROLE_REVOKED",reason.trim(),Map.of("roles",before),Map.of("roles",after)));
+        return new RoleAssignmentResponse(id,after,user.getVersion());
+    }
 }

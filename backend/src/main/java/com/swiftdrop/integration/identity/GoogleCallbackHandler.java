@@ -25,19 +25,29 @@ public class GoogleCallbackHandler implements AuthenticationSuccessHandler {
     private final AuthSettings authSettings;
     private final GoogleSettings googleSettings;
     private final Clock clock;
+    private final com.swiftdrop.service.identity.GoogleLinkService links;
 
     public GoogleCallbackHandler(GoogleOAuthService googleOAuth, AuthSettings authSettings,
-            GoogleSettings googleSettings, Clock clock) {
+            GoogleSettings googleSettings, Clock clock, com.swiftdrop.service.identity.GoogleLinkService links) {
         this.googleOAuth = googleOAuth;
         this.authSettings = authSettings;
         this.googleSettings = googleSettings;
         this.clock = clock;
+        this.links=links;
     }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException {
         OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
+        HttpSession existingSession=request.getSession(false);
+        var intent=existingSession==null?null:existingSession.getAttribute(com.swiftdrop.controller.identity.GoogleLinkController.INTENT);
+        if(intent instanceof com.swiftdrop.service.identity.GoogleLinkService.Intent linkIntent) {
+            existingSession.removeAttribute(com.swiftdrop.controller.identity.GoogleLinkController.INTENT);
+            try { links.complete(linkIntent,oidcUser); existingSession.invalidate(); response.sendRedirect(googleSettings.frontendOrigin()+"/account?google=linked"); }
+            catch(RuntimeException failure) { existingSession.invalidate(); response.sendRedirect(googleSettings.frontendOrigin()+"/account?google=failed"); }
+            return;
+        }
         GoogleOAuthService.Result result = googleOAuth.handleCallback(oidcUser);
 
         // Consume and discard the OIDC framework session — state/nonce no longer needed.
