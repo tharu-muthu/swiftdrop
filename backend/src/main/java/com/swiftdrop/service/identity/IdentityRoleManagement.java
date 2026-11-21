@@ -6,6 +6,7 @@ import java.util.UUID;
 
 /** Trusted in-process handoff. Call merchant grant within M2's approval transaction. */
 public interface IdentityRoleManagement {
+    RoleAssignmentResponse changeAdminManagedRole(UUID targetUserId, IdentityRole role, boolean granting, long expectedVersion, String reason);
     RoleAssignmentResponse roleSummary(UUID targetUserId);
     void grantMerchantForApprovedOwner(UUID ownerUserId, String reason);
     void revokeMerchantForOwner(UUID ownerUserId, String reason);

@@ -9,7 +9,7 @@ before adding authenticated feature endpoints or calling identity services.
 For administrator setup, merchant approval grants and courier onboarding, use the
 [role handoff](contracts/identity-role-handoff.md).
 Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
-to search accounts and suspend or reactivate them with an audited reason.
+to search accounts, suspend or reactivate them, and manage permitted roles with an audited reason.
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 
@@ -146,10 +146,14 @@ without quotes, spaces or `$`. Never commit `.env`; never put credentials in
 `VITE_*` variables, which would expose them to browsers.
 
 The database is hosted in Neon; no local PostgreSQL container or password is
-needed. Local password-reset and email-verification messages are captured by
-Mailpit in Docker and require no mail account. Open `http://localhost:8025` to
-view the local inbox. To send real Gmail messages instead, follow the private backend SMTP settings in
-[`contracts/identity-password-recovery.md`](contracts/identity-password-recovery.md).
+needed. Verification and password-reset messages use the real SMTP provider configured in
+private `backend/.env`. Fill the `SPRING_MAIL_*` and `MAIL_FROM` placeholders in
+`backend/.env.example` using your own sending account. See
+[real SMTP setup](contracts/identity-password-recovery.md#real-gmail-delivery).
+No local mail inbox is included. After changing private settings, recreate the
+backend with `docker compose up --detach --force-recreate --wait backend`.
+If upgrading from the previous local-mail setup, run
+`docker compose up --detach --remove-orphans --wait` to remove the old mail container.
 
 ## 2A. Run the application with Neon and RabbitMQ
 
@@ -442,3 +446,9 @@ names/IDs, deadline and hosting decisions. The assignment found beside this
 repository was copied unchanged into `docs/reference/` for teammates. Later
 Google, JWT, provider and deployment secrets belong to their feature/deployment
 tasks. This repository foundation does not fulfill the complete assignment yet.
+
+## Role workspaces
+
+After sign-in, open `/workspaces` to choose among assigned roles. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
+
+The [assignment RBAC matrix](docs/identity/rbac-assignment-review.md) documents role and ownership rules. Courier deliveries now have a Sri Lankan workday filter with unfinished carryover; reassignment stops after pickup.

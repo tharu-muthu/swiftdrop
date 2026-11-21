@@ -3,6 +3,7 @@ import { useAuth } from './AuthProvider.jsx';
 import Brand from '../../components/Brand.jsx';
 import { navigate } from '../../app/navigation.js';
 import './profile.css';
+import WorkspaceNavigation from '../../components/WorkspaceNavigation.jsx';
 
 const phonePattern = /^\+?[0-9][0-9 -]*[0-9]$/;
 const initials = name => (name || '').split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
@@ -79,17 +80,9 @@ export default function AccountPage() {
     try { await client.logout(); navigate('/login'); }
     catch { setMessage('Sign-out could not be confirmed. Check your connection and try again.'); setPending(false); }
   }
-  const customer = user.roles.includes('CUSTOMER');
   return <div className="profile-shell">
     <aside className="profile-sidebar" aria-label="Account navigation"><Brand />
-      <nav><span className="profile-nav-label">WORKSPACE</span>
-        {customer && <><a href="/booking">Dashboard</a><a href="/bookings">My bookings</a></>}
-        <a href="/tracking">Track parcel</a><span className="profile-nav-label">ACCOUNT</span>
-        <a href="/merchant">Merchant workspace</a>
-        {user.roles.includes('COURIER') && <a href="/courier">Courier deliveries</a>}
-        {user.roles.includes('DISPATCHER_ADMIN') && <><a href="/dispatch">Dispatch</a><a href="/admin/merchants">Merchant approvals</a><a href="/admin/pricing">Pricing</a><a href="/admin/notifications">Notifications</a></>}
-        {user.roles.includes('DISPATCHER_ADMIN') && <a href="/admin/users">User management</a>}
-        <a href="/profile" className="selected" aria-current="page">My profile</a></nav>
+      <WorkspaceNavigation user={user} />
       <button className="profile-rail-signout" onClick={signOut} disabled={pending}>Sign out</button>
     </aside>
     <main className="profile-main"><header className="profile-topbar">

@@ -98,7 +98,7 @@ class MerchantDispatchMonitoringIT {
         var detail=ok(call("/api/v1/merchant/dashboard/orders/"+delivered,HttpMethod.GET,null,owner.token()),200);
         assertThat(detail.get("id").asText()).isEqualTo(delivered.toString()); assertThat(detail.get("deliveryStatus").asText()).isEqualTo("DELIVERED");
         assertThat(call("/api/v1/merchant/dashboard/orders/"+foreign,HttpMethod.GET,null,owner.token()).getStatusCode().value()).isEqualTo(403);
-        assertThat(call("/api/v1/merchant/dashboard/orders",HttpMethod.GET,null,customer.token()).getStatusCode().value()).isEqualTo(404);
+        assertThat(call("/api/v1/merchant/dashboard/orders",HttpMethod.GET,null,customer.token()).getStatusCode().value()).isEqualTo(403);
         for(String query:List.of("page=-1","size=0","size=101"))
             assertThat(call("/api/v1/merchant/dashboard/orders?"+query,HttpMethod.GET,null,owner.token()).getStatusCode().value()).isEqualTo(400);
         var defaults=ok(call("/api/v1/merchant/dashboard/orders",HttpMethod.GET,null,owner.token()),200);

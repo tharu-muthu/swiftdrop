@@ -18,7 +18,7 @@ class OperationalRoleTest {
     final UUID target=UUID.randomUUID(),actor=UUID.randomUUID(),roleId=UUID.randomUUID(); final User user=mock(User.class);
     void fixture() {
         when(identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN)).thenReturn(new IdentityContext(actor,UUID.randomUUID(),Set.of("DISPATCHER_ADMIN"),0));
-        var role=mock(Role.class); when(role.getId()).thenReturn(roleId); when(roles.lockByName("DISPATCHER_ADMIN")).thenReturn(Optional.of(role));
+        var role=mock(Role.class); when(role.getId()).thenReturn(roleId); when(roles.lockByName("DISPATCHER_ADMIN")).thenReturn(Optional.of(role)); when(roles.findByName("DISPATCHER_ADMIN")).thenReturn(Optional.of(role));
         when(users.lockById(target)).thenReturn(Optional.of(user)); when(user.isActive()).thenReturn(true); when(user.getVersion()).thenReturn(4L);
         when(memberships.existsById(new UserRoleId(target,roleId))).thenReturn(true);
     }
@@ -37,5 +37,31 @@ class OperationalRoleTest {
         var session=mock(AuthSession.class); when(sessions.findByUserIdAndRevokedAtIsNull(target)).thenReturn(List.of(session));
         var response=service.revokeOperationalRole(target,IdentityRole.DISPATCHER_ADMIN,4,"Access review");
         assertThat(response.roles()).containsExactly("CUSTOMER"); verify(user).authorizationChanged(); verify(session).revoke(any(),eq("ROLE_CHANGED")); verify(audit).saveAndFlush(any());
+    }
+    @Test void refusesSelfRemovalEvenWhenOtherAdministratorsExist() {
+        fixture();
+        when(identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN)).thenReturn(new IdentityContext(target, UUID.randomUUID(), Set.of("DISPATCHER_ADMIN"), 0));
+        assertThatThrownBy(() -> service.revokeOperationalRole(target, IdentityRole.DISPATCHER_ADMIN, 4, "Self removal"))
+                .isInstanceOf(IdentityRoleConflictException.class);
+        verify(memberships, never()).deleteById(any());
+    }
+    @Test void refusesRemovingTheOnlyRole() {
+        fixture(); when(roles.countActiveAdministrators()).thenReturn(2L);
+        when(roles.namesForUser(target)).thenReturn(Set.of("DISPATCHER_ADMIN"));
+        assertThatThrownBy(() -> service.revokeOperationalRole(target, IdentityRole.DISPATCHER_ADMIN, 4, "Access review"))
+                .isInstanceOf(IdentityRoleConflictException.class);
+        verify(memberships, never()).deleteById(any());
+    }
+    @Test void merchantCannotBeGrantedThroughTheAdminEditor() {
+        fixture();
+        assertThatThrownBy(() -> service.changeAdminManagedRole(target, IdentityRole.MERCHANT, true, 4, "Wrong workflow"))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(memberships, sessions, audit);
+    }
+    @Test void unverifiedAccountsCannotReceiveStaffRoles() {
+        fixture(); when(user.isEmailVerified()).thenReturn(false);
+        assertThatThrownBy(() -> service.grantCourier(target, 4, "Courier onboarding"))
+                .isInstanceOf(IdentityRoleConflictException.class);
+        verify(memberships, never()).saveAndFlush(any()); verifyNoInteractions(sessions, audit);
     }
 }

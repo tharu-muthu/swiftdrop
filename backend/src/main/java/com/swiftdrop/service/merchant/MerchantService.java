@@ -41,7 +41,7 @@ public class MerchantService {
 
     @Transactional(readOnly = true)
     public Optional<MerchantResponse> myApplication() {
-        var current = identities.requireCurrentIdentity();
+        var current = requireApplicant();
         return merchants.findByOwnerUserId(current.userId()).map(MerchantResponse::from);
     }
 
@@ -49,11 +49,17 @@ public class MerchantService {
         return value == null || value.isBlank() ? null : value.trim();
     }
     @Transactional public MerchantResponse update(com.swiftdrop.dto.merchant.MerchantProfileUpdate request) {
-        var owner=identities.requireCurrentIdentity();
+        var owner=requireApplicant();
         var merchant=merchants.findByOwnerUserId(owner.userId()).orElseThrow(com.swiftdrop.exception.MerchantNotFoundException::new);
         if(merchant.getVersion()!=request.expectedVersion()) throw new com.swiftdrop.exception.LifecycleConflictException("Business profile changed. Reload before saving.");
         if(!merchant.getBusinessName().equals(request.profile().businessName().trim())) throw new IllegalArgumentException("The approved business name cannot be changed through contact editing");
         merchant.updateContact(request.profile().contactEmail().trim(),blankToNull(request.profile().contactPhone()),blankToNull(request.profile().businessAddress()));
         merchants.saveAndFlush(merchant); return MerchantResponse.from(merchant);
+    }
+    private com.swiftdrop.security.IdentityContext requireApplicant() {
+        var identity = identities.requireCurrentIdentity();
+        if (!identity.roles().contains(IdentityRole.CUSTOMER.name()) && !identity.roles().contains(IdentityRole.MERCHANT.name()))
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        return identity;
     }
 }

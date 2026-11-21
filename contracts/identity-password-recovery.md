@@ -17,12 +17,20 @@ The link is built from private `RESET_FRONTEND_ORIGIN`, never the request Host h
 
 Request limits are 10 per source IP per minute and 3 per normalized email per 15 minutes. Confirmation allows 20 attempts per source IP per minute. The current limiter is in memory for the agreed single-backend application.
 
-## Local Docker walkthrough
+## Docker walkthrough
 
-Run `docker compose up --detach --build --wait backend frontend`. Open `http://localhost:8080/forgot-password`, enter an existing password account email, and submit. Open the private local inbox at `http://localhost:8025`, follow the message link, choose a new password and sign in. Mailpit is local development mail capture; it does not send real email. For Maven on the host, configure an SMTP server through private `backend/.env` using `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM`, and optional SMTP credentials/TLS flags. Set `RESET_FRONTEND_ORIGIN` to the exact frontend origin users open. Never commit private mail credentials.
+Configure a real SMTP sender in private `backend/.env` as described below. Run
+`docker compose up --detach --build --wait backend frontend`. Open
+`http://localhost:8080/forgot-password`, enter an existing active password account
+email, and submit. Check that account's real inbox and spam folder, follow the
+message link, choose a new password and sign in. Verification uses the same sender.
+Set `RESET_FRONTEND_ORIGIN` to the exact browser origin when running Maven/Vite;
+Compose supplies its frontend origin automatically. Never commit mail credentials.
+After editing private settings, use
+`docker compose up --detach --force-recreate --wait backend` to load them.
 
 ## Real Gmail delivery
 
-Google sign-in (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`) does not authorize this backend to send Gmail messages. To send a reset message to a user's real Gmail inbox, configure a separate sending Gmail account in private `backend/.env` using `SPRING_MAIL_HOST=smtp.gmail.com`, `SPRING_MAIL_PORT=587`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` (Google App Password), `SPRING_MAIL_SMTP_AUTH=true`, `SPRING_MAIL_SMTP_STARTTLS=true`, `SPRING_MAIL_SMTP_STARTTLS_REQUIRED=true`, and `MAIL_FROM` equal to the sender address. Docker's Mailpit host/port are overridden by those private `SPRING_MAIL_*` values. Keep `RESET_FRONTEND_ORIGIN` as the exact public frontend origin. Rebuild/restart the backend with `docker compose up --detach --build --wait backend` after editing the file. The sender must have Google 2-Step Verification and be eligible for App Passwords; organization-managed accounts may restrict them. Do not paste the App Password into chat, Git, frontend variables or logs. Real SMTP delivery has not been smoke-tested in this repository.
+Google sign-in (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`) does not authorize this backend to send Gmail messages. To send a reset message to a user's real Gmail inbox, configure a separate sending Gmail account in private `backend/.env` using `SPRING_MAIL_HOST=smtp.gmail.com`, `SPRING_MAIL_PORT=587`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` (Google App Password), `SPRING_MAIL_SMTP_AUTH=true`, `SPRING_MAIL_SMTP_STARTTLS=true`, `SPRING_MAIL_SMTP_STARTTLS_REQUIRED=true`, and `MAIL_FROM` equal to the sender address. Compose passes the private SMTP settings directly to the backend; no local mail server is included. Keep `RESET_FRONTEND_ORIGIN` as the exact public frontend origin. Recreate the backend with `docker compose up --detach --force-recreate --wait backend` after editing the file. The sender must have Google 2-Step Verification and be eligible for App Passwords; organization-managed accounts may restrict them. Do not paste the App Password into chat, Git, frontend variables or logs. Real SMTP delivery has not been smoke-tested in this repository.
 
 From `backend/`, run `./mvnw -Pintegration -Dit.test=IdentitySessionsIT verify` (Windows: `./mvnw.cmd`). From `frontend/`, run `npm test` and `npm run build`.

@@ -33,7 +33,7 @@ export default function LoginPage() {
     submitting.current = true; setPending(true);
     try {
       await auth.client.login(email, password);
-      setPassword(''); navigate('/booking');
+      setPassword(''); navigate('/workspaces');
     } catch (error) { setMessage(error.message); }
     finally { submitting.current = false; setPending(false); }
   }
