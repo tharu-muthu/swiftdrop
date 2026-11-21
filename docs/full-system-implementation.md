@@ -10,10 +10,10 @@ notifications, automatic callbacks, or pricing/merchant administration are pendi
 | Member | Implemented workflow |
 | --- | --- |
 | M1 | Verified password signup/login, rotating sessions, recovery, profile, guarded account status and operational roles, first-admin bootstrap, optional Google sign-in and explicit linking after password confirmation. |
-| M2 | Business application/review, approved-owner contact editing with record version, hashed API credentials, merchant-owned quotes/orders and order details. API keys also check the owner's current account, verification and MERCHANT role. |
+| M2 | Business application/review, approved-owner contact editing with record version, hashed API credentials, merchant-owned quotes/orders, paginated order history and canonical delivery status in lists/details. API keys also check the owner's current account, verification and MERCHANT role. |
 | M3 | Owned expiring quotations and breakdown, administrator zones/postcodes and rate versions, enable/disable controls. |
 | M4 | Quote confirmation, transactional customer/merchant booking, immutable addresses/contacts/price, tracking number, idempotency, history, private details and delivery receipts. |
-| M5 | Operational courier profiles, paginated parcel/unassigned board, authorized assignment/reassignment, workload, assignment history and daily results/age reporting. |
+| M5 | Operational courier profiles, paginated parcel/unassigned/overdue board, live courier eligibility, authorized assignment/reassignment, workload, assignment history and daily results/age reporting. |
 | M6 | Canonical lifecycle, guarded courier updates, ordered history, delivery proof, transactionally persisted events, terminal workload release and receipt issuance. |
 | M7 | Public-safe timeline, private customer details, event-driven SSE, heartbeats, reconnect/snapshot recovery, validation and bounded public request/subscriber limits. |
 | M8 | Editable versioned templates, mock SMS provider, durable jobs and attempts, duplicate protection, leases, retries, terminal failures and administrator logs/retry. |
@@ -106,8 +106,15 @@ Booking, initial unassigned CREATED lifecycle, initial history and outbox event
 commit in one database transaction. PostgreSQL uniqueness and transaction locks
 serialize concurrent requests.
 
-Merchant lists currently return the latest 100 orders. Customer history, receipts
-and the dispatch board are paginated. Rate amounts are LKR minor units and grams
+Merchant order lists are paginated: the browser shows 20 orders per page, with
+previous/next navigation and a total count. List/detail responses include M6's
+`deliveryStatus` and `statusUpdatedAt`, independently of administrative
+`bookingState`. Refresh the order list or open details to read the latest status.
+Legacy orders without an initialized lifecycle show "Not initialized".
+Partner lists retain an array body, accept zero-based `page` and `size` (default
+100, maximum 100), and return pagination headers; see
+[the merchant contract](../contracts/merchant-api.md). Customer history, receipts
+and the dispatch board are also paginated. Rate amounts are LKR minor units and grams
 are integers. The existing booking amount storage supports up to 2,147,483,647
 minor units; confirmation rejects larger quotations.
 
@@ -149,9 +156,20 @@ are not consumed. Keep a stable private `WEBHOOK_SECRET_ENCRYPTION_KEY`; if the
 development JWT-derived fallback is used, rotating that JWT root requires rotating
 existing webhook subscription secrets too.
 
-Dispatch daily reports use UTC. The separate open-delivery age count uses a
-configurable `swiftdrop.dispatch.delay-hours` threshold, default 24 hours; it is an
+Dispatch daily reports use UTC. The open-delivery age count and the "Overdue only"
+board filter use the same configurable `swiftdrop.dispatch.delay-hours` threshold,
+default 24 hours since the last lifecycle update. Delivered/failed parcels are
+excluded; overdue results show the oldest update first. The report's "View overdue
+parcels" button opens that current list, independently of the report date. Combine
+it with "Unassigned only" to find old parcels awaiting assignment. This is an
 operational age indicator, not a promised delivery SLA.
+
+Courier choices require an active operational profile plus a currently active,
+verified account with the COURIER role. Unavailable profiles remain visible for
+administration, with a reason, but are excluded from assignment choices. Selection
+refreshes the fleet and submission rechecks eligibility; a role withdrawal while
+the screen is open cannot authorize an assignment. See
+[dispatch monitoring](../contracts/dispatch-monitoring.md).
 
 ## Local receiver demonstration
 

@@ -59,8 +59,11 @@ public class BookingService {
         return BookingReadService.snapshot(booking);
     }
     @Transactional(readOnly=true)
-    public List<BookingSnapshot> merchantOrders(MerchantContext merchant) {
-        return bookings.findTop100ByMerchantIdOrderByCreatedAtDesc(merchant.merchantId()).stream().map(BookingReadService::snapshot).toList();
+    public org.springframework.data.domain.Page<BookingSnapshot> merchantOrders(MerchantContext merchant, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("Invalid order page");
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt", "id"));
+        return bookings.findByMerchantId(merchant.merchantId(), pageable).map(BookingReadService::snapshot);
     }
     @Transactional(readOnly=true)
     public BookingSnapshot merchantOrder(MerchantContext merchant,UUID id) {

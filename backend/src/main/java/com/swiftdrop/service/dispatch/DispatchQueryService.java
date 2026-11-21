@@ -19,15 +19,23 @@ public class DispatchQueryService {
         this.bookings=bookings; this.lifecycles=lifecycles; this.identities=identities; this.dispatch=dispatch; this.clock=clock; this.delayHours=delayHours;
         if(delayHours<1)throw new IllegalArgumentException("Delay threshold must be positive");
     }
-    public Map<String,Object> board(int page,int size,boolean unassigned) {
+    public Map<String,Object> board(int page,int size,boolean unassigned,boolean overdueOnly) {
         admin(); if(page<0||size<1||size>100)throw new IllegalArgumentException("Invalid page");
-        var result=lifecycles.board(page,size,unassigned);
+        var cutoff=clock.instant().minus(Duration.ofHours(delayHours));
+        var result=lifecycles.board(page,size,unassigned,overdueOnly?cutoff:null);
         var rows=result.getContent().stream().map(lifecycle->{
             var booking=bookings.find(lifecycle.bookingId()).orElseThrow(); Map<String,Object> row=new LinkedHashMap<>();
             row.put("bookingId",booking.id());row.put("trackingNumber",booking.trackingNumber());row.put("pickupCity",booking.pickupCity());row.put("deliveryCity",booking.deliveryCity());
             row.put("status",lifecycle.status());row.put("courierId",lifecycle.courierId());row.put("updatedAt",lifecycle.updatedAt());return row;
         }).toList();
-        return Map.of("items",rows,"page",page,"totalPages",result.getTotalPages(),"totalElements",result.getTotalElements());
+        rows.forEach(row->{
+            var status=(com.swiftdrop.entity.execution.ParcelStatus)row.get("status");
+            var updated=(Instant)row.get("updatedAt");
+            row.put("overdue",status!=com.swiftdrop.entity.execution.ParcelStatus.DELIVERED
+                    && status!=com.swiftdrop.entity.execution.ParcelStatus.FAILED && updated.isBefore(cutoff));
+        });
+        return Map.of("items",rows,"page",page,"totalPages",result.getTotalPages(),"totalElements",result.getTotalElements(),
+                "delayHours",delayHours,"overdueBefore",cutoff);
     }
     public Map<String,Object> detail(UUID id) { admin();return Map.of("booking",bookings.find(id).orElseThrow(),"lifecycle",lifecycles.find(id).orElseThrow(),"assignments",dispatch.history(id)); }
     public Map<String,Object> daily(LocalDate day) {
