@@ -19,6 +19,15 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [revision, setRevision] = useState(0);
+  const [role, setRole] = useState('COURIER');
+  const [roleReason, setRoleReason] = useState('');
+  async function changeRole(grant) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await client.request(`/api/v1/admin/users/${selected.id}/operational-roles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role, grant, expectedVersion: selected.version, reason: roleReason.trim() }) });
+      setSelected(await client.request(`/api/v1/admin/users/${selected.id}`)); setRoleReason(''); setRevision(value => value + 1); setNotice('Role updated. Previous sessions were revoked.');
+    } catch (failure) { setError(failure.message); } finally { setBusy(false); }
+  }
 
   useEffect(() => {
     let live = true;
@@ -72,6 +81,7 @@ export default function AdminUsersPage() {
         {selected && <section className="profile-card" aria-label="Account details"><div className="profile-card-heading"><div><h2>{selected.fullName}</h2><p>{selected.email}</p></div><button className="profile-secondary" onClick={() => choose(selected.id)}>Reload</button></div>
           <dl className="admin-details"><div><dt>Status</dt><dd>{selected.active ? 'Active' : 'Suspended'}</dd></div><div><dt>Email verification</dt><dd>{selected.emailVerified ? 'Verified' : 'Not verified'}</dd></div>
             <div><dt>Roles</dt><dd>{selected.roles.join(', ')}</dd></div><div><dt>Phone</dt><dd>{selected.phone || 'Not provided'}</dd></div><div><dt>Joined</dt><dd>{date(selected.createdAt)}</dd></div></dl>
+          <div className="admin-action"><h3>Operational roles</h3><label htmlFor="operational-role">Role</label><select id="operational-role" value={role} onChange={event => setRole(event.target.value)}><option value="COURIER">Courier</option><option value="DISPATCHER_ADMIN">Dispatcher administrator</option></select><label htmlFor="role-reason">Reason for role change</label><textarea id="role-reason" maxLength={500} value={roleReason} onChange={event => setRoleReason(event.target.value)} /><button className="profile-primary" disabled={busy || !roleReason.trim()} onClick={() => changeRole(!selected.roles.includes(role))}>{selected.roles.includes(role) ? 'Revoke role' : 'Grant role'}</button></div>
           {selected.active && selected.id === actor.id ? <p className="profile-note">You cannot suspend your own account.</p> : <div className="admin-action"><label htmlFor="admin-reason">Reason for {selected.active ? 'suspension' : 'reactivation'} *</label>
             <textarea id="admin-reason" value={reason} onChange={event => setReason(event.target.value)} maxLength={500} rows={3} placeholder="Record why this change is needed" />
             <button className={selected.active ? 'admin-danger' : 'profile-primary'} disabled={busy || !reason.trim()} onClick={changeStatus}>{busy ? 'Saving…' : selected.active ? 'Suspend account' : 'Reactivate account'}</button></div>}</section>}

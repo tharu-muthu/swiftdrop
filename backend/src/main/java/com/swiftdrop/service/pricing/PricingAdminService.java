@@ -90,6 +90,21 @@ public class PricingAdminService {
     private void requireAdmin() {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
     }
+    @Transactional(readOnly=true)
+    public java.util.List<java.util.Map<String,Object>> postcodes() {
+        requireAdmin(); return postcodes.findAll().stream().map(row->java.util.Map.<String,Object>of("postcode",row.getPostcode(),"zoneId",row.getZoneId())).toList();
+    }
+    @Transactional public void removePostcode(String code) {
+        requireAdmin(); postcodes.findByPostcode(code).ifPresent(postcodes::delete);
+    }
+    @Transactional public ZoneResponse zoneState(UUID id,boolean active) {
+        requireAdmin(); var zone=zones.findById(id).orElseThrow(()->new PricingException(PricingErrorCode.ZONE_NOT_FOUND));
+        zone.setActive(active); return toResponse(zone);
+    }
+    @Transactional public RateCardResponse rateState(UUID id,boolean active) {
+        requireAdmin(); var rate=rateCards.findById(id).orElseThrow(()->new IllegalArgumentException("Rate card unavailable"));
+        rate.setActive(active); return toResponse(rate);
+    }
 
     private void requireZone(UUID zoneId) {
         if (!zones.existsById(zoneId)) {

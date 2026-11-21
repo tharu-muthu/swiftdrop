@@ -52,7 +52,7 @@ public class SecurityConfig {
         
         return http.securityMatcher("/api/**")
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf", "/api/v1/auth/providers").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm",
@@ -61,23 +61,34 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings", "/api/v1/bookings/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/registration").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/registration").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/registration").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/api-keys").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/api-keys", "/api/v1/merchant/api-keys/*/revoke").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/webhooks", "/api/v1/merchant/webhooks/*/deliveries").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/webhooks/*/deliveries/*/attempts").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/merchant/webhooks/*/deliveries/*/retry").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/webhooks", "/api/v1/merchant/webhooks/*/rotate-secret",
                                 "/api/v1/merchant/webhooks/*/test").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/webhooks/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").authenticated()
-                        .requestMatchers("/api/v1/courier/deliveries/**").hasRole("COURIER")
-                        .requestMatchers("/api/v1/dispatch/**").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.GET,"/api/v1/courier/deliveries","/api/v1/courier/deliveries/{id}").hasRole("COURIER")
+                        .requestMatchers(HttpMethod.POST,"/api/v1/courier/deliveries/{id}/status").hasRole("COURIER")
+                        .requestMatchers(HttpMethod.GET,"/api/v1/dispatch/couriers","/api/v1/dispatch/couriers/active","/api/v1/dispatch/couriers/{id}/workload",
+                                "/api/v1/dispatch/bookings","/api/v1/dispatch/bookings/{id}","/api/v1/dispatch/bookings/{id}/assignments","/api/v1/dispatch/reports/daily").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT,"/api/v1/dispatch/couriers/{id}").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.POST,"/api/v1/dispatch/assignments","/api/v1/dispatch/assignments/reassign").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/quotes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/quotes/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/zones", "/api/v1/admin/rate-cards").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/zones", "/api/v1/admin/zones/*/postcodes",
                                 "/api/v1/admin/rate-cards").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/postcodes").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/postcodes/*").hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/zones/*", "/api/v1/admin/rate-cards/*").hasRole("DISPATCHER_ADMIN")
                         .anyRequest().denyAll())
                 .csrf(config -> config.csrfTokenRepository(csrf))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
+                .addFilterBefore(new TrackingRateLimitFilter(limiter, json), CsrfFilter.class)
                 .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .requestCache(AbstractHttpConfigurer::disable)

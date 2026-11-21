@@ -12,6 +12,13 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
+    @Query(value = """
+            select u.id from swiftdrop.users u
+            join swiftdrop.user_roles ur on ur.user_id=u.id
+            join swiftdrop.roles r on r.id=ur.role_id
+            where u.id in (:ids) and u.active and u.email_verified_at is not null and r.name='COURIER'
+            """, nativeQuery = true)
+    java.util.Set<UUID> eligibleCourierIds(@Param("ids") java.util.Collection<UUID> ids);
     // Same PostgreSQL expression/collation as V2's generated unique column.
     @Query(value = "select lower(btrim(cast(:email as text)))", nativeQuery = true)
     String normalizeEmail(@Param("email") String email);

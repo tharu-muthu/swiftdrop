@@ -69,6 +69,9 @@ public class Merchant extends UuidEntity {
         return merchant;
     }
     public boolean isPending() { return approvalStatus == MerchantApprovalStatus.PENDING; }
+    public void updateContact(String email,String phone,String address) {
+        contactEmail=email; contactPhone=phone; businessAddress=address;
+    }
 
     public void approve(UUID reviewer, Instant when) {
         this.approvalStatus = MerchantApprovalStatus.APPROVED;
