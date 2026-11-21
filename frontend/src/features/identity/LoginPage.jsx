@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import GoogleSignInButton from './GoogleSignInButton.jsx';
 import AuthLayout from '../../components/AuthLayout.jsx';
 import Brand from '../../components/Brand.jsx';
 import FormField from '../../components/FormField.jsx';
@@ -50,9 +51,7 @@ export default function LoginPage() {
     </form>
     {auth.error.includes('retry sign-out') && <button className="secondary-button" onClick={() => auth.client.logout().catch(() => {})}>Retry sign-out</button>}
     <div className="auth-divider"><span>or sign in with</span></div>
-    <a href="/oauth2/authorization/google" className="google-button" role="button">
-      <span aria-hidden="true">G</span> Continue with Google
-    </a>
+    <GoogleSignInButton />
     <p className="login-note">New to SwiftDrop? <a href="/register">Sign up</a></p>
     <p className="login-note">Need to verify your email? <a href="/verify-email/request">Resend link</a></p>
   </div></AuthLayout>;

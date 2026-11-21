@@ -55,6 +55,7 @@ class IdentityAccountServiceTest {
         authenticate(Set.of("DISPATCHER_ADMIN"));
         var user = mock(User.class);
         when(users.findById(target)).thenReturn(Optional.of(user));
+        when(user.isEmailVerified()).thenReturn(true);
         when(user.isActive()).thenReturn(true); when(user.getId()).thenReturn(target); when(user.getFullName()).thenReturn("Courier");
         var mutable = new HashSet<>(Set.of("CUSTOMER", "COURIER")); when(roles.namesForUser(target)).thenReturn(mutable);
         var summary = service.requireActiveCourier(target); mutable.clear();

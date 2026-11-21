@@ -1,98 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
-import { loadActiveCouriers, assignParcel } from './dispatchApi.js';
-import './dispatch.css';
-import BookingFrame from '../booking/BookingFrame.jsx';
+import WorkspacePage, { JsonRequest } from '../../components/WorkspacePage.jsx';
 
 export default function DispatchDashboardPage() {
-  const { client, user } = useAuth();
-  const [couriers, setCouriers] = useState([]);
-  const [error, setError] = useState('');
-  const [pending, setPending] = useState(false);
-  const [bookingId, setBookingId] = useState('');
-
-  async function refresh() {
-    try {
-      setError('');
-      setCouriers(await loadActiveCouriers(client));
-    } catch (requestError) {
-      setError(requestError.message);
-    }
+  const { client } = useAuth();
+  const [couriers, setCouriers] = useState([]), [bookings, setBookings] = useState([]), [selected, setSelected] = useState(''), [courierId, setCourierId] = useState(''), [reason, setReason] = useState('');
+  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [pending, setPending] = useState(false), [history, setHistory] = useState([]), [report, setReport] = useState(null), [date, setDate] = useState('');
+  const [page,setPage]=useState(0),[totalPages,setTotalPages]=useState(0),[unassigned,setUnassigned]=useState(false),[details,setDetails]=useState(null);
+  const [profile, setProfile] = useState({ userId: '', vehicleType: '', licensePlate: '', active: true });
+  async function load() {
+    setError('');
+    try { const [c, b] = await Promise.all([client.request('/api/v1/dispatch/couriers'), client.request(`/api/v1/dispatch/bookings?page=${page}&size=50&unassigned=${unassigned}`)]); setCouriers(c); setBookings(b.items); setTotalPages(b.totalPages); }
+    catch (failure) { setError(failure.message); }
   }
-
-  useEffect(() => {
-    refresh();
-  }, [client]);
-
-  async function handleAssign(courierId) {
-    if (!bookingId.trim()) {
-      return setError('Please enter a valid Booking ID to assign this parcel.');
-    }
-    setPending(true);
-    try {
-      await assignParcel(client, bookingId.trim(), courierId);
-      setBookingId('');
-      setError('');
-      alert('Parcel successfully assigned! The courier has been notified in M6.');
-      await refresh();
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <BookingFrame activePath="/dispatch" headerTitle="Active Couriers">
-    <main className="dispatch-shell">
-      <header className="dispatch-header">
-        <span className="dispatch-brand">◇ SwiftDrop</span>
-        <span>{user.fullName} · Dispatch Admin</span>
-      </header>
-      
-      <section className="dispatch-content">
-        <div>
-          <p className="dispatch-kicker">M5 · DISPATCH OPERATIONS</p>
-          <h1>Active Couriers</h1>
-          <p style={{ color: '#6b7280' }}>Review available fleets and assign pending parcels.</p>
-        </div>
-
-        {error && <p className="dispatch-error" role="alert">{error}</p>}
-
-        <div className="dispatch-input-group">
-          <label htmlFor="bookingId">Pending Booking ID</label>
-          <input 
-            id="bookingId"
-            value={bookingId} 
-            onChange={e => setBookingId(e.target.value)} 
-            placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000" 
-            disabled={pending}
-          />
-        </div>
-
-        <div className="courier-list">
-          {couriers.length === 0 && (
-            <p style={{ color: '#6b7280', padding: '1rem 0' }}>No couriers are currently active.</p>
-          )}
-          
-          {couriers.map(courier => (
-            <article className="courier-card" key={courier.courierId}>
-              <div>
-                <strong>{courier.vehicleType || 'Vehicle Pending'}</strong>
-                <small>Plate: {courier.licensePlate || 'N/A'} | ID: {courier.courierId}</small>
-              </div>
-              <button 
-                className="assign-button" 
-                disabled={pending} 
-                onClick={() => handleAssign(courier.courierId)}
-              >
-                {pending ? 'Assigning...' : 'Assign Parcel'}
-              </button>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
-    </BookingFrame>
-  );
+  useEffect(() => { load(); }, [client,page,unassigned]);
+  async function action(work, message) { setPending(true); setError(''); setNotice(''); try { await work(); await load(); setNotice(message); } catch (failure) { setError(failure.message); } finally { setPending(false); } }
+  const booking = bookings.find(row => row.bookingId === selected);
+  return <WorkspacePage title="Dispatch operations">{error && <p className="error" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}<button disabled={pending} onClick={load}>Refresh board</button>
+    <section><h2>Parcel board</h2><label className="check-label"><input type="checkbox" checked={unassigned} onChange={event=>{setUnassigned(event.target.checked);setPage(0);}} />Unassigned only</label><p>Select a parcel to assign or reassign it.</p><div className="table-scroll"><table><thead><tr><th>Tracking</th><th>Route</th><th>Status</th><th>Courier</th><th></th></tr></thead><tbody>{bookings.map(row => <tr key={row.bookingId}><td><a href={`/tracking/${row.trackingNumber}`}>{row.trackingNumber}</a></td><td>{row.pickupCity} → {row.deliveryCity}</td><td>{row.status}</td><td>{row.courierId || 'Unassigned'}</td><td><button className="secondary" onClick={async () => { setSelected(row.bookingId); setHistory([]); try { const value=await client.request(`/api/v1/dispatch/bookings/${row.bookingId}`); setHistory(value.assignments); setDetails(value.booking); } catch (failure) { setError(failure.message); } }}>Select</button></td></tr>)}</tbody></table></div>{!bookings.length && <p>No deliveries found.</p>}<div className="actions"><button disabled={page===0} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page+1} of {Math.max(1,totalPages)}</span><button disabled={page+1>=totalPages} onClick={()=>setPage(page+1)}>Next</button></div></section>
+    {booking && <section><h2>{booking.trackingNumber}</h2>{details && <p>Pickup: {details.pickupAddressSnapshot} · {details.senderName} {details.senderPhone}<br />Deliver to: {details.dropoffAddressSnapshot} · {details.recipientName} {details.recipientPhone}<br />{details.parcelDescription} · {details.parcelWeightGrams} g</p>}{['DELIVERED', 'FAILED'].includes(booking.status) ? <p>Delivery is complete.</p> : <form onSubmit={event => { event.preventDefault(); action(() => client.request(`/api/v1/dispatch/assignments${booking.courierId ? '/reassign' : ''}`, JsonRequest('POST', booking.courierId ? { bookingId: selected, newCourierId: courierId, reason } : { bookingId: selected, courierId })), 'Assignment saved.'); }}><label>Courier<select required value={courierId} onChange={event => setCourierId(event.target.value)}><option value="">Select active courier</option>{couriers.filter(row => row.active && row.courierId !== booking.courierId).map(row => <option key={row.courierId} value={row.courierId}>{row.vehicleType} · {row.licensePlate} · workload {row.workload}</option>)}</select></label>{booking.courierId && <label>Reassignment reason<textarea required maxLength={200} value={reason} onChange={event => setReason(event.target.value)} /></label>}<button disabled={pending}>{booking.courierId ? 'Reassign' : 'Assign'} courier</button></form>}<h3>Assignment history</h3>{history.map(row => <p key={row.id}>{row.courier_id} · {new Date(row.assigned_at).toLocaleString()} · {row.is_active ? 'Current' : row.revocation_reason}</p>)}</section>}
+    <section><h2>Courier operational profiles</h2><p>First grant the verified user the Courier role in User management, then register their vehicle here.</p><form onSubmit={event => { event.preventDefault(); action(() => client.request(`/api/v1/dispatch/couriers/${profile.userId}`, JsonRequest('PUT', { vehicleType: profile.vehicleType, licensePlate: profile.licensePlate, active: profile.active })), 'Courier profile saved.'); }}><div className="form-grid"><label>Courier user ID<input required value={profile.userId} onChange={event => setProfile({ ...profile, userId: event.target.value })} /></label><label>Vehicle type<input required maxLength={50} value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })} /></label><label>License plate<input maxLength={20} value={profile.licensePlate} onChange={event => setProfile({ ...profile, licensePlate: event.target.value })} /></label><label className="check-label"><input type="checkbox" checked={profile.active} onChange={event => setProfile({ ...profile, active: event.target.checked })} />Active</label></div><button disabled={pending}>Save courier profile</button></form><ul>{couriers.map(row => <li key={row.courierId}>{row.vehicleType} · {row.licensePlate} · {row.active ? 'Active' : 'Inactive'} · workload {row.workload} <button className="secondary" onClick={() => setProfile({ userId: row.courierId, vehicleType: row.vehicleType, licensePlate: row.licensePlate || '', active: row.active })}>Edit</button></li>)}</ul></section>
+    <section><h2>Daily delivery report (UTC)</h2><form onSubmit={async event => { event.preventDefault(); setError(''); try { setReport(await client.request(`/api/v1/dispatch/reports/daily${date ? `?date=${date}` : ''}`)); } catch (failure) { setError(failure.message); } }}><label>Report date<input type="date" value={date} onChange={event => setDate(event.target.value)} /></label><button>Load report</button></form>{report && <><p>{report.date} · Open deliveries without an update for {report.delayHours} hours: {report.overdueOpenDeliveries}</p>{report.results.map(row => <p key={`${row.courierId}-${row.status}`}>{row.courierId} · {row.status}: {row.count}</p>)}{!report.results.length && <p>No completed deliveries for this date.</p>}</>}</section>
+  </WorkspacePage>;
 }

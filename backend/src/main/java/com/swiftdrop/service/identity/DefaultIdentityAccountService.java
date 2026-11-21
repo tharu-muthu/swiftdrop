@@ -44,11 +44,18 @@ public class DefaultIdentityAccountService implements IdentityAccountService {
         requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
         if (userId == null) throw unavailable();
         var user = users.findById(userId).orElseThrow(DefaultIdentityAccountService::unavailable);
-        if (!user.isActive()) throw unavailable();
+        if (!user.isActive() || !user.isEmailVerified()) throw unavailable();
         var currentRoles = roles.namesForUser(userId);
         if (!currentRoles.contains(IdentityRole.COURIER.name())) throw unavailable();
         return new AccountSummary(user.getId(), user.getFullName(), true, currentRoles);
     }
 
     private static AccessDeniedException unavailable() { return new AccessDeniedException("Courier account is unavailable"); }
+    @Override public void requireActiveMerchant(UUID id) {
+        if(!isActiveMerchantAccount(id))throw new AccessDeniedException("Merchant account unavailable");
+    }
+    @Override public boolean isActiveMerchantAccount(UUID id) {
+        var user=users.findById(id).orElse(null);
+        return user!=null&&user.isActive()&&user.isEmailVerified()&&roles.namesForUser(id).contains("MERCHANT");
+    }
 }

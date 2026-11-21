@@ -58,4 +58,8 @@ class TrackingSecurityTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
+    @Test void courierAndAdministratorCannotReachUnimplementedFeatureRoutes() throws Exception {
+        mvc.perform(get("/api/v1/courier/deliveries/not-implemented/other").with(user("courier").roles("COURIER"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/dispatch/not-implemented").with(user("admin").roles("DISPATCHER_ADMIN"))).andExpect(status().isForbidden());
+    }
 }

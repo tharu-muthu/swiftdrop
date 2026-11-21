@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import BookingFrame from './BookingFrame.jsx';
-import { createQuotePreparationRequest } from './bookingFormApi.js';
+import { createQuotePreparationRequest, requestQuote, confirmBooking } from './bookingFormApi.js';
 import './booking-form.css';
 import './booking-brand-theme.css';
 
@@ -28,13 +28,14 @@ function errorsFor(step, draft) {
     const address = step === 1 ? 'pickupAddress' : 'deliveryAddress';
     const city = step === 1 ? 'pickupCity' : 'deliveryCity';
     const post = step === 1 ? 'pickupPostalCode' : 'deliveryPostalCode';
-    for (const key of [`${prefix}Name`, address, city, post]) if (!draft[key].trim()) next[key] = `${labelFor(key)} is required.`;
+    for (const key of [`${prefix}Name`, `${prefix}Phone`, address, city, post]) if (!draft[key].trim()) next[key] = `${labelFor(key)} is required.`;
     if (draft[`${prefix}Phone`] && !phone.test(draft[`${prefix}Phone`].replaceAll(' ', ''))) next[`${prefix}Phone`] = 'Enter a valid Sri Lankan mobile number, e.g. 0771234567.';
     if (draft[post] && !postal.test(draft[post])) next[post] = 'Enter a five-digit postal code.';
   }
   if (step === 3) {
     const weight = Number(draft.weightGrams);
     if (!draft.weightGrams || !Number.isInteger(weight) || weight <= 0) next.weightGrams = 'Enter a whole weight in grams greater than zero.';
+    else if (weight > 100000) next.weightGrams = 'Maximum parcel weight is 100000 grams.';
     if (!draft.parcelSize) next.parcelSize = 'Choose a parcel size.';
     if (!draft.description.trim()) next.description = 'Describe the parcel contents.';
   }
@@ -44,7 +45,7 @@ function errorsFor(step, draft) {
 function TextField({ name, label, type, placeholder, draft, errors, update }) {
   const id = `booking-${name}`;
   return <div className={`booking-field ${name.includes('Address') ? 'field-wide' : ''}`}><label htmlFor={id}>{label} <b>*</b></label>
-    <input id={id} type={type} inputMode={type === 'tel' || name.includes('Postal') ? 'numeric' : undefined} value={draft[name]} maxLength={name.includes('Address') ? 500 : name.includes('Name') ? 120 : 32} placeholder={placeholder} onChange={event => update(name, event.target.value)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${id}-error` : undefined} />
+    <input id={id} type={type} inputMode={type === 'tel' || name.includes('Postal') ? 'numeric' : undefined} value={draft[name]} maxLength={name.includes('Address') ? 500 : name.includes('Name') ? 120 : name.includes('City') ? 100 : name.includes('PostalCode') ? 5 : 32} placeholder={placeholder} onChange={event => update(name, event.target.value)} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${id}-error` : undefined} />
     {errors[name] && <small id={`${id}-error`} className="field-error">{errors[name]}</small>}</div>;
 }
 
@@ -52,7 +53,7 @@ function addressLine(address, city, postalCode) {
   return [address, city, postalCode].filter(Boolean).join(', ');
 }
 
-function QuoteReadiness({ draft }) {
+function QuoteReadiness({ draft, quote, quoteError }) {
   const quoteRequest = createQuotePreparationRequest(draft);
   const parcelSize = quoteRequest.parcel.size.replaceAll('_', ' ').toLowerCase();
 
@@ -60,7 +61,7 @@ function QuoteReadiness({ draft }) {
     <div className="quote-ready-icon" aria-hidden="true">◇</div>
     <p className="quote-eyebrow">Booking details reviewed</p>
     <h3 id="quote-ready-title">Ready to request a delivery quote</h3>
-    <p>M3 owns delivery-rate calculation and the quotation API. Your booking has not been created and no payment will be requested until M3 returns an accepted quote.</p>
+    <p>Review your details and request a delivery quote.</p>
     <div className="booking-review" aria-label="Booking details for quote">
       <section>
         <h4>Pickup</h4>
@@ -81,22 +82,42 @@ function QuoteReadiness({ draft }) {
       </section>
     </div>
     <div className="quote-integration-status" id="quote-service-note" role="status">
-      <strong>Quotation service pending</strong>
-      <span>The validated request is ready for the M3 integration. A booking confirmation will be available only after M3 returns an accepted quote.</span>
+      {quote && <><strong>Delivery quote: {quote.currency} {(quote.amountMinor / 100).toFixed(2)}</strong>
+        <span>Base {(quote.baseMinor / 100).toFixed(2)} · Extra weight {(quote.extraWeightMinor / 100).toFixed(2)} · Size {(quote.sizeSurchargeMinor / 100).toFixed(2)}</span>
+        <span>Expires {new Date(quote.expiresAt).toLocaleString()}. Confirm to book at this price.</span></>}
+      {quoteError && <span role="alert">{quoteError}</span>}
     </div>
   </section>;
 }
 
-export default function BookingFormPage() {
-  const { user } = useAuth();
+export default function BookingFormPage({ merchant = false }) {
+  const { user, client } = useAuth();
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [quotePending, setQuotePending] = useState(false);
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [draft, setDraft] = useState(() => ({
     senderName: user.fullName || '', senderPhone: user.phone || '', pickupAddress: '', pickupCity: '', pickupPostalCode: '',
     recipientName: '', recipientPhone: '', deliveryAddress: '', deliveryCity: '', deliveryPostalCode: '',
-    weightGrams: '', parcelSize: '', description: '',
+    weightGrams: '', parcelSize: '', description: '', externalReference: '',
   }));
-  const update = (name, value) => { setDraft(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); };
+  const update = (name, value) => { setRequestKey(crypto.randomUUID()); setQuote(null); setQuoteError(''); setDraft(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); };
+  const getQuote = async () => {
+    setQuotePending(true); setQuoteError('');
+    try { setQuote(await requestQuote(client, draft, merchant)); setRequestKey(crypto.randomUUID()); }
+    catch (error) { setQuoteError(error.message); }
+    finally { setQuotePending(false); }
+  };
+  const confirm = async () => {
+    setQuotePending(true); setQuoteError('');
+    try {
+      const booking = await confirmBooking(client, draft, quote.quoteId, requestKey, merchant);
+      navigate(merchant ? '/merchant' : `/bookings/${booking.id}`);
+    } catch (error) { setQuoteError(error.message); }
+    finally { setQuotePending(false); }
+  };
   const advance = event => {
     event.preventDefault();
     const invalid = errorsFor(step, draft);
@@ -115,8 +136,9 @@ export default function BookingFormPage() {
       {step === 3 && <div className="booking-field-grid"><TextField name="weightGrams" label="Weight in grams" type="number" placeholder="e.g. 1500" draft={draft} errors={errors} update={update} />
         <div className="booking-field"><label htmlFor="booking-parcelSize">Parcel size <b>*</b></label><select id="booking-parcelSize" value={draft.parcelSize} onChange={event => update('parcelSize', event.target.value)} aria-invalid={Boolean(errors.parcelSize)}><option value="">Select size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option><option value="EXTRA_LARGE">Extra large</option></select>{errors.parcelSize && <small className="field-error">{errors.parcelSize}</small>}</div>
         <div className="booking-field field-wide"><label htmlFor="booking-description">Parcel description <b>*</b></label><textarea id="booking-description" value={draft.description} maxLength="200" placeholder="Describe parcel contents (no prohibited items)." onChange={event => update('description', event.target.value)} aria-invalid={Boolean(errors.description)} />{errors.description && <small className="field-error">{errors.description}</small>}</div></div>}
-      {step === 4 && <QuoteReadiness draft={draft} />}
-      <div className="form-actions"><button type="button" className="cancel-booking" onClick={() => navigate('/booking')}>← Cancel</button><span />{step > 1 && <button type="button" className="back-step" onClick={back}>← Back</button>}{step < 4 ? <button className="next-step">Next: {steps[step][0]} →</button> : <button type="button" className="next-step" disabled aria-describedby="quote-service-note">Quote service pending</button>}</div>
+      {step === 4 && <QuoteReadiness draft={draft} quote={quote} quoteError={quoteError} />}
+      {step===3 && merchant && <label>Merchant order reference (optional)<input maxLength={100} value={draft.externalReference} onChange={event=>update('externalReference',event.target.value)} /></label>}
+      <div className="form-actions"><button type="button" className="cancel-booking" onClick={() => navigate(merchant ? '/merchant' : '/booking')}>← Cancel</button><span />{step > 1 && <button type="button" className="back-step" onClick={back} disabled={quotePending}>← Back</button>}{step < 4 ? <button className="next-step">Next: {steps[step][0]} →</button> : <><button type="button" className="next-step" disabled={quotePending} onClick={getQuote}>{quotePending ? 'Please wait…' : 'Get quote'}</button>{quote && <button type="button" className="next-step" disabled={quotePending} onClick={confirm}>Confirm booking</button>}</>}</div>
     </form>
     <aside className="booking-steps-card"><h2>▱ Booking Steps</h2><ol>{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'active-step' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol><div className="quick-tips"><h3>☼ Quick Tips</h3><ul><li>Use a reachable contact number.</li><li>Provide a complete pickup address.</li><li>Check all details before getting a quote.</li></ul></div></aside>
     </div>

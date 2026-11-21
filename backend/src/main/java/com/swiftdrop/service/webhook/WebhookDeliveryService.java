@@ -37,6 +37,8 @@ public final class WebhookDeliveryService {
             boolean success = response.statusCode() >= 200 && response.statusCode() < 300;
             return new DeliveryResult(success, response.statusCode(), response.body().length,
                     success ? "DELIVERED" : "FAILED", null);
+        } catch (com.swiftdrop.integration.webhook.BlockedWebhookDestinationException blocked) {
+            return new DeliveryResult(false,0,0,"FAILED","DESTINATION_BLOCKED");
         } catch (IOException | InterruptedException exception) {
             if (exception instanceof InterruptedException) Thread.currentThread().interrupt();
             return new DeliveryResult(false, 0, 0, "RETRYABLE_FAILURE", exception.getClass().getSimpleName());

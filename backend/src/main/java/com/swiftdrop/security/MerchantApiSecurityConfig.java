@@ -28,8 +28,10 @@ public class MerchantApiSecurityConfig {
                         "/api/v1/merchant/orders", "/api/v1/merchant/orders/**")
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/verify").authenticated()
-                        .requestMatchers("/api/v1/merchant/quotes", "/api/v1/merchant/quotes/**").hasAuthority("SCOPE_quote")
-                        .requestMatchers("/api/v1/merchant/orders", "/api/v1/merchant/orders/**").hasAuthority("SCOPE_order")
+                        .requestMatchers(HttpMethod.POST,"/api/v1/merchant/quotes").hasAuthority("SCOPE_quote")
+                        .requestMatchers(HttpMethod.GET,"/api/v1/merchant/quotes/{id}").hasAuthority("SCOPE_quote")
+                        .requestMatchers(HttpMethod.POST,"/api/v1/merchant/orders").hasAuthority("SCOPE_order")
+                        .requestMatchers(HttpMethod.GET,"/api/v1/merchant/orders","/api/v1/merchant/orders/{id}").hasAuthority("SCOPE_order")
                         .anyRequest().denyAll())
                 // Server-to-server and key-authenticated: no cookies or sessions, so there is nothing for CSRF to protect.
                 .csrf(AbstractHttpConfigurer::disable)

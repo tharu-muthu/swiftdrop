@@ -23,6 +23,8 @@ export default function WebhookSettingsPage() {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [attempts, setAttempts] = useState({});
 
   async function load() {
     setLoading(true); setError('');
@@ -36,6 +38,10 @@ export default function WebhookSettingsPage() {
   async function create(event) {
     event.preventDefault(); setPending(true); setError(''); setMessage(''); setSecret('');
     try {
+      if(editing) {
+        await updateWebhookSubscription(client,editing,{callbackUrl:form.callbackUrl,eventTypes:parseEventTypes(form.eventTypes)});
+        setEditing(null); setForm(initialForm); setMessage('Subscription updated.'); await load(); return;
+      }
       const result = await createWebhookSubscription(client, {
         callbackUrl: form.callbackUrl,
         eventTypes: parseEventTypes(form.eventTypes),
@@ -91,16 +97,17 @@ export default function WebhookSettingsPage() {
     {error && <p className="webhook-alert" role="alert">{error}</p>}
     {message && <p className="webhook-success" role="status">{message}</p>}
     {secret && <section className="webhook-secret" aria-label="Signing secret"><strong>Signing secret</strong><code>{secret}</code><span>Store this securely. It is shown only after creation or rotation.</span></section>}
-    <section className="webhook-card"><h2>Add webhook subscription</h2><form onSubmit={create} className="webhook-form">
+    <section className="webhook-card"><h2>{editing ? 'Edit webhook subscription' : 'Add webhook subscription'}</h2><form onSubmit={create} className="webhook-form">
       <label>HTTPS callback URL<input required value={form.callbackUrl} onChange={event => setForm({ ...form, callbackUrl: event.target.value })} placeholder="https://merchant.example/webhooks" /></label>
-      <label>Event types<input required value={form.eventTypes} onChange={event => setForm({ ...form, eventTypes: event.target.value })} /><small>Separate event names with commas.</small></label>
-      <button disabled={pending}>{pending ? 'Saving…' : 'Create subscription'}</button>
+      <label>Event types<input required value={form.eventTypes} onChange={event => setForm({ ...form, eventTypes: event.target.value })} /><small>Supported event: parcel.status.changed</small></label>
+      <button disabled={pending}>{pending ? 'Saving…' : editing ? 'Save subscription' : 'Create subscription'}</button>{editing && <button type="button" onClick={()=>{setEditing(null);setForm(initialForm);}}>Cancel edit</button>}
     </form></section>
     <section className="webhook-card"><h2>Your subscriptions</h2>{loading && <p role="status">Loading subscriptions…</p>}{!loading && subscriptions.length === 0 && <p>No webhook subscriptions yet.</p>}
       <div className="webhook-list">{subscriptions.map(subscription => <article className="webhook-row" key={subscription.id}>
         <div><strong>{subscription.callbackUrl}</strong><span>{subscription.eventTypes.join(', ')}</span><small>{subscription.active ? 'Active' : 'Inactive'}</small></div>
+        <button disabled={pending} onClick={()=>{setEditing(subscription.id);setForm({callbackUrl:subscription.callbackUrl,eventTypes:subscription.eventTypes.join(', ')});}}>Edit subscription</button>
         <div className="webhook-actions"><button disabled={pending} onClick={() => update(subscription.id, { active: !subscription.active }, subscription.active ? 'Webhook disabled.' : 'Webhook enabled.')}>{subscription.active ? 'Disable' : 'Enable'}</button><button disabled={pending} onClick={() => rotate(subscription.id)}>Rotate secret</button><button disabled={pending || !subscription.active} onClick={() => sendTest(subscription.id)}>Send test</button><button onClick={() => showDeliveries(subscription.id)}>Delivery log</button></div>
-        {deliveries[subscription.id] && <ul className="webhook-deliveries">{deliveries[subscription.id].map(item => <li key={item.id}><span>{item.eventType}</span><strong>{item.state}</strong><small>Attempts {item.attemptCount}{item.lastHttpStatus ? ` · HTTP ${item.lastHttpStatus}` : ''}</small></li>)}</ul>}
+        {deliveries[subscription.id] && <ul className="webhook-deliveries">{deliveries[subscription.id].map(item => <li key={item.id}><span>{item.eventType}</span><strong>{item.state}</strong><small>Attempts {item.attemptCount}{item.lastHttpStatus ? ` · HTTP ${item.lastHttpStatus}` : ''}</small><button onClick={async()=>{try{const rows=await client.request(`/api/v1/merchant/webhooks/${subscription.id}/deliveries/${item.id}/attempts`);setAttempts(current=>({...current,[item.id]:rows}));}catch(failure){setError(failure.message);}}}>Attempt details</button>{item.state==='FAILED' && <button disabled={pending} onClick={async()=>{setPending(true);try{await client.request(`/api/v1/merchant/webhooks/${subscription.id}/deliveries/${item.id}/retry`,{method:'POST'});await showDeliveries(subscription.id);}catch(failure){setError(failure.message);}finally{setPending(false);}}}>Retry delivery</button>}{attempts[item.id]?.map(attempt=><small key={attempt.attemptNumber}>#{attempt.attemptNumber} · {attempt.outcome} · {attempt.httpStatus||attempt.errorMessage} · {new Date(attempt.startedAt).toLocaleString()}</small>)}</li>)}</ul>}
       </article>)}</div>
     </section>
   </main>;

@@ -114,3 +114,24 @@ None of those credentials are required for this foundation.
   Existing compatible Java 21.0.9 and Node 24.11.0 are recorded separately in the
   verification report. Docker tags are explicit version pins, not immutable digests;
   controlled patch updates remain team maintenance work.
+
+## All-member integration follow-up (21 November 2026)
+
+The user explicitly authorized completing the remaining work across M1–M9,
+superseding the earlier M9-only implementation restriction. The member task PDF
+and its ordered remaining-work review inform this phase. Original references
+remain unchanged. The current contracts and operational choices are recorded in
+[the integrated system guide](full-system-implementation.md).
+
+The member task list permits FAILED after PICKED_UP and IN_TRANSIT as well as
+OUT_FOR_DELIVERY; this now supersedes the earlier narrower transition table.
+M6 creates unassigned CREATED lifecycles at booking time, M5 assigns through its
+service contract, and terminal execution releases assignment workload. One
+versioned parcel.status.changed envelope serves independent tracking, notification
+and webhook queues. SMS is the assignment mock provider. Receipts are delivery
+receipts with print/text download. The configurable 24-hour dispatch age indicator
+is an operational threshold, not an inferred contractual SLA.
+
+New V11/V12 migrations are additive. V8 is not reused and V1–V10 are unchanged.
+Tests target disposable databases; shared Neon migration/SMTP coordination and
+live-provider deployment remain separate from implementation verification.

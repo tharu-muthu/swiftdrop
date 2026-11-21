@@ -9,7 +9,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ParcelBookingRepository extends JpaRepository<ParcelBooking, UUID> {
+public interface ParcelBookingRepository extends JpaRepository<ParcelBooking, UUID>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<ParcelBooking> {
+    java.util.Optional<ParcelBooking> findByCustomerIdAndIdempotencyKey(UUID customerId, String idempotencyKey);
+    java.util.Optional<ParcelBooking> findByMerchantIdAndIdempotencyKey(UUID merchantId, String idempotencyKey);
+    java.util.Optional<ParcelBooking> findByTrackingNumber(String trackingNumber);
+    java.util.List<ParcelBooking> findTop100ByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
+    @Query(value = "select 1 from pg_advisory_xact_lock(hashtextextended(:key, 0))", nativeQuery = true)
+    Integer lockRequest(@Param("key") String key);
     interface DashboardAggregate {
         long getActiveBookings();
         long getPendingReceipts();
@@ -25,16 +31,19 @@ public interface ParcelBookingRepository extends JpaRepository<ParcelBooking, UU
             """, nativeQuery = true)
     DashboardAggregate dashboardForCustomer(@Param("customerId") UUID customerId);
 
-    @Query("""
-            SELECT b FROM ParcelBooking b
-            WHERE b.customerId = :customerId
-              AND (:search IS NULL OR lower(b.trackingNumber) LIKE lower(concat('%', :search, '%'))
-                   OR lower(coalesce(b.recipientName, '')) LIKE lower(concat('%', :search, '%')))
-              AND (:bookingState IS NULL OR b.bookingState = :bookingState)
-              AND (:from IS NULL OR b.createdAt >= :from)
-              AND (:until IS NULL OR b.createdAt < :until)
-            """)
-    Page<ParcelBooking> findHistory(@Param("customerId") UUID customerId, @Param("search") String search,
-            @Param("bookingState") String bookingState, @Param("from") Instant from,
-            @Param("until") Instant until, Pageable pageable);
+    default Page<ParcelBooking> findHistory(UUID customerId,String search,String bookingState,Instant from,Instant until,Pageable pageable) {
+        return findAll((root,query,cb)->{
+            var filters=new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            filters.add(cb.equal(root.get("customerId"),customerId));
+            if(search!=null) {
+                String escaped=search.toLowerCase(java.util.Locale.ROOT).replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+                filters.add(cb.or(cb.like(cb.lower(root.get("trackingNumber")),"%"+escaped+"%",'\\'),
+                        cb.like(cb.lower(root.get("recipientName")),"%"+escaped+"%",'\\')));
+            }
+            if(bookingState!=null)filters.add(cb.equal(root.get("bookingState"),bookingState));
+            if(from!=null)filters.add(cb.greaterThanOrEqualTo(root.<Instant>get("createdAt"),from));
+            if(until!=null)filters.add(cb.lessThan(root.<Instant>get("createdAt"),until));
+            return cb.and(filters.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        },pageable);
+    }
 }
