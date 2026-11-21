@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthProvider.jsx';
-import Brand from '../../components/Brand.jsx';
+import PortalShell from '../../components/PortalShell.jsx';
 import { navigate } from '../../app/navigation.js';
 import './profile.css';
 import './admin-users.css';
@@ -81,12 +81,8 @@ export default function AdminUsersPage() {
     } finally { setBusy(false); }
   }
 
-  return <div className="profile-shell">
-    <aside className="profile-sidebar" aria-label="Account navigation"><Brand /><nav><span className="profile-nav-label">WORKSPACE</span>
-      <a href="/workspaces">All workspaces</a><a href="/dispatch">Dispatch</a><a href="/admin/users" className="selected" aria-current="page">User management</a>
-      <span className="profile-nav-label">ACCOUNT</span><a href="/profile">My profile</a></nav></aside>
-    <main className="profile-main"><header className="profile-topbar"><span className="profile-breadcrumb">Administration / Users</span><span>{actor.fullName}</span></header>
-      <div className="profile-content"><h1>User management</h1><p className="profile-subtitle">Find accounts and manage access. Changes take effect immediately.</p>
+  return <PortalShell title="User management" contentClassName="profile-content">
+    <p className="profile-subtitle">Find accounts and manage access. Changes take effect immediately.</p>
         {notice && <p className="profile-banner" role="status">{notice}</p>}
         {error && <p className="profile-banner error" role="alert">{error}</p>}
         <section className="profile-card"><form className="admin-search" onSubmit={event => { event.preventDefault(); ++detailRequest.current; setPage(0); setSearch(query.trim()); setSelected(null); }}>
@@ -117,6 +113,5 @@ export default function AdminUsersPage() {
           {selected.active && selected.id === actor.id ? <p className="profile-note">You cannot suspend your own account.</p> : <div className="admin-action"><label htmlFor="admin-reason">Reason for {selected.active ? 'suspension' : 'reactivation'} *</label>
             <textarea id="admin-reason" value={reason} onChange={event => setReason(event.target.value)} maxLength={500} rows={3} placeholder="Record why this change is needed" />
             <button className={selected.active ? 'admin-danger' : 'profile-primary'} disabled={busy || !reason.trim()} onClick={changeStatus}>{busy ? 'Saving…' : selected.active ? 'Suspend account' : 'Reactivate account'}</button></div>}</section>}
-      </div></main>
-  </div>;
+  </PortalShell>;
 }
