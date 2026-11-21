@@ -14,7 +14,6 @@ import com.swiftdrop.entity.identity.User;
 import com.swiftdrop.repository.booking.ParcelBookingRepository;
 import com.swiftdrop.repository.execution.CourierProfileRepository;
 import com.swiftdrop.repository.execution.ParcelAssignmentRepository;
-import com.swiftdrop.repository.execution.ParcelLifecycleRepository;
 import com.swiftdrop.repository.identity.UserRepository;
 
 @Service
@@ -24,19 +23,19 @@ public class CourierAssignmentService {
     private final CourierProfileRepository courierProfileRepository;
     private final ParcelBookingRepository bookingRepository;
     private final UserRepository userRepository;
-    private final ParcelLifecycleRepository parcelLifecycleRepository;
+    private final ParcelLifecycleService parcelLifecycleService;
 
     public CourierAssignmentService(
             ParcelAssignmentRepository assignmentRepository,
             CourierProfileRepository courierProfileRepository,
             ParcelBookingRepository bookingRepository,
             UserRepository userRepository,
-            ParcelLifecycleRepository parcelLifecycleRepository) {
+            ParcelLifecycleService parcelLifecycleService) {
         this.assignmentRepository = assignmentRepository;
         this.courierProfileRepository = courierProfileRepository;
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
-        this.parcelLifecycleRepository = parcelLifecycleRepository;
+        this.parcelLifecycleService = parcelLifecycleService;
     }
 
     @Transactional
@@ -72,11 +71,8 @@ public class CourierAssignmentService {
 
         ParcelAssignment savedAssignment = assignmentRepository.save(assignment);
 
-        // 5. Synchronize with M6 ParcelLifecycle: update assigned courier so delivery tasks appear for the courier
-        parcelLifecycleRepository.findByBookingId(bookingId).ifPresent(lifecycle -> {
-            lifecycle.assignCourier(courierId);
-            parcelLifecycleRepository.save(lifecycle);
-        });
+        // 5. Create or update the M6 lifecycle in the same dispatch transaction.
+        parcelLifecycleService.initialize(bookingId, courierId, dispatcherId);
 
         return savedAssignment;
     }

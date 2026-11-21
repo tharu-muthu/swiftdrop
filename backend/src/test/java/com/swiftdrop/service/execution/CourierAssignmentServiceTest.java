@@ -3,12 +3,10 @@ package com.swiftdrop.service.execution;
 import com.swiftdrop.entity.booking.ParcelBooking;
 import com.swiftdrop.entity.execution.CourierProfile;
 import com.swiftdrop.entity.execution.ParcelAssignment;
-import com.swiftdrop.entity.execution.ParcelLifecycle;
 import com.swiftdrop.entity.identity.User;
 import com.swiftdrop.repository.booking.ParcelBookingRepository;
 import com.swiftdrop.repository.execution.CourierProfileRepository;
 import com.swiftdrop.repository.execution.ParcelAssignmentRepository;
-import com.swiftdrop.repository.execution.ParcelLifecycleRepository;
 import com.swiftdrop.repository.identity.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +26,7 @@ class CourierAssignmentServiceTest {
     private final CourierProfileRepository courierProfileRepository = mock(CourierProfileRepository.class);
     private final ParcelBookingRepository bookingRepository = mock(ParcelBookingRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final ParcelLifecycleRepository parcelLifecycleRepository = mock(ParcelLifecycleRepository.class);
+    private final ParcelLifecycleService parcelLifecycleService = mock(ParcelLifecycleService.class);
 
     private CourierAssignmentService service;
 
@@ -44,7 +42,7 @@ class CourierAssignmentServiceTest {
                 courierProfileRepository,
                 bookingRepository,
                 userRepository,
-                parcelLifecycleRepository
+                parcelLifecycleService
         );
     }
 
@@ -68,8 +66,8 @@ class CourierAssignmentServiceTest {
 
         when(assignmentRepository.save(any(ParcelAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ParcelLifecycle lifecycle = mock(ParcelLifecycle.class);
-        when(parcelLifecycleRepository.findByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
+        when(parcelLifecycleService.initialize(bookingId, courierId, dispatcherId))
+                .thenReturn(UUID.randomUUID());
 
         ParcelAssignment result = service.assignCourier(bookingId, courierId, dispatcherId);
 
@@ -80,8 +78,7 @@ class CourierAssignmentServiceTest {
         assertThat(result.getBooking()).isEqualTo(booking);
 
         verify(assignmentRepository).save(any(ParcelAssignment.class));
-        verify(lifecycle).assignCourier(courierId);
-        verify(parcelLifecycleRepository).save(lifecycle);
+        verify(parcelLifecycleService).initialize(bookingId, courierId, dispatcherId);
     }
 
     @Test
