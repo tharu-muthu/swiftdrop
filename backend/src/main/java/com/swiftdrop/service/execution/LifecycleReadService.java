@@ -24,17 +24,17 @@ public class LifecycleReadService {
         if(bookingIds.isEmpty())return Map.of();
         return lifecycles.findByBookingIdIn(bookingIds).stream().collect(java.util.stream.Collectors.toMap(row->row.getBookingId(),row->row.getStatus().name()));
     }
+    public Map<UUID,LifecycleSnapshot> summaries(java.util.Collection<UUID> bookingIds) {
+        if (bookingIds.isEmpty()) return Map.of();
+        return lifecycles.findByBookingIdIn(bookingIds).stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                row -> row.getBookingId(), row -> new LifecycleSnapshot(row.getId(), row.getBookingId(),
+                        row.getAssignedCourierId(), row.getStatus(), row.getUpdatedAt(), List.of())));
+    }
+    public long overdue(java.time.Instant cutoff) { return lifecycles.overdue(cutoff); }
     public org.springframework.data.domain.Page<LifecycleSnapshot> board(int page,int size,boolean unassigned,java.time.Instant overdueBefore) {
         var direction = overdueBefore == null ? org.springframework.data.domain.Sort.Direction.DESC : org.springframework.data.domain.Sort.Direction.ASC;
         var pageable=org.springframework.data.domain.PageRequest.of(page,size,org.springframework.data.domain.Sort.by(direction,"updatedAt","id"));
         var result=lifecycles.findDispatchBoard(unassigned,overdueBefore,pageable);
-        return result.map(row->new LifecycleSnapshot(row.getId(),row.getBookingId(),row.getAssignedCourierId(),row.getStatus(),row.getUpdatedAt(),List.of()));
-    }
-    public org.springframework.data.domain.Page<LifecycleSnapshot> board(int page,int size,boolean unassigned) {
-        var pageable=org.springframework.data.domain.PageRequest.of(page,size,org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"updatedAt"));
-        var result=unassigned?lifecycles.findByAssignedCourierIdIsNullAndStatus(com.swiftdrop.entity.execution.ParcelStatus.CREATED,pageable):lifecycles.findAll(pageable);
-        return result.map(row->new LifecycleSnapshot(row.getId(),row.getBookingId(),row.getAssignedCourierId(),row.getStatus(),row.getUpdatedAt(),List.of()));
-    }
         return result.map(row->new LifecycleSnapshot(row.getId(),row.getBookingId(),row.getAssignedCourierId(),row.getStatus(),row.getUpdatedAt(),List.of()));
     }
 }
