@@ -11,7 +11,7 @@ function setup(status) {
 }
 it('waits for the existing bootstrap instead of navigating during refresh', () => {
   const client = setup('loading');
-  expect(screen.getByRole('status')).toHaveTextContent('Completing Google sign-in');
+  expect(screen.getByRole('status')).toHaveTextContent('Loading SwiftDrop');
   expect(window.location.pathname).toBe('/auth/complete');
   expect(client.bootstrap).toHaveBeenCalledTimes(1);
 });

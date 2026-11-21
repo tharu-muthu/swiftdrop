@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from './AuthProvider.jsx';
 import { navigate } from '../../app/navigation.js';
+import AppLoading from '../../app/AppLoading.jsx';
 
 export default function AuthCompletePage() {
   const { status } = useAuth();
@@ -10,5 +11,5 @@ export default function AuthCompletePage() {
     if (status === 'authenticated') navigate('/workspaces', { replace: true });
     else if (status === 'anonymous') navigate('/login', { replace: true });
   }, [status]);
-  return <main className="auth-loading" role="status" aria-live="polite">Completing Google sign-in...</main>;
+  return <AppLoading />;
 }
