@@ -77,6 +77,7 @@ export default function AccountPage() {
       <nav><span className="profile-nav-label">WORKSPACE</span>
         {customer && <><a href="/booking">Dashboard</a><a href="/bookings">My bookings</a></>}
         <a href="/tracking">Track parcel</a><span className="profile-nav-label">ACCOUNT</span>
+        {user.roles.includes('DISPATCHER_ADMIN') && <a href="/admin/users">User management</a>}
         <a href="/profile" className="selected" aria-current="page">My profile</a></nav>
       <button className="profile-rail-signout" onClick={signOut} disabled={pending}>Sign out</button>
     </aside>
