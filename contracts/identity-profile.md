@@ -23,3 +23,11 @@ The profile UI is at `/profile`. Email and roles are read-only. Password changes
 ## Verification
 
 From `backend/`, run `./mvnw -Dtest=ProfileServiceTest test` (on Windows, `./mvnw.cmd`). With Docker Desktop running, `./mvnw -Pintegration -Dit.test=IdentitySessionsIT verify` runs the identity integration tests against isolated PostgreSQL through Testcontainers. From `frontend/`, run `npm test` and `npm run build`.
+
+## Account-settings expansion
+
+The profile DTO also returns `emailVerified`. PATCH /me is unchanged. Email and
+password changes now have dedicated step-up/verification routes, and saved
+addresses have owned CRUD endpoints. See [the reviewed account-settings contract](identity-account-settings.md).
+Business contact details and courier operational profiles stay with their feature
+owners. Existing exclusions above describe the original profile-only scope.

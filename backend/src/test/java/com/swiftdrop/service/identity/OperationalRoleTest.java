@@ -33,7 +33,7 @@ class OperationalRoleTest {
         verify(memberships,never()).deleteById(any()); verifyNoInteractions(sessions,audit);
     }
     @Test void successfulRevocationInvalidatesAuthorizationAndSessionsAndAudits() {
-        fixture(); when(roles.countActiveAdministrators()).thenReturn(2L); when(roles.namesForUser(target)).thenReturn(Set.of("CUSTOMER","DISPATCHER_ADMIN"),Set.of("CUSTOMER"));
+        fixture(); when(roles.countActiveAdministrators()).thenReturn(2L); when(roles.namesForUser(target)).thenReturn(Set.of("CUSTOMER","DISPATCHER_ADMIN")).thenReturn(Set.of("CUSTOMER"));
         var session=mock(AuthSession.class); when(sessions.findByUserIdAndRevokedAtIsNull(target)).thenReturn(List.of(session));
         var response=service.revokeOperationalRole(target,IdentityRole.DISPATCHER_ADMIN,4,"Access review");
         assertThat(response.roles()).containsExactly("CUSTOMER"); verify(user).authorizationChanged(); verify(session).revoke(any(),eq("ROLE_CHANGED")); verify(audit).saveAndFlush(any());

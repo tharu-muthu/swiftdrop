@@ -134,6 +134,6 @@ public class IdentitySessionService {
         var user = users.findById(current.userId()).orElseThrow(IdentityAuthenticationException::new);
         return new UserProfile(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(), current.roles(),
                 user.isActive(), user.getCreatedAt(), user.getUpdatedAt(), user.getVersion(),
-                user.getPasswordHash() != null, oauthAccounts.existsByUserIdAndProvider(user.getId(), "google"));
+                user.getPasswordHash() != null, oauthAccounts.existsByUserIdAndProvider(user.getId(), "google"), user.isEmailVerified());
     }
 }

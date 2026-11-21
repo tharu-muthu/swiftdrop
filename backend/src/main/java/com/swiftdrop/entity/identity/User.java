@@ -92,6 +92,12 @@ public class User extends CreatedEntity {
         }
     }
 
+    public void changeEmail(String email, Instant now) {
+        this.email=email;
+        this.emailVerifiedAt=now;
+        this.authorizationVersion++;
+    }
+
     public void authorizationChanged() { authorizationVersion++; }
     public void setActive(boolean active) {
         this.active = active;

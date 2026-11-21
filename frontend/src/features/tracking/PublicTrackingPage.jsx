@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { ApiError } from '../identity/apiClient.js';
 import { loadPublicTracking, trackingEventsUrl, acceptTrackingSnapshot } from './trackingApi.js';
+import Brand from '../../components/Brand.jsx';
+import PortalShell from '../../components/PortalShell.jsx';
 import './tracking.css';
 
-export default function PublicTrackingPage({ trackingNumber = '' }) {
+export default function PublicTrackingPage({ trackingNumber = '', inPortal = false }) {
   const [value, setValue] = useState(trackingNumber);
   const [tracking, setTracking] = useState(null);
   const [error, setError] = useState('');
@@ -101,16 +103,9 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
     await copyLink();
   }
 
-  return <main className="tracking-page">
-    <header className="tracking-header">
-      <button className="tracking-brand" onClick={() => navigate('/tracking')} aria-label="SwiftDrop tracking home">
-        Swift<span>Drop</span>
-      </button>
-      <span className="tracking-eyebrow">Parcel tracking</span>
-    </header>
-    <section className="tracking-card">
+  const content = <section className="tracking-card">
       <p className="tracking-eyebrow">Follow your delivery</p>
-      <h1>Track a parcel</h1>
+      {inPortal ? <h2>Track a parcel</h2> : <h1>Track a parcel</h1>}
       <p className="tracking-intro">Enter the tracking number to see the latest committed delivery status.</p>
       <form className="tracking-search" onSubmit={submit}>
         <label htmlFor="tracking-number">Tracking number</label>
@@ -140,6 +135,13 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
           <button type="button" onClick={shareLink}>Share tracking link</button>
         </div>
       </section>}
-    </section>
+    </section>;
+  if (inPortal) return <PortalShell title="Track parcel" activePath="/tracking" contentClassName="tracking-page tracking-in-portal">{content}</PortalShell>;
+  return <main className="tracking-page">
+    <header className="tracking-header">
+      <button className="tracking-brand" onClick={() => navigate('/tracking')} aria-label="SwiftDrop tracking home"><Brand /></button>
+      <span className="tracking-eyebrow">Parcel tracking</span>
+    </header>
+    {content}
   </main>;
 }

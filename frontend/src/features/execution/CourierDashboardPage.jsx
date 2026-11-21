@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
-import { availableWorkspaces } from '../../app/workspaces.js';
-import AppLink from '../../components/AppLink.jsx';
+import PortalShell from '../../components/PortalShell.jsx';
 import { loadAssignedDeliveries, loadDelivery, updateDeliveryStatus } from './executionApi.js';
 import './execution.css';
 
@@ -19,7 +18,7 @@ function currentWorkday() {
 }
 
 export default function CourierDashboardPage() {
-  const { client, user } = useAuth();
+  const { client } = useAuth();
   const [date, setDate] = useState(currentWorkday);
   const [loading, setLoading] = useState(true);
   const listRequest = useRef(0);
@@ -66,12 +65,8 @@ export default function CourierDashboardPage() {
     } finally { setPending(false); }
   }
 
-  return <main className="execution-shell">
-    <header className="execution-header"><span className="execution-brand">◇ SwiftDrop</span>
-      <span>{user.fullName} · Courier</span>{availableWorkspaces(user).length > 1 && <AppLink href="/workspaces">Switch portal</AppLink>}<AppLink href="/account">My account</AppLink></header>
-    <section className="execution-content">
-      <div><p className="execution-kicker">M6 · COURIER OPERATIONS</p><h1>Assigned deliveries</h1>
-        <p className="execution-muted">Update only parcels currently assigned to you.</p></div>
+  return <PortalShell title="Assigned deliveries" contentClassName="execution-content">
+    <p className="execution-muted">Update only parcels currently assigned to you.</p>
       {error && <p className="execution-error" role="alert">{error}</p>}
       <div className="execution-filters"><label htmlFor="courier-workday">Workday (Sri Lanka)</label>
         <input id="courier-workday" type="date" value={date} max={currentWorkday()} disabled={pending} onChange={event => { if (event.target.value) { setDate(event.target.value); setSelected(null); } }} />
@@ -90,8 +85,7 @@ export default function CourierDashboardPage() {
       </div> : <DeliveryDetails delivery={selected} recipientName={recipientName}
         setRecipientName={setRecipientName} failureReason={failureReason} setFailureReason={setFailureReason}
         pending={pending} onUpdate={update} onBack={() => setSelected(null)} />}
-    </section>
-  </main>;
+  </PortalShell>;
 }
 
 function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason, pending, onUpdate, onBack }) {

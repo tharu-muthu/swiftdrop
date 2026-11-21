@@ -12,6 +12,11 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(AccountSettingsException.class)
+    ResponseEntity<ApiError> accountSettings(AccountSettingsException error) {
+        return ResponseEntity.status(error.status()).body(ApiError.of(error.code(),error.getMessage()));
+    }
+
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
     ResponseEntity<ApiError> missingAuthentication() {
         return ResponseEntity.status(401).body(ApiError.of("UNAUTHORIZED", "Authentication required"));

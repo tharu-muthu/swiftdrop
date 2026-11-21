@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swiftdrop.config.AuthSettings;
 import com.swiftdrop.controller.identity.RegistrationController.CsrfResponse;
-import com.swiftdrop.dto.identity.TokenResponse;
 import com.swiftdrop.service.identity.TokenSecrets;
 import com.swiftdrop.integration.identity.PasswordResetDelivery;
 import com.swiftdrop.integration.identity.EmailVerificationDelivery;
