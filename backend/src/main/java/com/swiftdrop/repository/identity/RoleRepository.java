@@ -17,6 +17,8 @@ public interface RoleRepository extends JpaRepository<Role, UUID> {
     Optional<Role> lockByName(@Param("name") String name);
     @Query(value = "select count(*) from swiftdrop.user_roles ur join swiftdrop.roles r on r.id=ur.role_id join swiftdrop.users u on u.id=ur.user_id where r.name='DISPATCHER_ADMIN'", nativeQuery = true)
     long countAdministrators();
+    @Query(value = "select count(*) from swiftdrop.user_roles ur join swiftdrop.roles r on r.id=ur.role_id join swiftdrop.users u on u.id=ur.user_id where r.name='DISPATCHER_ADMIN' and u.active", nativeQuery = true)
+    long countActiveAdministrators();
     @Query(value = "select r.name from swiftdrop.roles r join swiftdrop.user_roles ur on ur.role_id=r.id where ur.user_id=:id", nativeQuery = true)
     Set<String> namesForUser(@Param("id") UUID id);
 }
