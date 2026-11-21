@@ -2,6 +2,10 @@
 
 Teammates: start with the [identity integration handoff](contracts/identity-services.md)
 before adding authenticated feature endpoints or calling identity services.
+For administrator setup, merchant approval grants and courier onboarding, use the
+[role handoff](contracts/identity-role-handoff.md).
+Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
+to search accounts and suspend or reactivate them with an audited reason.
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 
@@ -18,7 +22,7 @@ existing password users must verify before they can sign in again. See the
 [email-verification rollout guide](contracts/identity-email-verification.md).
 See [authentication setup and request flow](docs/identity/sessions.md) and the
 [current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
-Admin and other business features remain separate work.
+General admin role editing remains separate work.
 
 **New setup step:** from the root run
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`

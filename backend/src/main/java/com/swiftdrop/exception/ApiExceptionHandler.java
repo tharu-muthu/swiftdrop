@@ -28,6 +28,19 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> profileConflict() {
         return ResponseEntity.status(409).body(ApiError.of("PROFILE_CONFLICT", "Your profile changed. Reload it before saving again."));
     }
+    @ExceptionHandler(IdentityRoleConflictException.class)
+    ResponseEntity<ApiError> roleConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ROLE_CHANGE_CONFLICT", "The account or role changed. Reload before trying again."));
+    }
+    @ExceptionHandler(AdminUserNotFoundException.class)
+    ResponseEntity<ApiError> adminUserNotFound() {
+        return ResponseEntity.status(404).body(ApiError.of("USER_NOT_FOUND", "Account not found."));
+    }
+    @ExceptionHandler(AdminUserConflictException.class)
+    ResponseEntity<ApiError> adminUserConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ACCOUNT_STATUS_CONFLICT",
+                "The account changed or this action would leave no active administrator. Reload before trying again."));
+    }
     @ExceptionHandler(WebhookEndpointException.class)
     ResponseEntity<ApiError> webhookEndpoint() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_WEBHOOK_ENDPOINT", "The webhook endpoint is invalid."));
@@ -105,6 +118,8 @@ public class ApiExceptionHandler {
                         ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
+                        : path.startsWith("/api/v1/admin/users/")
+                        ? "Send a JSON object containing only reason and expectedVersion."
                         : "Send a JSON object containing only fullName, email and password."));
     }
 

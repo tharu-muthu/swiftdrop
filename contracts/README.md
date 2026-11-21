@@ -4,6 +4,8 @@ Backend feature integration: [shared identity services](identity-services.md)
 documents the implemented current-user/role/courier lookup contract, React API
 client usage, examples, permissions and pending role-changing workflows.
 
+Admin account directory and status API: [identity admin users](identity-admin-users.md).
+
 Current endpoint: `GET /api/v1/health`, public, HTTP 200:
 
 ```json

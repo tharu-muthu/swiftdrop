@@ -91,4 +91,10 @@ public class User extends CreatedEntity {
             authorizationVersion++;
         }
     }
+
+    public void authorizationChanged() { authorizationVersion++; }
+    public void setActive(boolean active) {
+        this.active = active;
+        authorizationVersion++;
+    }
 }

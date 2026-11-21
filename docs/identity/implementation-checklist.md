@@ -78,14 +78,14 @@ Ownership boundaries:
 
 ### IAM-05 — Admin user management and suspension
 
-**Existing:** role/state/version columns and append-only administrative audit persistence. **Missing:** admin account, query/update services, API/screen, administrative authorization, audit-writing service and bootstrap procedure.
+**Implemented:** one-time private first-admin bootstrap, audited merchant/courier role handoffs, admin-only user directory/details and suspension/reactivation with a reason, version check, session revocation and audit. See [role handoff](../../contracts/identity-role-handoff.md) and [admin users](../../contracts/identity-admin-users.md). General admin role editing/removal remains the next slice.
 
-- [ ] Only active `DISPATCHER_ADMIN` users can page/filter users, read a safe account record, change permitted roles and suspend/reactivate an account. Ordinary roles receive `403`; anonymous/invalid-session callers receive `401` after applicable CSRF checks.
+- [x] Only active `DISPATCHER_ADMIN` users can page/filter users, read a safe account record and suspend/reactivate an account. Ordinary roles receive `403`; anonymous/invalid-session callers receive `401` after applicable CSRF checks. General role editing remains open.
 - [ ] Role vocabulary is exactly CUSTOMER, MERCHANT, COURIER, DISPATCHER_ADMIN. Proposed admin role editing covers CUSTOMER/COURIER/DISPATCHER_ADMIN; MERCHANT grants/removals go through the M2 approval/access workflow and its M1 service contract.
-- [ ] Suspension and role changes update the user authorization version and revoke all sessions atomically. Subsequent requests using already-issued JWTs must fail. Reactivation does not resurrect old sessions.
-- [ ] Require an audit reason and expected record version; record actor, target, action, safe before/after values and timestamp in the same transaction. No hard deletion of users referenced by other modules.
-- [ ] Prevent self-suspension/self-removal of the admin role and loss of the last active administrator, including concurrent changes. A separately reviewed recovery procedure is needed for exceptional administration.
-- [ ] Bootstrap the first admin through a one-time, explicitly enabled backend operational procedure with private input; never ship a default password, public admin signup, or secret-bearing Flyway seed. Exact procedure remains a decision before this slice.
+- [x] Suspension and reactivation update the authorization version and revoke all sessions atomically. Subsequent requests using already-issued JWTs fail. Reactivation does not resurrect old sessions. General role changes remain open.
+- [x] Status changes require an audit reason and expected record version; record actor, target, action, safe before/after values and timestamp in the same transaction. No hard deletion of users referenced by other modules.
+- [x] Prevent self-suspension and loss of the last active administrator, including concurrent status changes. Self-removal/last-admin role removal belongs to the next slice. A separately reviewed recovery procedure is needed for exceptional administration.
+- [x] Bootstrap the first admin through a one-time, explicitly enabled backend operational procedure with private input; never ship a default password, public admin signup, or secret-bearing Flyway seed.
 - [ ] Test the role matrix, pagination/limits, stale writes, concurrent last-admin changes, audit records and immediate revocation; add admin UI loading/empty/denied/error states.
 
 ### IAM-06 — Role enforcement and shared IdentityContext
