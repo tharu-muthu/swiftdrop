@@ -1,0 +1,49 @@
+.app-loading {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f4f7fc;
+  color: #142c52;
+}
+.app-loading-brand {
+  width: max-content;
+  max-width: 100%;
+  animation: app-loading-appear 180ms 180ms both;
+}
+.app-loading-track {
+  height: 3px;
+  margin-top: 24px;
+  border-radius: 8px;
+  background: #dce5f1;
+  overflow: hidden;
+}
+.app-loading-track span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: #ff752d;
+  animation: app-loading-progress 1.4s ease-in-out infinite;
+}
+.app-loading-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@keyframes app-loading-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes app-loading-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-brand, .app-loading-track span { animation: none; }
+  .app-loading-track span { width: 100%; }
+}
