@@ -24,6 +24,6 @@ export default function AuthLayout({ children }) {
         <p>Manage shipments, dispatch couriers,<br className="desktop-break" /> and monitor operations in one place.</p></div>
       <DeliveryIllustration />
     </aside>
-    <section className="auth-main" aria-label="Customer registration">{children}</section>
+    <section className="auth-main" aria-label="SwiftDrop account">{children}</section>
   </main>;
 }

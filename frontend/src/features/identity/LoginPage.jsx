@@ -44,7 +44,7 @@ export default function LoginPage() {
         value={email} onChange={event => setEmail(event.target.value)} error={errors.email} disabled={pending} maxLength={320} required />
       <FormField name="password" label="Password" type="password" placeholder="Enter your password" autoComplete="current-password"
         value={password} onChange={event => setPassword(event.target.value)} error={errors.password} disabled={pending} required />
-      <p className="recovery-note">Forget Password?</p>
+      <p className="recovery-note"><a href="/forgot-password">Forgot password?</a></p>
       {(message || auth.error) && <p className="form-alert" role="alert">{message || auth.error}</p>}
       <button className="primary-button" disabled={pending}>{pending ? 'Logging in…' : 'Log in'}</button>
     </form>
@@ -54,5 +54,6 @@ export default function LoginPage() {
       <span aria-hidden="true">G</span> Continue with Google
     </a>
     <p className="login-note">New to SwiftDrop? <a href="/register">Sign up</a></p>
+    <p className="login-note">Need to verify your email? <a href="/verify-email/request">Resend link</a></p>
   </div></AuthLayout>;
 }

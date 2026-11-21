@@ -9,11 +9,16 @@ Team onboarding and collaboration: see [the team development guide](docs/team-de
 for Docker setup, private configuration, feature branches, PRs into `dev`, migration
 coordination and the current Google/Docker readiness limitations.
 
-Customer registration, password login/logout, rotating refresh sessions and safe
-profile reads now work end to end. Open `/register`, `/login` and `/account`.
+Customer registration, password login/logout, rotating refresh sessions, profile
+management and password recovery are implemented. Open `/register`, `/login`,
+`/profile` and `/forgot-password`.
+The email-verification branch adds a required inbox proof for password accounts.
+**Do not start its backend against shared Neon until mail delivery is verified:**
+existing password users must verify before they can sign in again. See the
+[email-verification rollout guide](contracts/identity-email-verification.md).
 See [authentication setup and request flow](docs/identity/sessions.md) and the
-[current API contract](contracts/identity-sessions.md). Google, recovery, admin
-and other business features remain future work.
+[current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
+Admin and other business features remain separate work.
 
 **New setup step:** from the root run
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
@@ -133,7 +138,10 @@ without quotes, spaces or `$`. Never commit `.env`; never put credentials in
 `VITE_*` variables, which would expose them to browsers.
 
 The database is hosted in Neon; no local PostgreSQL container or password is
-needed. No Google client ID, JWT key, mail account or merchant key is needed yet.
+needed. Local password-reset and email-verification messages are captured by
+Mailpit in Docker and require no mail account. Open `http://localhost:8025` to
+view the local inbox. To send real Gmail messages instead, follow the private backend SMTP settings in
+[`contracts/identity-password-recovery.md`](contracts/identity-password-recovery.md).
 
 ## 2A. Run the application with Neon and RabbitMQ
 

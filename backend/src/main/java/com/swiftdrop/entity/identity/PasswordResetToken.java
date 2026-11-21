@@ -26,6 +26,15 @@ public class PasswordResetToken extends CreatedEntity {
 
     protected PasswordResetToken() { }
 
+    public PasswordResetToken(UUID userId, String tokenHash, Instant expiresAt) {
+        this.userId = userId;
+        this.tokenHash = tokenHash;
+        this.expiresAt = expiresAt;
+    }
+
+    public void use(Instant now) { this.usedAt = now; }
+    public void revoke(Instant now) { this.revokedAt = now; }
+
     public UUID getUserId() { return userId; }
     public String getTokenHash() { return tokenHash; }
     public Instant getExpiresAt() { return expiresAt; }
