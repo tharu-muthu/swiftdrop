@@ -1,292 +1,182 @@
 # SwiftDrop
 
-The customer, merchant, dispatch, courier, tracking, notification and webhook
-workflows are now connected. Use the [integrated system guide](docs/full-system-implementation.md)
-for the demonstration order, new screens, API contracts, queues and migration notes.
+A parcel-delivery platform for customers, merchants, couriers and dispatch administrators. SwiftDrop combines booking and pricing, courier assignment, delivery execution, live tracking, notifications and merchant webhooks in one application.
 
-Teammates: start with the [identity integration handoff](contracts/identity-services.md)
-before adding authenticated feature endpoints or calling identity services.
-For administrator setup, merchant approval grants and courier onboarding, use the
-[role handoff](contracts/identity-role-handoff.md).
-Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
-to search accounts, suspend or reactivate them, and manage permitted roles with an audited reason.
-Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
-configuration and the first feature PR.
+**Architecture:** one React frontend, one Java/Spring Boot backend, one PostgreSQL database and a shared `swiftdrop` schema per environment. RabbitMQ supports asynchronous integrations.
 
-Team onboarding and collaboration: see [the team development guide](docs/team-development-guide.md)
-for Docker setup, private configuration, feature branches, PRs into `dev`, migration
-coordination and the current Google/Docker readiness limitations.
+[Quick start](#quick-start-docker) | [Local development](#local-development) | [Configuration](#configuration) | [Tests](#tests-and-builds) | [Documentation](#documentation) | [Troubleshooting](#troubleshooting)
 
-Customer registration, password login/logout, rotating refresh sessions, profile
-management and password recovery are implemented. Open `/register`, `/login`,
-`/profile` and `/forgot-password`.
-The email-verification branch adds a required inbox proof for password accounts.
-**Do not start its backend against shared Neon until mail delivery is verified:**
-existing password users must verify before they can sign in again. See the
-[email-verification rollout guide](contracts/identity-email-verification.md).
-See [authentication setup and request flow](docs/identity/sessions.md) and the
-[current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
-Administrator controls now include guarded courier/administrator grants and revocation.
+> Backend startup runs Flyway against the configured database. Select your own Neon development branch and coordinate migration versions before starting against a shared environment. V13 adds profile security and saved addresses; its rollout requires team coordination. Existing password accounts require inbox verification after V9.
 
-**New setup step:** from the root run
-`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
-before starting the backend. This adds private signing/origin settings while
-preserving Neon credentials. For full Compose use `-Compose` instead.
+## Features
 
-## Architecture and folders
-
-```text
-Browser (React) -> /api proxy -> Spring Security -> Controller -> Service
-                                                               -> Repository -> PostgreSQL
-                               One Java application            -> RabbitMQ (committed parcel events)
-```
-
-Controllers handle HTTP, services apply business rules, and repositories access
-the database. All Java layers run in **one backend application**. All nine members
-share **one PostgreSQL database and one application schema per environment**, named
-`swiftdrop`. Each developer can use their own Neon development branch with the same
-application schema and Flyway migrations; features still share one database.
-The health service is a liveness response and needs no repository or business table.
-
-| Folder / file | What it does |
+| Area | Available workflows |
 | --- | --- |
-| `frontend/` | React browser app, Vite development server, npm dependencies and tests; Docker builds static files served by Nginx. |
-| `frontend/src/app/` | Page entry point, preserved foundation page and shared styles. |
-| `frontend/src/features/` | Feature screens and API calls; `identity/` implements registration. |
-| `frontend/src/components/` | Reusable auth layout, brand and form fields. |
-| `backend/` | Single Spring Boot Maven project and its Windows/Linux/macOS Maven wrappers. |
-| `backend/src/main/java/com/swiftdrop/` | `controller`, `service`, `repository`, `entity`, `dto`, `security`, `config`, `exception`, `integration` layers; add feature subpackages as needed. |
-| `backend/src/main/resources/` | Environment-based configuration and `db/migration/` Flyway SQL. |
-| `backend/src/test/` | HTTP/security tests and optional real PostgreSQL/RabbitMQ integration tests. |
-| `contracts/` | Health and registration API contracts; future OpenAPI/event schemas. |
-| `docs/reference/` | Original design PDF, diagrams and screen references, preserved unchanged. |
-| `docs/reference-review.md` | Conflicts, source provenance, scope decisions and unresolved team questions. |
-| `docs/identity/` | IAM checklist, registration guide, ER/table guide and connection rules. |
-| `docs/verification.md` | Actual environment and checks from this scaffold run. |
-| `compose.yaml` | Three containers: frontend, backend and RabbitMQ; the backend connects to Neon. |
-| `compose.dev.yaml` | Optional localhost ports for connecting locally running Java to RabbitMQ. |
-| `AGENTS.md` | Short architecture and coding rules for the team and coding assistants. |
-| `.env.example` | Root template for RabbitMQ and app ports; real `.env` files are ignored. |
-| `backend/.env.example` | Shared variable names and placeholders for each developer's private Neon connection. |
-| `frontend/.env.example` | Optional proxy URL only; never database credentials. |
+| Identity | Registration, inbox verification, password and optional Google sign-in, rotating refresh sessions, recovery and profile editing |
+| Account settings | Verified email change, password change/set-password, verification status and saved addresses |
+| Customer | Delivery quotes, parcel booking, booking history/details, tracking and delivery receipts |
+| Merchant | Business application/approval, orders, API credentials and webhook configuration |
+| Dispatch | Courier operational profiles, booking assignment, workload monitoring and daily reporting |
+| Courier | Assigned deliveries, dated worklists with unfinished carryover, status updates and delivery/failure details |
+| Tracking | Public shareable tracking links and live SSE updates; signed-in tracking uses the shared portal layout |
+| Notifications and integrations | Event-driven processing, notification administration, webhook delivery logs and retries; SMS uses a mock provider |
+| Shared UI | Role-aware navigation, expandable icon rail, account dropdown and consistent identity/booking theme |
 
-Feature ownership: M1 identity, M2 merchant, M3 pricing, M4 booking, M5 dispatch,
-M6 execution, M7 tracking, M8 notification, M9 webhook. Ownership is across layers;
-it does not mean nine deployed backend applications.
+Source implementation does not imply deployment verification. Run the checks below before merging or deploying. Historical results in `docs/` describe their recorded revisions; recent profile/security and UI changes still need compilation, full tests and real-provider smoke checks.
 
-## Prerequisites and pinned versions
+## Roles and sign-in
 
-For the easiest all-container setup, install **Git and Docker Desktop with its
-Linux engine running** (or Docker Engine + Compose on Linux). You do not need host
-Java, Node, Maven, PostgreSQL or RabbitMQ for that option. Internet access is needed
-for the first image and dependency downloads. Use Compose v2.20+ or v5, with
-`docker compose` (space), not the old `docker-compose` command.
+Public registration creates **CUSTOMER only**. Password accounts verify their inbox before signing in; registration does not automatically sign users in. Email verification and connecting Google are separate actions.
 
-For editing with automatic React reload, also install a Java 21 **JDK** and Node 24.
-`JAVA_HOME` must point to the JDK folder, not its `bin` folder. Global Maven is
-optional because the wrapper downloads the pinned version.
+| Role | Portal | How access is assigned |
+| --- | --- | --- |
+| `CUSTOMER` | `/booking` | Public registration or new verified Google signup |
+| `MERCHANT` | `/merchant` | Merchant approval, handled by the merchant feature |
+| `COURIER` | `/courier` | Administrator grant; dispatch also configures an operational courier profile |
+| `DISPATCHER_ADMIN` | `/dispatch` | Guarded administrator grant or explicitly enabled private first-admin bootstrap |
 
-| Component | Pin / policy |
+An account with one role opens its portal directly. Multiple roles open `/workspaces` to choose a portal. Customers without merchant access see **Apply for merchant**. A courier role alone does not make the account eligible for assignments without its operational profile.
+
+Administrators manage accounts and supported role grants at `/admin/users`; merchant approvals remain at `/admin/merchants`. Changes require a reason/version and revoke affected sessions. The last active administrator and self-removal are protected.
+
+There are no seeded accounts or passwords. To establish the first administrator, register and verify an account, then follow the [private bootstrap procedure](contracts/identity-role-handoff.md). Disable bootstrap after provisioning.
+
+## Technology
+
+| Component | Repository version / policy |
 | --- | --- |
-| Java | Language target 21; container Temurin `21.0.13_9` on Ubuntu Jammy. Recommend current team pin 21.0.13 locally. |
-| Spring Boot | `3.5.16`; its parent manages Spring Security, JPA, Validation, AMQP, Flyway, JDBC driver and test dependency versions together. |
-| Maven / wrapper | Maven `3.9.11`, official script-only wrapper `3.3.4`; no wrapper JAR is needed. |
-| Node / npm | Team pin `24.22.2` / `11.19.1`; `.nvmrc`, `.node-version`, packageManager and Dockerfile record it. Existing Node 24.11+/npm 11.6.1+ within those majors is accepted. |
-| React / React DOM | `19.3.1` |
-| Vite / React plugin | `8.3.5` / `6.1.2` |
-| Vitest | `5.0.5` |
-| PostgreSQL | Neon-hosted PostgreSQL; each developer uses a separate Neon branch. |
-| RabbitMQ | `4.2.9-management-alpine` |
-| Nginx | `1.28.3-alpine` |
+| Java / Spring Boot | Java 21 / Spring Boot `3.5.16` |
+| Maven | Wrapper-managed `3.9.11`; no global Maven installation required |
+| React / Vite / Vitest | `19.3.1` / `8.3.5` / `5.0.5` |
+| Node / npm | Team pins `24.22.2` / `11.19.1`; accepted engine ranges are in `frontend/package.json` |
+| Database | PostgreSQL on Neon; isolated PostgreSQL containers for integration tests |
+| Broker / static server | RabbitMQ `4.2.9-management-alpine` / Nginx `1.28.3-alpine` |
+| Persistence | Flyway migrations; JPA validates schema and never writes it |
 
-Direct npm dependencies are exact pins; `package-lock.json` fixes the complete
-dependency tree. Use `npm ci` after cloning. Container tags pin versions rather
-than immutable image digests. Update pins and lockfiles together after review.
+Use `npm ci` with the committed lockfile and the Maven wrapper. Coordinate dependency/toolchain changes with the team. Exact image pins live in the Dockerfiles and Compose configuration.
 
-Check tools in PowerShell:
+## Quick start: Docker
 
-```powershell
-git --version
-docker --version
-docker compose version
-docker info
-# Only needed for local Java/React development:
-java -version
-javac -version
-node --version
-npm.cmd --version
-```
+### 1. Prerequisites
 
-`docker info` must show a Server section. If it says the Linux engine pipe is
-missing, open Docker Desktop and wait until the engine is running.
+Install Git and Docker Desktop with its Linux engine running, or Docker Engine with Compose on Linux. Use the `docker compose` command. Host Java, Node, PostgreSQL and RabbitMQ installations are unnecessary for the container setup. First builds need network access for images and dependencies.
 
-## 1. Create local configuration
+All commands below run from the repository root in **PowerShell**. On macOS/Linux, use the shell equivalents, `npm` instead of `npm.cmd`, and `sh ./backend/mvnw` instead of `.\backend\mvnw.cmd`.
 
-The root file configures RabbitMQ and app ports. Every developer must also put
-their private Neon connection in `backend/.env` as described in **2A**.
-
-Open a terminal in the repository root (the folder containing `compose.yaml`).
-In PowerShell:
+### 2. Create private configuration
 
 ```powershell
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-notepad .env
+if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
 ```
 
-On macOS/Linux:
+Edit the files in your editor:
 
-```bash
-test -f .env || cp .env.example .env
-# Open .env in your text editor.
-```
+- **`.env`:** set a unique random `RABBITMQ_PASSWORD` of at least 24 alphanumeric characters. Keep the supplied development username/vhost or configure your own.
+- **`backend/.env`:** enter your private Neon connection and real SMTP sending configuration. Leave Google disabled until its credentials and callback are configured.
 
-Set `RABBITMQ_PASSWORD` to a random alphanumeric password of at least 24
-characters. Do not use real university/service passwords. Keep plain values
-without quotes, spaces or `$`. Never commit `.env`; never put credentials in
-`VITE_*` variables, which would expose them to browsers.
-
-The database is hosted in Neon; no local PostgreSQL container or password is
-needed. Verification and password-reset messages use the real SMTP provider configured in
-private `backend/.env`. Fill the `SPRING_MAIL_*` and `MAIL_FROM` placeholders in
-`backend/.env.example` using your own sending account. See
-[real SMTP setup](contracts/identity-password-recovery.md#real-gmail-delivery).
-No local mail inbox is included. After changing private settings, recreate the
-backend with `docker compose up --detach --force-recreate --wait backend`.
-If upgrading from the previous local-mail setup, run
-`docker compose up --detach --remove-orphans --wait` to remove the old mail container.
-
-## 2A. Run the application with Neon and RabbitMQ
-
-First create the private Neon configuration:
+Generate private Compose signing settings without replacing existing non-placeholder values:
 
 ```powershell
-if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
-notepad backend/.env
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1 -Compose
 ```
 
-In Neon **Connect**, select your own development branch, database and role. Fill
-the three `SPRING_DATASOURCE_*` values in `backend/.env`; keep credentials out
-of the JDBC URL. The pooled runtime URL is converted to the matching direct
-endpoint for Flyway. Then, from the repository root:
+The helper configures signing/origin values; it does not configure Neon or SMTP. On other platforms, populate the documented `AUTH_*` settings manually and generate a cryptographically random Base64 signing key of at least 32 bytes.
 
-From the repository root, in PowerShell or Bash:
+### 3. Start the application
 
-```text
+After choosing the database branch and coordinating migrations:
+
+```powershell
 docker compose config --quiet
 docker compose up --build --detach --wait --wait-timeout 300
 docker compose ps
 ```
 
-The first build downloads several large images and may take a long time on a slow
-connection. It runs frontend tests/build and backend unit/security tests as part
-of building the images. Compose starts RabbitMQ, waits for it, then starts the
-backend (connected to Neon) and frontend.
+Open **[http://localhost:8080](http://localhost:8080)**. Register, confirm the inbox link, then sign in. The default frontend port can be changed with `FRONTEND_PORT`.
 
-Open **[http://localhost:8080/register](http://localhost:8080/register)**. You should
-see the SwiftDrop registration form. A valid submission shows **“Account created”**
-without signing you in. The original health/retry page is at `/foundation`; it
-shows **“Backend connected”** when the backend is reachable.
+Compose starts **frontend, backend and RabbitMQ**. PostgreSQL remains on Neon. Docker image builds run frontend tests/build and backend unit verification; they do **not** run the PostgreSQL/RabbitMQ integration suite.
 
-Check HTTP responses from another PowerShell terminal:
+Check liveness:
 
 ```powershell
-curl.exe -i http://localhost:8080/api/v1/health
-curl.exe -i http://localhost:8080/api/v1/private
+curl.exe http://localhost:8080/api/v1/health
 ```
 
-Use `curl` instead of `curl.exe` on macOS/Linux. Expected: health returns HTTP 200
-with `{"status":"UP","application":"swiftdrop"}`; the private URL returns HTTP 401.
-POST without a CSRF token returns 403. React obtains that token automatically for
-registration. Login is available at `/login`; registration does not sign you in.
+Expected: `{"status":"UP","application":"swiftdrop"}`. This is liveness, not a complete database, broker or delivery-provider health assessment. `/foundation` also provides the preserved connection-check screen.
 
-Flyway runs against the selected Neon branch during backend startup. Verify its
-history in the Neon SQL editor, for example:
+### 4. Update or stop
 
-```sql
-SELECT version, description, success
-FROM swiftdrop.flyway_schema_history
-ORDER BY installed_rank;
-```
+```powershell
+# Rebuild after source changes, including backend/profile changes.
+docker compose up --build --detach --wait
 
-Expect successful V1 through V12 entries after coordinating the new versions. Health reports **application liveness**; it
-does not probe broker availability or assert that business integrations work.
+# Frontend-only changes, when no backend/migration changes are needed.
+docker compose up --build --no-deps --detach --wait frontend
 
-Useful commands:
-
-```text
+# Inspect recent logs or stop the stack.
 docker compose logs --tail=100 backend
-docker compose logs --tail=100 rabbitmq
-docker compose logs --follow backend
-# Ctrl+C exits log following without stopping containers.
 docker compose down
 ```
 
-`down` preserves the RabbitMQ volume. Neon data is managed by Neon, not Docker.
-Changing `.env` passwords later does not change credentials already stored in the
-RabbitMQ volume; rotate those explicitly.
+Use **Ctrl + Shift + R** after a frontend rebuild. `down` preserves the RabbitMQ volume; it does not remove Neon data. Changing a password in `.env` does not rotate credentials already persisted in RabbitMQ.
 
-## 2B. Run React and Java locally (daily development)
+## Local development
 
-Choose either 2A or 2B. Stop the full stack with `docker compose down` before
-switching modes. Start only RabbitMQ, exposing its localhost ports:
+Use this mode for Java debugging and Vite hot reload. Install a **Java 21 JDK**, Node 24 and npm 11. Set `JAVA_HOME` to the JDK directory, not its `bin` directory.
 
-```text
-docker compose -f compose.yaml -f compose.dev.yaml up --detach --wait rabbitmq
-```
+1. Complete private configuration above. Stop the full Compose stack before switching modes.
+2. Generate backend-local signing settings:
 
-In **terminal 1**, from the repository root, PowerShell:
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1
+   ```
+
+3. In `backend/.env`, set `RESET_FRONTEND_ORIGIN=http://127.0.0.1:5173`. If Google is enabled, set `GOOGLE_FRONTEND_ORIGIN` to the same origin and update its registered callback. Ensure `AUTH_ALLOWED_ORIGINS` includes that exact origin; the setup helper preserves existing non-placeholder values.
+4. Start only RabbitMQ with localhost ports:
+
+   ```powershell
+   docker compose -f compose.yaml -f compose.dev.yaml up --detach --wait rabbitmq
+   ```
+
+5. Start Java in terminal 1, from the repository root:
+
+   ```powershell
+   .\backend\mvnw.cmd -f backend/pom.xml spring-boot:run
+   ```
+
+6. Start React in terminal 2, from the repository root:
+
+   ```powershell
+   npm.cmd --prefix frontend ci
+   npm.cmd --prefix frontend run dev
+   ```
+
+Open **[http://127.0.0.1:5173](http://127.0.0.1:5173)**. The backend listens on `8081`. Vite proxies `/api`, `/oauth2` and `/login/oauth2` to the backend; it reads only frontend configuration. Optional `frontend/.env` can set `BACKEND_URL` (default `http://localhost:8081`).
+
+Broker management is available at `http://localhost:15672` only with the development override; use your private root `.env` credentials. Stop Java/Vite with Ctrl+C and infrastructure with:
 
 ```powershell
-cd backend
-.\mvnw.cmd --version
-.\mvnw.cmd spring-boot:run
-```
-
-On macOS/Linux use `sh ./mvnw --version` and `sh ./mvnw spring-boot:run`.
-The backend explicitly imports the root `.env`, then `backend/.env`, and listens
-on port **8081**. You should see Flyway migration/validation output against Neon
-and `Started SwiftDropApplication`.
-
-In **terminal 2**, from the repository root, PowerShell:
-
-```powershell
-cd frontend
-npm.cmd ci
-npm.cmd run dev
-```
-
-On macOS/Linux use `npm ci` and `npm run dev`. Open
-**[http://127.0.0.1:5173](http://127.0.0.1:5173)**. Vite forwards `/api/...` to
-`BACKEND_URL` from optional `frontend/.env` (default `http://localhost:8081`),
-retaining the full path. Vite does not read root or backend `.env` files. Browser
-requests use a relative URL, so no development CORS exception is needed.
-If you change `BACKEND_PORT`, update `BACKEND_URL` in `frontend/.env` too and restart
-Vite. An old root-level `BACKEND_URL` is no longer used by Vite.
-
-The optional broker management page is
-[http://localhost:15672](http://localhost:15672); use your `.env` RabbitMQ username
-and password. No PostgreSQL port is published or required.
-
-Stop Java and Vite with Ctrl+C in their terminals, then stop infrastructure:
-
-```text
 docker compose -f compose.yaml -f compose.dev.yaml down
 ```
 
-## 2C. Neon connection details
+## Configuration
 
-Keep the same variable names for every developer. Only their values change.
-Complete step 1 for local RabbitMQ configuration, then, from the repository root:
+### Files and scope
 
-```powershell
-if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
-notepad backend/.env
-```
+| File | Contents | Loaded by |
+| --- | --- | --- |
+| `.env` | Broker credentials, host ports and Compose signing settings | Docker Compose; local backend also imports it |
+| `backend/.env` | Neon, backend-local auth, SMTP, Google and optional bootstrap settings | Spring configuration; Compose backend `env_file` |
+| `frontend/.env` | Optional `BACKEND_URL` proxy target | Vite only |
 
-In Neon **Connect**, select your own development branch, database and role. Choose
-the Java/JDBC format. Runtime can use a pooled or direct connection; Flyway uses a
-separate **direct** connection to the same endpoint/database.
-Fill all three placeholders in `backend/.env`:
+Copy the matching `.env.example` templates; never commit populated files. Backend `.env` uses Java-properties syntax: `KEY=value`, no `export` or surrounding quotes, and escaped literal backslashes. Compose environment entries override backend `env_file` values; exported environment variables can also override local Spring file configuration.
+
+The documented Maven command anchors runtime configuration to `backend/`, importing the root `.env` before `backend/.env`. Private configuration is excluded from Docker build contexts. Never put secrets in `VITE_*` variables or frontend source.
+
+### Neon and migrations
+
+Select your own branch, database and role in Neon Connect. Keep credentials separate from the JDBC URL:
 
 ```properties
 SPRING_DATASOURCE_URL=jdbc:postgresql://YOUR_ENDPOINT-pooler.YOUR_REGION.aws.neon.tech:5432/YOUR_DATABASE?sslmode=require&channelBinding=require
@@ -294,200 +184,132 @@ SPRING_DATASOURCE_USERNAME=YOUR_NEON_ROLE
 SPRING_DATASOURCE_PASSWORD=YOUR_NEON_PASSWORD
 ```
 
-Use the hostname displayed for the selected branch; do not construct it from a
-branch name. Keep `sslmode=require&channelBinding=require` (the JDBC spelling is
-`channelBinding`). Put the role and password in their separate variables, not in
-the URL. These parameters follow [Neon's Java connection guidance](https://neon.com/docs/guides/java).
-This file is loaded as Java properties: use `KEY=value`, no `export`, no surrounding
-quotes; double a literal backslash. Keep passwords private and out of frontend
-files, `VITE_*` variables, commits, and command-line arguments.
+Runtime accepts the selected pooled/direct connection. `DatabaseMigrationConfig` derives a direct Flyway connection from the same Neon endpoint by removing `-pooler`. Optional `SPRING_FLYWAY_URL`, `SPRING_FLYWAY_USER` and `SPRING_FLYWAY_PASSWORD` belong in private `backend/.env`. The destination guard rejects a different endpoint/database/port or pooled migration URL. Do not bypass it.
 
-The setup changes do not overwrite existing private files.
+Flyway is the only schema writer, and JPA uses `ddl-auto: validate`. The repository contains **V1-V13**; V13 adds account-action tokens and saved addresses. Coordinate the single migration sequence before shared rollout, never modify an applied migration, and never reuse V8 or another existing version. Coordinate SMTP before applying V9 to shared password accounts.
 
-Start the broker from the repository root (no local PostgreSQL is needed for Neon):
+See the [schema guide](docs/identity/schema.md) and [migration notes](backend/src/main/resources/db/migration/README.md).
 
-```powershell
-docker compose -f compose.yaml -f compose.dev.yaml up --detach --wait rabbitmq
-```
+### Email and Google
 
-**Exact backend startup command**, from the repository root:
+- Configure `SPRING_MAIL_*` and `MAIL_FROM` privately for verification, recovery and account-security emails. **Mailpit is not used.** See [real SMTP setup](contracts/identity-password-recovery.md#real-gmail-delivery).
+- `RESET_FRONTEND_ORIGIN` must match the browser entry point. Compose supplies its frontend origin automatically; local development needs its own value.
+- Google is optional: configure `GOOGLE_ENABLED`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_FRONTEND_ORIGIN` on the backend. Register the exact callback `<frontend-origin>/login/oauth2/code/google` with Google.
+- Google-only security changes require recent signed authentication-time metadata. Missing/stale claims fail closed; check the configured provider with the [Google OIDC reference](https://developers.google.com/identity/openid-connect/reference) and the [account-settings contract](contracts/identity-account-settings.md).
 
-```powershell
-cd backend
-.\mvnw.cmd spring-boot:run
-```
+### Security model
 
-On macOS/Linux: `cd backend` then `sh ./mvnw spring-boot:run`. A root-directory
-alternative on Windows is `.\backend\mvnw.cmd -f backend/pom.xml spring-boot:run`.
-The Maven plugin explicitly sets its working directory to `backend/`.
-`application.yaml` explicitly imports `../.env[.properties]`, then
-`./.env[.properties]`, **before datasource creation and Flyway migrations**. Thus
-backend values override matching root file keys. There is no assumption that Maven
-or the operating system automatically sources `.env`, and no dotenv dependency.
-Exported OS variables and command-line properties can override file values; clear
-stale `SPRING_DATASOURCE_*` and `SPRING_FLYWAY_*` overrides if the wrong branch is selected.
+Access JWTs stay in React memory. Refresh tokens rotate, are hashed in persistent sessions, and travel only through protected HttpOnly cookies. Protected requests check current account, session and role state. Cookie-authenticated/browser mutations retain CSRF protections.
 
-JPA/runtime queries use the application DataSource. `DatabaseMigrationConfig`
-derives Flyway's direct URL by removing `-pooler` only from a Neon hostname, while
-keeping the same database, port and TLS parameters. Direct/runtime and test fallback PostgreSQL URLs are unchanged. Migration credentials default to the runtime role
-and password. This follows [Neon's pooled/direct endpoint convention](https://neon.com/docs/connect/connection-pooling).
+Recovery and verification links use expiring single-use hashed tokens. Email changes keep the current email until new-inbox confirmation; successful email/password changes revoke sessions. Matching email alone never links a Google identity. Saved addresses are owner-scoped and copied into booking snapshots.
 
-Optional explicit overrides belong in the same private `backend/.env`:
+Base Compose exposes loopback HTTP for development. Deployment requires HTTPS, secure-cookie configuration, exact trusted origins and privately managed secrets. Do not treat the development Compose file as a production deployment specification.
 
-```properties
-SPRING_FLYWAY_URL=jdbc:postgresql://YOUR_ENDPOINT.YOUR_REGION.aws.neon.tech:5432/YOUR_DATABASE?sslmode=require&channelBinding=require
-SPRING_FLYWAY_USER=YOUR_MIGRATION_ROLE
-SPRING_FLYWAY_PASSWORD=YOUR_MIGRATION_PASSWORD
-```
+## Tests and builds
 
-Omit these overrides to use the derived direct URL and existing credentials.
-If specifying a separate migration role, supply its matching password and ensure
-the runtime role has the required table/schema grants. The destination guard
-rejects a pooled migration URL or a different endpoint/database/port before
-migrating; use the same branch/compute's pooled/direct pair. Never embed passwords
-in URLs. The migration role needs schema/DDL privileges. The backend runs Flyway
-automatically during startup, so choose your development branch before launching.
-See [the identity schema guide](docs/identity/schema.md) for guard limits and exact
-environment loading; private files are preserved.
-
-Expected startup: Flyway applies/validates V1 through V7, Hibernate validates the
-identity, merchant, execution, and webhook tables, followed by `Started SwiftDropApplication`.
-Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
-`{"status":"UP","application":"swiftdrop"}`. Run the frontend as shown in 2B;
-it communicates only with the backend API and needs no Neon information.
-
-Compose loads `backend/.env` at runtime; it is excluded from Docker builds and is
-not copied into the backend image.
-
-## 3. Run tests and builds
-
-From the repository root, PowerShell:
+Run these from the repository root. Use the pinned toolchain and install frontend dependencies first:
 
 ```powershell
-cd frontend
-npm.cmd ci
-npm.cmd test
-npm.cmd run build
-cd ../backend
-.\mvnw.cmd --batch-mode --no-transfer-progress verify
-```
-
-Frontend tests cover registration validation, confirmation, visibility, pending
-state, API errors/success and the preserved health page. Backend unit tests cover
-service rules, validation, password encoding, throttling, security and configuration.
-These tests do not need a running database, broker or Docker engine.
-
-With Docker running, from `backend/`:
-
-```powershell
-# Optional first-time prefetch; useful on slow connections:
-docker pull rabbitmq:4.2.9-management-alpine
-.\mvnw.cmd --batch-mode --no-transfer-progress -Pintegration verify
-```
-
-On macOS/Linux, use `sh ./mvnw` in place of `.\mvnw.cmd`. The integration profile
-starts disposable PostgreSQL and RabbitMQ containers on random ports, verifies
-Flyway on a fresh real database and on a second migration run, checks actual HTTP
-security, and round-trips an infrastructure-only broker message. It also checks
-V1-to-V2 data preservation, identity constraints, token rotation races, audit
-protection and Hibernate mappings. Registration tests cover real HTTP/database
-success, duplicate races, injection, safe errors/logs and transaction rollback.
-Both connection configurations are overridden:
-it does not touch Neon or the Compose database, and it is not a login or domain
-event/notification implementation.
-It fails if Docker is unavailable; it does not silently report a skipped suite as a pass.
-
-Reports appear in `backend/target/surefire-reports/`, integration reports in
-`backend/target/failsafe-reports/`, and JaCoCo coverage in
-`backend/target/site/jacoco/index.html`. Coverage measures only implemented code;
-it says nothing about unimplemented assignment features. No mandated percentage
-was found in the brief. Build outputs are `frontend/dist/` and
-`backend/target/swiftdrop-backend.jar`.
-
-To inspect the production frontend build locally while the backend is running:
-
-```powershell
-cd frontend
-npm.cmd run preview
-```
-
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173); the preview also proxies `/api`.
-Nginx serves the built page and proxies API requests in Docker.
-
-## Troubleshooting
-
-| Symptom | What to do |
-| --- | --- |
-| `java` hangs or resolves the wrong JDK | Set `JAVA_HOME` to your Java 21 installation and put its `bin` first in PATH. For the inspected Windows machine: `$env:JAVA_HOME='C:\Program Files\Java\jdk-21'` then `$env:Path="$env:JAVA_HOME\bin;$env:Path"`. Check `javac -version`. |
-| PowerShell blocks `npm.ps1` | Use the documented `npm.cmd` commands; no execution-policy change is needed. |
-| Wrapper/dependency download fails | Check internet/proxy access to Maven Central and npm. Retry the same command. Do not disable TLS verification. |
-| Windows build cannot rename `swiftdrop-backend.jar` | Stop the Java process running that JAR before packaging again. `spring-boot:run` uses compiled classes and avoids running from the packaged JAR. |
-| Docker image downloads fail or integration tests report `ContainerFetchException` | Ensure Docker Desktop can reach Docker Hub and its CDN (`production.cloudfront.docker.com`). Retry the image pulls above after connectivity recovers, then rerun the check. A failed image pull is not a passed or skipped integration test. |
-| Compose says a password is missing | Fill both blank values in root `.env`; run `docker compose config --quiet`. |
-| DB authentication fails | Check `.env` against the existing volume's credentials; changing the file does not reset the volume. |
-| Neon connection fails or uses the wrong branch | Check the runtime values and any optional Flyway overrides in private `backend/.env`. Use the same branch/compute/database, a direct Flyway endpoint, TLS parameters and suitable grants. Clear stale exported overrides. Restart after editing; never paste credentials into logs/issues. |
-| Port already in use | Change the relevant host port in `.env`. For local backend changes, keep `BACKEND_URL` aligned. |
-| React says backend unavailable | Check backend logs and health URL; ensure correct startup mode, `.env`, DB connectivity and proxy target. |
-| Flyway checksum mismatch | Restore the original applied migration; add a new migration for changes. Do not disable validation. |
-| A protected URL returns 401/403 | Expected. Health/CSRF and implemented auth entry points are public; auth POSTs require CSRF and an allowed Origin. GET /me requires a valid bearer identity. |
-
-## Before feature work
-
-Read [the reference review](docs/reference-review.md) and [coding rules](AGENTS.md).
-Coordinate one ordered Flyway history, feature DTOs and service contracts. Keep
-business authorization in services as features arrive. The detailed v3 ER views
-are the design baseline; the implemented M1 model is in [the identity ER guide](docs/identity/schema.md).
-The standalone ER PNG has recorded conflicts. V2 is used by identity; coordinate
-the next free migration number before merging another schema change. V8 is already
-reserved by the team and must not be reused.
-
-The team still needs lecturer approval for nine rather than ten members, member
-names/IDs, deadline and hosting decisions. The assignment found beside this
-repository was copied unchanged into `docs/reference/` for teammates. Later
-Google, JWT, provider and deployment secrets belong to their feature/deployment
-tasks. This repository foundation does not fulfill the complete assignment yet.
-
-## Role workspaces
-
-After sign-in, open `/workspaces` to choose among assigned roles. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
-
-The [assignment RBAC matrix](docs/identity/rbac-assignment-review.md) documents role and ownership rules. Courier deliveries now have a Sri Lankan workday filter with unfinished carryover; reassignment stops after pickup.
-
-
-### Profile security and saved addresses
-
-`/account` now includes verified email change, password change/set-password,
-email verification status and an owned saved-address book. Booking pickup and
-recipient forms can copy a saved address into their draft without linking or
-rewriting earlier bookings. See [the account-settings contract](contracts/identity-account-settings.md)
-for API fields, step-up checks, revocation and migration coordination.
-
-Coordinate the new **V13** migration before applying it to a shared Neon branch.
-Existing SMTP credentials are reused. Google-only security changes require
-Google authentication-time metadata and recent provider authentication; missing
-or stale signed claims are rejected. Follow the [Google OIDC reference](https://developers.google.com/identity/openid-connect/reference)
-for the `auth_time` claim and check it with your configured Google project.
-
-With Docker Desktop running, validate from the repository root:
-
-```powershell
+npm.cmd --prefix frontend ci
 npm.cmd --prefix frontend test
 npm.cmd --prefix frontend run build
-.\backend\mvnw.cmd -f backend/pom.xml -Pintegration verify
+.\backend\mvnw.cmd -f backend/pom.xml --batch-mode --no-transfer-progress verify
 ```
 
-For a focused new backend integration run:
+Backend unit verification does not require Docker. For the complete integration suite, start Docker Desktop and run:
 
 ```powershell
+.\backend\mvnw.cmd -f backend/pom.xml --batch-mode --no-transfer-progress -Pintegration verify
+```
+
+Integration tests create disposable PostgreSQL/RabbitMQ containers and override both runtime and Flyway connections. They do not use your Neon database. Docker/image-download failures are test failures, not evidence of a passing suite.
+
+Focused checks:
+
+```powershell
+# Shared UI, account dropdown and signed-in/public tracking.
+npm.cmd --prefix frontend test -- src/components/AccountMenu.test.jsx src/components/PortalShell.test.jsx src/features/tracking/PublicTrackingPage.test.jsx
+
+# Profile settings, address ownership, email/password changes and session revocation.
 .\backend\mvnw.cmd -f backend/pom.xml -Pintegration -Dit.test=AccountSettingsIT verify
 ```
 
-After tests and shared-migration/SMTP coordination, rebuild both applications:
+| Output | Location |
+| --- | --- |
+| Backend unit results | `backend/target/surefire-reports/` |
+| Integration results | `backend/target/failsafe-reports/` |
+| JaCoCo coverage | `backend/target/site/jacoco/index.html` |
+| Backend JAR | `backend/target/swiftdrop-backend.jar` |
+| Frontend production build | `frontend/dist/` |
 
-```powershell
-docker compose up --build --detach --wait
+Use `npm.cmd --prefix frontend run preview` to inspect a built frontend at `http://127.0.0.1:4173` with the backend running. Automated tests do not replace real inbox delivery, Google callback/reauthentication, desktop/mobile visual checks or the assignment demonstration.
+
+## Project layout
+
+```text
+backend/
+  src/main/java/com/swiftdrop/<layer>/<feature>/
+  src/main/resources/db/migration/
+  src/test/
+frontend/
+  src/app/          # Routing, theme tokens and in-memory navigation
+  src/components/   # Brand, portal shell, sidebar and account dropdown
+  src/features/     # Identity and domain screens/API clients
+contracts/          # API and cross-feature service contracts
+docs/               # Onboarding, schema, UI and verification guides
+  reference/        # Preserved assignment, design PDF and diagrams
+scripts/            # Local setup helpers
+compose.yaml        # Frontend + backend + RabbitMQ; Neon remains external
+compose.dev.yaml    # Optional localhost broker ports
 ```
 
-The agent added regression tests and performed source syntax/whitespace review;
-application compilation, test execution, migrations and real-provider checks
-remain user-run in this change.
+Requests flow **React -> Controller -> Service -> Repository -> PostgreSQL**. Services own business rules, resource authorization and transactions. Features call each other through service contracts, not repositories or internal HTTP.
+
+Feature ownership: **M1** identity, **M2** merchant, **M3** pricing, **M4** booking, **M5** dispatch, **M6** execution, **M7** tracking, **M8** notification, **M9** webhook. These are modules in one backend, not separate services/databases.
+
+## Documentation
+
+| Topic | Guide |
+| --- | --- |
+| Team setup and first contribution | [Team onboarding](docs/team-onboarding.md), [development guide](docs/team-development-guide.md) |
+| Architecture, workflows and demo order | [Integrated system guide](docs/full-system-implementation.md) |
+| Identity integration and trusted actor context | [Identity service handoff](contracts/identity-services.md) |
+| Roles, bootstrap, merchant/courier onboarding | [Role workflows](docs/identity/role-workflows.md), [role handoff](contracts/identity-role-handoff.md) |
+| Role/ownership requirements | [Assignment RBAC matrix](docs/identity/rbac-assignment-review.md) |
+| Profile, security changes and saved addresses | [Profile contract](contracts/identity-profile.md), [account settings](contracts/identity-account-settings.md) |
+| Authentication and email verification | [Sessions](docs/identity/sessions.md), [verification rollout](contracts/identity-email-verification.md) |
+| Merchant APIs and events | [Integration guide](docs/merchant-integration-guide.md), [OpenAPI](contracts/merchant-openapi.yaml), [webhook events](contracts/webhook-events.md) |
+| UI conventions | [Shared UI guidelines](docs/frontend/ui-guidelines.md) |
+| Requirement provenance and conflicts | [Reference review](docs/reference-review.md), [original references](docs/reference/) |
+| Historical verification evidence | [System verification](docs/full-system-verification.md), [foundation verification](docs/verification.md) |
+
+## Contributing
+
+Read [AGENTS.md](AGENTS.md), the [reference review](docs/reference-review.md) and relevant contracts before changing code. Work on small feature branches and submit peer-reviewed PRs into `dev`.
+
+- Keep authorization and transactions in services; validate DTOs and return safe responses.
+- Coordinate migrations and feature contracts with their owners.
+- Pin direct npm dependencies and commit lockfile changes; use the Maven wrapper.
+- Include meaningful behavior/security tests and report passed, failed and unrun checks separately.
+- Keep secrets, tokens and personal data out of commits, logs and issue reports.
+
+The assignment defines assessed requirements; agreed implementation decisions and recorded conflicts are documented separately. Assignment completion requires the team's validation, evidence and demonstration, not just available source code.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Docker daemon unavailable | Start Docker Desktop, wait for its Linux engine and check `docker info`. |
+| PowerShell blocks `npm.ps1` | Use `npm.cmd`; no execution-policy change is needed. |
+| Wrong Java version | Point `JAVA_HOME` at a Java 21 JDK and place its `bin` first in `PATH`; check `javac -version`. |
+| Compose reports missing values | Populate the private templates, run the appropriate auth helper, then `docker compose config --quiet`. |
+| Backend exits or frontend waits indefinitely | Read `docker compose logs --tail=100 backend`; check Neon credentials, migration validation and RabbitMQ authentication. |
+| RabbitMQ authentication fails after an `.env` change | Rotate the existing broker credentials explicitly; editing `.env` does not reset its persisted volume. |
+| Wrong Neon branch or Flyway destination error | Check both datasource/Flyway values and stale exported overrides. Keep the same endpoint/database and direct migration connection. |
+| Flyway checksum mismatch | Restore the original applied migration; add a new migration. Do not disable validation. |
+| Verification/reset email is missing | Check real SMTP configuration and backend warnings. Google OAuth credentials are separate from SMTP credentials. |
+| Google callback or security verification fails | Match exact browser/callback origins, enable the provider, and verify credentials and authentication-time metadata. |
+| Protected API returns 401/403 | Check session validity and assigned roles. Verification, suspension and role changes can end sessions; unsafe requests need CSRF. |
+| UI still looks unchanged | Rebuild the correct service(s), then hard-refresh the browser. Backend/profile changes require a backend rebuild too. |
+| Port already in use | Change host ports as appropriate; keep proxy targets, trusted origins and Google callbacks aligned. |
+| Dependency or image download fails | Check network/proxy access to registries, retry downloads and rerun the failed checks. Do not disable TLS validation. |
