@@ -170,7 +170,6 @@ administration, with a reason, but are excluded from assignment choices. Selecti
 refreshes the fleet and submission rechecks eligibility; a role withdrawal while
 the screen is open cannot authorize an assignment. See
 [dispatch monitoring](../contracts/dispatch-monitoring.md).
-
 ## Local receiver demonstration
 
 Use [the Node receiver](../examples/webhook-receiver/server.mjs) with a backend running

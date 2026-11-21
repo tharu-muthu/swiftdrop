@@ -21,6 +21,7 @@ public interface ParcelLifecycleRepository extends JpaRepository<ParcelLifecycle
     List<ParcelLifecycle> findByBookingIdIn(java.util.Collection<UUID> ids);
     @org.springframework.data.jpa.repository.Query("select count(p) from ParcelLifecycle p where p.status not in (com.swiftdrop.entity.execution.ParcelStatus.DELIVERED,com.swiftdrop.entity.execution.ParcelStatus.FAILED) and p.updatedAt<:cutoff")
     long overdue(@org.springframework.data.repository.query.Param("cutoff") java.time.Instant cutoff);
+    org.springframework.data.domain.Page<ParcelLifecycle> findByAssignedCourierIdIsNullAndStatus(com.swiftdrop.entity.execution.ParcelStatus status,org.springframework.data.domain.Pageable pageable);
     default org.springframework.data.domain.Page<ParcelLifecycle> findDispatchBoard(boolean unassigned,java.time.Instant overdueBefore,org.springframework.data.domain.Pageable pageable) {
         return findAll((root,query,cb)->{
             var filters=new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();

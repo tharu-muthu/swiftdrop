@@ -9,7 +9,6 @@ The latest follow-up reran the full backend suite and frontend tests/build.
 The receiver, image-build and container-tool checks below are retained from the
 earlier all-member baseline; they were not rerun for this follow-up. No migration
 was added or edited for these monitoring changes.
-
 ## Passed
 
 | Check | Result |

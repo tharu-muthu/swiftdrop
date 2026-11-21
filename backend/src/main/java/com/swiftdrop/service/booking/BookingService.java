@@ -65,6 +65,9 @@ public class BookingService {
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt", "id"));
         return bookings.findByMerchantId(merchant.merchantId(), pageable).map(BookingReadService::snapshot);
     }
+    public List<BookingSnapshot> merchantOrders(MerchantContext merchant) {
+        return bookings.findTop100ByMerchantIdOrderByCreatedAtDesc(merchant.merchantId()).stream().map(BookingReadService::snapshot).toList();
+    }
     @Transactional(readOnly=true)
     public BookingSnapshot merchantOrder(MerchantContext merchant,UUID id) {
         var booking=bookings.findById(id).orElseThrow(()->new AccessDeniedException("Access denied"));

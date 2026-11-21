@@ -22,7 +22,6 @@ public class MerchantOrderController {
     }
     @GetMapping public org.springframework.http.ResponseEntity<List<MerchantOrderResponse>> list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="100") int size) {
         var result=queries.orders(merchants.requireCurrentApiMerchant(),page,size);
-        // Retain the partner API's array body; expose page metadata through headers.
         return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .header("X-Total-Count",Long.toString(result.totalElements())).header("X-Total-Pages",Integer.toString(result.totalPages()))
                 .header("X-Page",Integer.toString(result.page())).header("X-Page-Size",Integer.toString(result.size())).body(result.items());
