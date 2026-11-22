@@ -35,13 +35,16 @@ public class DefaultAdminUserService implements AdminUserService {
     }
 
     @Override @Transactional(readOnly = true)
-    public AdminUsersPage list(String query, int page, int size) {
+    public AdminUsersPage list(String query, String role, int page, int size) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
         if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("Invalid page");
         String term = query == null ? "" : query.strip().toLowerCase(java.util.Locale.ROOT);
         if (term.length() > 200) throw new IllegalArgumentException("Search is too long");
         term = term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        var result = users.searchForAdmin(term, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"))));
+        String roleName = role == null ? "" : role.strip().toUpperCase(java.util.Locale.ROOT);
+        if (!roleName.isEmpty() && !java.util.Set.of("CUSTOMER", "MERCHANT", "COURIER", "DISPATCHER_ADMIN").contains(roleName))
+            throw new IllegalArgumentException("Invalid role filter");
+        var result = users.searchForAdmin(term, roleName, PageRequest.of(page, size));
         return new AdminUsersPage(result.getContent().stream().map(this::safe).toList(),
                 page, size, result.getTotalElements(), result.getTotalPages());
     }
