@@ -25,10 +25,13 @@ Valid transitions are:
 CREATED -> PICKED_UP -> IN_TRANSIT -> OUT_FOR_DELIVERY
 OUT_FOR_DELIVERY -> DELIVERED | FAILED
 PICKED_UP | IN_TRANSIT -> FAILED
+FAILED -> OUT_FOR_DELIVERY
 ```
 
-`DELIVERED` requires a non-blank `recipientName`. `FAILED` requires a
-non-blank `failureReason`. Terminal statuses cannot transition again.
+`DELIVERED` requires a non-blank `recipientName`. The confirmed recipient name is stored
+as delivery proof and returned by the courier details API. `FAILED` requires a
+non-blank `failureReason`. `DELIVERED` is terminal. `FAILED` can be reopened explicitly
+by its assigned courier through `FAILED -> OUT_FOR_DELIVERY`; the active assignment is restored.
 
 Each successful update writes the lifecycle, append-only status history,
 delivery proof when applicable, and a versioned `parcel.status.changed` outbox event in one

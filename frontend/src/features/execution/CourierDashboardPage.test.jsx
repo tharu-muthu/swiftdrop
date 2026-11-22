@@ -29,6 +29,44 @@ const details = {
 };
 
 describe('courier execution dashboard', () => {
+  it('allows a failed parcel to be resumed and shows stored proof', async () => {
+    const failed = { ...details, status: 'FAILED', deliveryProofName: null };
+    const request = vi.fn().mockImplementation(path => {
+      if (path === '/api/v1/courier/deliveries/lifecycle-1') return Promise.resolve(failed);
+      if (path === '/api/v1/courier/deliveries/lifecycle-1/status') {
+        return Promise.resolve({ ...failed, status: 'OUT_FOR_DELIVERY' });
+      }
+      return Promise.resolve([summary]);
+    });
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: /SD-1001/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume delivery' }));
+
+    await waitFor(() => expect(request).toHaveBeenCalledWith(
+      '/api/v1/courier/deliveries/lifecycle-1/status',
+      expect.objectContaining({ body: JSON.stringify({
+        expectedStatus: 'FAILED', status: 'OUT_FOR_DELIVERY', recipientName: null, failureReason: null,
+      }) }),
+    ));
+  });
+
+  it('shows the recorded recipient proof after successful delivery', async () => {
+    const delivered = { ...details, status: 'DELIVERED', deliveryProofName: 'Alex Fernando' };
+    const request = vi.fn().mockImplementation(path => path === '/api/v1/courier/deliveries/lifecycle-1'
+      ? Promise.resolve(delivered)
+      : Promise.resolve([summary]));
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: /SD-1001/i }));
+
+    expect(await screen.findByText(/Person who received the parcel/i)).toBeVisible();
+    expect(screen.getByText('Alex Fernando')).toBeVisible();
+  });
   it('separates active and completed deliveries and formats the tracking code', async () => {
     const active = { ...summary, lifecycleId: 'active-1', trackingNumber: 'SDP-B8AF9FE589FF4E74A88F1B12860354A3', status: 'IN_TRANSIT' };
     const completed = { ...summary, lifecycleId: 'completed-1', trackingNumber: 'SDP-BE4DA3B948600D9A7EC8F2D4A1138844', status: 'DELIVERED' };

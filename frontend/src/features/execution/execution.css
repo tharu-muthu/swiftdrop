@@ -46,6 +46,7 @@
 .delivery-detail dl { display: grid; grid-template-columns: 110px 1fr; gap: 8px 18px; }
 .delivery-detail dt { font-weight: 700; }
 .delivery-detail dd { margin: 0; }
+.delivery-proof { margin: 18px 0 0; padding: 10px 12px; border-left: 3px solid #176241; background: #edf8f2; border-radius: 6px; }
 .status-history { padding-left: 22px; }
 .status-history li { padding: 7px 0; }
 .status-history small, .status-history span { display: block; }

@@ -90,6 +90,9 @@ public class ParcelLifecycleService {
             proofs.save(DeliveryProof.create(statusHistory.getId(), request.recipientName().trim()));
             bookings.deliveryCompleted(lifecycle.getBookingId());
         }
+        if (previous == ParcelStatus.FAILED && request.status() == ParcelStatus.OUT_FOR_DELIVERY) {
+            dispatch.reopenFailed(lifecycle.getBookingId(), courier.userId(), courier.userId());
+        }
         if (request.status() == ParcelStatus.DELIVERED || request.status() == ParcelStatus.FAILED) {
             dispatch.complete(lifecycle.getBookingId());
         }
@@ -129,14 +132,22 @@ public class ParcelLifecycleService {
 
     private CourierDeliveryDetails details(ParcelLifecycle lifecycle) {
         var booking = booking(lifecycle);
-        var items = history.findAllByLifecycleIdOrderBySequenceNoAsc(lifecycle.getId()).stream()
+        var historyItems = history.findAllByLifecycleIdOrderBySequenceNoAsc(lifecycle.getId());
+        var items = historyItems.stream()
                 .map(item -> new StatusHistoryItem(item.getSequenceNo(), item.getPreviousStatus(),
                         item.getNewStatus(), item.getActorUserId(), item.getFailureReason(), item.getOccurredAt()))
                 .toList();
+        var deliveryProofName = historyItems.stream()
+                .filter(item -> item.getNewStatus() == ParcelStatus.DELIVERED)
+                .findFirst()
+                .flatMap(item -> proofs.findByHistoryId(item.getId()))
+                .map(DeliveryProof::getRecipientName)
+                .orElse(null);
         return new CourierDeliveryDetails(lifecycle.getId(), lifecycle.getBookingId(), booking.trackingNumber(),
                 booking.customerId(), booking.pickupAddressSnapshot(), booking.dropoffAddressSnapshot(),
                 booking.parcelDescription(), booking.parcelWeightGrams(), lifecycle.getStatus(),
-                lifecycle.getUpdatedAt(), items,booking.recipientName(),booking.recipientPhone(),booking.senderName(),booking.senderPhone());
+                lifecycle.getUpdatedAt(), items,booking.recipientName(),booking.recipientPhone(),
+                booking.senderName(),booking.senderPhone(),deliveryProofName);
     }
 
     private BookingSnapshot booking(ParcelLifecycle lifecycle) {

@@ -26,14 +26,17 @@ class ParcelLifecycleServiceTest {
     private final OutboxEventRepository outbox = mock(OutboxEventRepository.class);
     private final BookingReadService bookings = mock(BookingReadService.class);
     private final com.swiftdrop.service.dispatch.CourierAssignmentQuery assignments = mock(com.swiftdrop.service.dispatch.CourierAssignmentQuery.class);
+    private final com.swiftdrop.service.dispatch.DispatchCompletionService dispatch =
+            mock(com.swiftdrop.service.dispatch.DispatchCompletionService.class);
     private final ParcelLifecycleService service = new ParcelLifecycleService(identities, lifecycles, history,
-            proofs, outbox, bookings, new ObjectMapper().findAndRegisterModules(), mock(DispatchCompletionService.class), assignments,
+            proofs, outbox, bookings, new ObjectMapper().findAndRegisterModules(), dispatch, assignments,
             java.time.Clock.fixed(java.time.Instant.parse("2026-11-22T10:00:00Z"), java.time.ZoneOffset.UTC), "Asia/Colombo");
     private final UUID courier = UUID.randomUUID(), lifecycleId = UUID.randomUUID();
 
     @ParameterizedTest
     @CsvSource({"CREATED,PICKED_UP", "PICKED_UP,IN_TRANSIT", "IN_TRANSIT,OUT_FOR_DELIVERY",
-            "OUT_FOR_DELIVERY,DELIVERED", "OUT_FOR_DELIVERY,FAILED", "PICKED_UP,FAILED", "IN_TRANSIT,FAILED"})
+            "OUT_FOR_DELIVERY,DELIVERED", "OUT_FOR_DELIVERY,FAILED", "PICKED_UP,FAILED", "IN_TRANSIT,FAILED",
+            "FAILED,OUT_FOR_DELIVERY"})
     void acceptsEverySupportedTransition(ParcelStatus expected, ParcelStatus next) {
         var request = new StatusUpdateRequest(expected, next,
                 next == ParcelStatus.DELIVERED ? "Recipient" : null,
@@ -142,6 +145,29 @@ class ParcelLifecycleServiceTest {
         assertThatThrownBy(() -> service.initialize(bookingId, courier, UUID.randomUUID()))
                 .isInstanceOf(LifecycleConflictException.class).hasMessageContaining("before pickup");
         verify(lifecycles, never()).save(any());
+    }
+    @Test void reopensFailedDeliveryAndRestoresTheAssignment() {
+        var lifecycle = mock(ParcelLifecycle.class);
+        UUID bookingId = UUID.randomUUID();
+        when(lifecycles.findByIdAndAssignedCourierId(lifecycleId, courier)).thenReturn(Optional.of(lifecycle));
+        when(lifecycle.getId()).thenReturn(lifecycleId);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.FAILED);
+        when(lifecycle.getBookingId()).thenReturn(bookingId);
+        when(identities.requireCurrentRole(IdentityRole.COURIER))
+                .thenReturn(new IdentityContext(courier, UUID.randomUUID(), Set.of("COURIER"), 0));
+        var booking = mock(BookingSnapshot.class);
+        when(booking.trackingNumber()).thenReturn("SDP-ABC12345");
+        when(bookings.find(bookingId)).thenReturn(Optional.of(booking));
+        when(history.findAllByLifecycleIdOrderBySequenceNoAsc(lifecycleId)).thenReturn(List.of());
+        when(history.saveAndFlush(any(ParcelStatusHistory.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.update(lifecycleId,
+                new StatusUpdateRequest(ParcelStatus.FAILED, ParcelStatus.OUT_FOR_DELIVERY, null, null));
+
+        verify(dispatch).reopenFailed(bookingId, courier, courier);
+        verify(dispatch, never()).complete(any(UUID.class));
+        verify(lifecycles).saveAndFlush(lifecycle);
     }
     @Test void workdayUsesColomboMidnightAndKeepsCurrentCarryover() {
         when(identities.requireCurrentRole(IdentityRole.COURIER))
