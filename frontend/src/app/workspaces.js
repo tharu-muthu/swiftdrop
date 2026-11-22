@@ -17,14 +17,10 @@ export function canAccess(user, path) {
   const role = requiredRole(path);
   return !role || (Array.isArray(role) ? role.some(item => user.roles.includes(item)) : user.roles.includes(role));
 }
-export const workspaceLinks = user => [
-  ...(availableWorkspaces(user).length > 1 ? [['/workspaces', 'Switch portal']] : []),
-  ...(user.roles.includes('CUSTOMER') ? [['/booking', 'Customer dashboard'], ['/bookings/new', 'Book parcel'], ['/bookings', 'My bookings']] : []),
-  ['/tracking', 'Track parcel'],
-  ...(user.roles.includes('CUSTOMER') ? [['/receipts', 'Receipts'], ['/help', 'Help']] : []),
-  ...(canAccess(user, '/merchant') ? [['/merchant', user.roles.includes('MERCHANT') ? 'Merchant workspace' : 'Apply for merchant']] : []),
-  ...(user.roles.includes('MERCHANT') ? [['/merchant/orders/new', 'Create merchant order'], ['/merchant/webhooks', 'Webhooks']] : []),
-  ...(user.roles.includes('COURIER') ? [['/courier', 'Courier deliveries']] : []),
-  ...(user.roles.includes('DISPATCHER_ADMIN') ? [['/dispatch', 'Dispatch'], ['/admin/users', 'User management'], ['/admin/merchants', 'Merchant approvals'], ['/admin/pricing', 'Pricing'], ['/admin/notifications', 'Notifications']] : []),
+export const workspaceLinks = (user, role = availableWorkspaces(user)[0]?.role) => [
+  ...(role === 'CUSTOMER' ? [['/booking', 'Customer dashboard'], ['/bookings/new', 'Book parcel'], ['/bookings', 'My bookings'], ['/tracking', 'Track parcel'], ['/receipts', 'Receipts'], ['/help', 'Help'], ...(!user.roles.includes('MERCHANT') ? [['/merchant', 'Apply for merchant']] : [])] : []),
+  ...(role === 'MERCHANT' ? [['/merchant', 'Merchant workspace'], ['/merchant/orders/new', 'Create merchant order'], ['/merchant/webhooks', 'Webhooks']] : []),
+  ...(role === 'COURIER' ? [['/courier', 'Courier deliveries']] : []),
+  ...(role === 'DISPATCHER_ADMIN' ? [['/dispatch', 'Dispatch'], ['/admin/users', 'User management'], ['/admin/merchants', 'Merchant approvals'], ['/admin/pricing', 'Pricing'], ['/admin/notifications', 'Notifications']] : []),
   ['/account', 'My account'],
 ];

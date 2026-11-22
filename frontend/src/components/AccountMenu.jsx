@@ -1,3 +1,5 @@
+import { availableWorkspaces } from '../app/workspaces.js';
+import { useActivePortal } from '../app/activePortal.js';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useAuth } from '../features/identity/AuthProvider.jsx';
 import { navigate } from '../app/navigation.js';
@@ -8,6 +10,9 @@ const roleNames = { CUSTOMER: 'Customer', MERCHANT: 'Merchant', COURIER: 'Courie
 
 export default function AccountMenu() {
   const { user, client } = useAuth();
+  const activeRole = useActivePortal(user);
+  const portals = availableWorkspaces(user);
+  const [switching, setSwitching] = useState(false);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -16,6 +21,7 @@ export default function AccountMenu() {
   const menu = useRef(null);
   const loggingOut = useRef(false);
   const panelId = useId();
+  useEffect(() => { if (!open) setSwitching(false); }, [open]);
   const initials = user.fullName?.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
 
   useEffect(() => {
@@ -82,6 +88,18 @@ export default function AccountMenu() {
           My account
           <svg className="account-dropdown-next" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
         </AppLink>
+        {portals.length > 0 && <button type="button" role="menuitem" aria-expanded={switching}
+          aria-controls={`${panelId}-portals`} onClick={() => setSwitching(value => !value)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-4-4 4 4-4 4 M20 17H4m4-4-4 4 4 4" /></svg>
+          Switch portal
+          <svg className="account-dropdown-next" viewBox="0 0 24 24" aria-hidden="true"><path d={switching ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>
+        </button>}
+        {switching && <div className="account-portal-options" id={`${panelId}-portals`} role="group" aria-label="Your portals">
+          {portals.map(portal => <AppLink key={portal.role} href={portal.path} role="menuitem"
+            aria-current={activeRole === portal.role ? 'true' : undefined} onClick={() => setOpen(false)}>
+            {roleNames[portal.role]}{activeRole === portal.role && <small>Current portal</small>}
+          </AppLink>)}
+        </div>}
         <button type="button" role="menuitem" className="account-dropdown-signout" disabled={pending} onClick={signOut}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v16h5 M10 12h11 m-5-5 5 5-5 5" /></svg>
           {pending ? 'Signing out…' : 'Sign out'}
