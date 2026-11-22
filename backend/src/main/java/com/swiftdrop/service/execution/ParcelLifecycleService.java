@@ -12,6 +12,11 @@ import com.swiftdrop.service.dispatch.DispatchCompletionService;
 import com.swiftdrop.repository.execution.*;
 import com.swiftdrop.service.identity.IdentityAccountService;
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import com.swiftdrop.service.dispatch.CourierAssignmentQuery;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -27,19 +32,33 @@ public class ParcelLifecycleService {
     private final BookingReadService bookings;
     private final DispatchCompletionService dispatch;
     private final ObjectMapper objectMapper;
+    private final CourierAssignmentQuery assignments;
+    private final Clock clock;
+    private final ZoneId businessZone;
 
     public ParcelLifecycleService(IdentityAccountService identities, ParcelLifecycleRepository lifecycles,
             ParcelStatusHistoryRepository history, DeliveryProofRepository proofs, OutboxEventRepository outbox,
-            BookingReadService bookings, ObjectMapper objectMapper, DispatchCompletionService dispatch) {
+            BookingReadService bookings, ObjectMapper objectMapper, DispatchCompletionService dispatch,
+            CourierAssignmentQuery assignments, Clock clock,
+            @Value("${swiftdrop.execution.business-zone:Asia/Colombo}") String businessZone) {
         this.identities = identities; this.lifecycles = lifecycles; this.history = history;
         this.proofs = proofs; this.outbox = outbox; this.bookings = bookings; this.objectMapper = objectMapper;
-        this.dispatch=dispatch;
+        this.dispatch=dispatch; this.assignments=assignments; this.clock=clock; this.businessZone=ZoneId.of(businessZone);
     }
 
     @Transactional(readOnly = true)
-    public List<CourierDeliverySummary> assignedDeliveries() {
+    public List<CourierDeliverySummary> assignedDeliveries() { return assignedDeliveries(null); }
+
+    @Transactional(readOnly = true)
+    public List<CourierDeliverySummary> assignedDeliveries(LocalDate day) {
         var courier = identities.requireCurrentRole(IdentityRole.COURIER);
-        return lifecycles.findAllByAssignedCourierIdOrderByUpdatedAtDesc(courier.userId()).stream()
+        var today = LocalDate.now(clock.withZone(businessZone));
+        var date = day == null ? today : day;
+        if (date.isAfter(today)) throw new IllegalArgumentException("A future workday cannot be requested");
+        var start = date.atStartOfDay(businessZone).toInstant();
+        var end = date.plusDays(1).atStartOfDay(businessZone).toInstant();
+        var assigned = assignments.bookingsAssignedBetween(start, end);
+        return lifecycles.findCourierWorkday(courier.userId(), assigned, start, end, date.equals(today)).stream()
                 .map(this::summary).toList();
     }
 
@@ -86,6 +105,10 @@ public class ParcelLifecycleService {
             var lifecycle = existing.get();
             if (lifecycle.getStatus() == ParcelStatus.DELIVERED || lifecycle.getStatus() == ParcelStatus.FAILED) {
                 throw new LifecycleConflictException("Terminal deliveries cannot be reassigned.");
+            }
+            if (lifecycle.getStatus() != ParcelStatus.CREATED
+                    && !java.util.Objects.equals(lifecycle.getAssignedCourierId(), courierId)) {
+                throw new LifecycleConflictException("Deliveries can only be reassigned before pickup.");
             }
             lifecycle.assignCourier(courierId);
             lifecycles.save(lifecycle);

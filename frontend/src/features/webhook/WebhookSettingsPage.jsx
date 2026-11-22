@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
-import { navigate } from '../../app/navigation.js';
+import PortalShell from '../../components/PortalShell.jsx';
 import {
   createWebhookSubscription, listWebhookSubscriptions, loadWebhookDeliveries,
   rotateWebhookSecret, testWebhook, updateWebhookSubscription,
@@ -14,7 +14,7 @@ function parseEventTypes(value) {
 }
 
 export default function WebhookSettingsPage() {
-  const { client, user } = useAuth();
+  const { client } = useAuth();
   const [subscriptions, setSubscriptions] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [secret, setSecret] = useState('');
@@ -91,9 +91,8 @@ export default function WebhookSettingsPage() {
     } catch (failure) { setError(failure.message); }
   }
 
-  return <main className="webhook-page">
-    <header className="webhook-header"><div><p className="webhook-eyebrow">Merchant integrations</p><h1>Webhooks</h1><p>Send signed parcel updates to your approved merchant system.</p></div><button className="webhook-secondary" onClick={() => navigate('/account')}>Account</button></header>
-    <p className="webhook-user">Signed in as {user.fullName}</p>
+  return <PortalShell title="Webhooks" contentClassName="webhook-page">
+    <p className="webhook-user">Send signed parcel updates to your approved merchant system.</p>
     {error && <p className="webhook-alert" role="alert">{error}</p>}
     {message && <p className="webhook-success" role="status">{message}</p>}
     {secret && <section className="webhook-secret" aria-label="Signing secret"><strong>Signing secret</strong><code>{secret}</code><span>Store this securely. It is shown only after creation or rotation.</span></section>}
@@ -110,5 +109,5 @@ export default function WebhookSettingsPage() {
         {deliveries[subscription.id] && <ul className="webhook-deliveries">{deliveries[subscription.id].map(item => <li key={item.id}><span>{item.eventType}</span><strong>{item.state}</strong><small>Attempts {item.attemptCount}{item.lastHttpStatus ? ` · HTTP ${item.lastHttpStatus}` : ''}</small><button onClick={async()=>{try{const rows=await client.request(`/api/v1/merchant/webhooks/${subscription.id}/deliveries/${item.id}/attempts`);setAttempts(current=>({...current,[item.id]:rows}));}catch(failure){setError(failure.message);}}}>Attempt details</button>{item.state==='FAILED' && <button disabled={pending} onClick={async()=>{setPending(true);try{await client.request(`/api/v1/merchant/webhooks/${subscription.id}/deliveries/${item.id}/retry`,{method:'POST'});await showDeliveries(subscription.id);}catch(failure){setError(failure.message);}finally{setPending(false);}}}>Retry delivery</button>}{attempts[item.id]?.map(attempt=><small key={attempt.attemptNumber}>#{attempt.attemptNumber} · {attempt.outcome} · {attempt.httpStatus||attempt.errorMessage} · {new Date(attempt.startedAt).toLocaleString()}</small>)}</li>)}</ul>}
       </article>)}</div>
     </section>
-  </main>;
+  </PortalShell>;
 }

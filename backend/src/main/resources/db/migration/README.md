@@ -23,3 +23,8 @@ pooler hostnames are converted to their direct counterparts; optional
 Startup rejects mismatched destination URLs. The migration role needs schema/DDL
 privileges; the local Compose role provides these. Separate runtime grants and
 production least-privilege policies remain deployment decisions.
+
+
+V13 extends profile security with hashed account-action tokens and owned saved
+addresses. It is pending team migration-number coordination; no old migration
+was changed. Confirm the next free version before shared application startup.

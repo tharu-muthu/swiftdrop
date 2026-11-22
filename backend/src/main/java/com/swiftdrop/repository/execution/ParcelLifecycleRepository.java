@@ -37,4 +37,22 @@ public interface ParcelLifecycleRepository extends JpaRepository<ParcelLifecycle
         },pageable);
     }
     List<ParcelLifecycle> findAllByAssignedCourierIdOrderByUpdatedAtDesc(UUID courierId);
+    default List<ParcelLifecycle> findCourierWorkday(UUID courierId, List<UUID> assignedBookingIds,
+            java.time.Instant start, java.time.Instant end, boolean includeCarryover) {
+        return findAll((root, query, cb) -> {
+            var activity = query.subquery(Integer.class);
+            var history = activity.from(com.swiftdrop.entity.execution.ParcelStatusHistory.class);
+            activity.select(cb.literal(1)).where(cb.equal(history.get("lifecycleId"), root.get("id")),
+                    cb.equal(history.get("actorUserId"), courierId),
+                    cb.greaterThanOrEqualTo(history.<java.time.Instant>get("occurredAt"), start),
+                    cb.lessThan(history.<java.time.Instant>get("occurredAt"), end));
+            var work = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            if (!assignedBookingIds.isEmpty()) work.add(root.get("bookingId").in(assignedBookingIds));
+            work.add(cb.exists(activity));
+            if (includeCarryover) work.add(cb.not(root.get("status").in(
+                    com.swiftdrop.entity.execution.ParcelStatus.DELIVERED, com.swiftdrop.entity.execution.ParcelStatus.FAILED)));
+            return cb.and(cb.equal(root.get("assignedCourierId"), courierId),
+                    cb.or(work.toArray(jakarta.persistence.criteria.Predicate[]::new)));
+        }, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "updatedAt", "id"));
+    }
 }

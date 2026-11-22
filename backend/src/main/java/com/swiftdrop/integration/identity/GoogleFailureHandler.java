@@ -24,7 +24,9 @@ public class GoogleFailureHandler implements AuthenticationFailureHandler {
             AuthenticationException exception) throws IOException {
         // Discard the OIDC session on failure too.
         HttpSession session = request.getSession(false);
+        boolean reauth=session!=null&&session.getAttribute(com.swiftdrop.controller.identity.GoogleReauthController.INTENT)!=null;
         if (session != null) session.invalidate();
+        if(reauth){response.sendRedirect(googleSettings.frontendOrigin()+"/account?reauth=failed");return;}
         response.sendRedirect(googleSettings.frontendOrigin() + "/login?error=google-failed");
     }
 }

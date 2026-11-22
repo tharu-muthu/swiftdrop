@@ -20,7 +20,7 @@ export default function DispatchDashboardPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [courierId, setCourierId] = useState('');
   const [reason, setReason] = useState('');
-  const [profile, setProfile] = useState(emptyProfile);
+  const [profile, setProfile] = useState(() => ({ ...emptyProfile, userId: new URLSearchParams(window.location.search).get('courier') || '' }));
   const [date, setDate] = useState('');
   const [report, setReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -132,7 +132,7 @@ export default function DispatchDashboardPage() {
       <p>Pickup: {details.pickupAddressSnapshot} · {details.senderName} {details.senderPhone}<br />
         Deliver to: {details.dropoffAddressSnapshot} · {details.recipientName} {details.recipientPhone}<br />
         {details.parcelDescription} · {details.parcelWeightGrams} g</p>
-      {['DELIVERED', 'FAILED'].includes(booking.status) ? <p>Delivery is complete.</p> : <form onSubmit={event => {
+      {['DELIVERED', 'FAILED'].includes(booking.status) ? <p>Delivery is complete.</p> : booking.status !== 'CREATED' ? <p>Pickup has started. This delivery cannot be reassigned.</p> : <form onSubmit={event => {
         event.preventDefault();
         action(async () => {
           await client.request(`/api/v1/dispatch/assignments${booking.courierId ? '/reassign' : ''}`, JsonRequest('POST',

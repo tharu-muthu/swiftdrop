@@ -1,0 +1,66 @@
+.portal-shell,.portal-shell.booking-shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh;background:var(--sd-background);color:var(--sd-text);font-family:Inter,"Segoe UI",system-ui,sans-serif}
+.portal-sidebar{background:linear-gradient(155deg,var(--sd-navy),var(--sd-navy-end));color:white;padding:30px 18px;display:flex;flex-direction:column;gap:32px;min-width:0}
+.portal-shell.sidebar-collapsed,.portal-shell.booking-shell.sidebar-collapsed{display:grid;grid-template-columns:76px minmax(0,1fr)}
+.sidebar-collapsed .portal-sidebar{position:sticky;top:0;align-self:start;height:100vh;height:100dvh;overflow-y:auto;padding:22px 12px;gap:28px}
+.sidebar-collapsed .portal-brand{display:flex;justify-content:center;padding:0}
+.sidebar-collapsed .portal-brand .identity-brand svg{width:36px;height:36px}
+.sidebar-collapsed .portal-sidebar nav{display:grid;gap:8px;overflow:visible;padding:0}
+.sidebar-collapsed .portal-sidebar nav a{justify-content:center;width:44px;min-height:44px;padding:12px;gap:0}
+.sidebar-collapsed .portal-nav-label,.sidebar-collapsed .portal-sidebar-note{display:none}
+.portal-heading{display:flex;align-items:center;gap:14px;min-width:0}
+.portal-heading>div{min-width:0;overflow-wrap:anywhere}
+.portal-menu-toggle{display:grid;place-items:center;flex:none;width:44px;min-height:44px;padding:10px;background:white;color:var(--sd-text);border:1px solid var(--sd-border);border-radius:6px}
+.portal-menu-toggle:hover{background:var(--sd-tint)}
+.portal-menu-toggle svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.portal-brand{color:white;text-decoration:none;padding:0 10px;display:block}
+.portal-brand .identity-brand{font-size:29px;gap:10px}
+.portal-brand .identity-brand svg{width:43px;height:42px}
+.portal-sidebar nav{display:grid;gap:7px}
+.portal-sidebar nav a{display:flex;align-items:center;gap:12px;color:#d9e5f7;min-height:46px;padding:11px 14px;font-size:14px;font-weight:500;border-radius:8px;text-decoration:none}
+.portal-sidebar nav a:hover{background:#ffffff12;color:white}
+.portal-sidebar nav a[aria-current=page]{background:var(--sd-primary);color:white;font-weight:600}
+.portal-nav-icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.portal-sidebar-note{margin:auto 14px 0;padding-top:32px;font-size:12px;color:#a9bfde}
+.portal-main{min-width:0;outline:none}
+.portal-header{min-height:84px;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 32px;background:white;border-bottom:1px solid var(--sd-border)}
+.portal-header .portal-title{font-size:24px;line-height:1.25;letter-spacing:-.6px;margin:3px 0 0;font-weight:750}
+.portal-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--sd-muted);margin:0}
+
+
+.portal-avatar{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--sd-navy-end);color:white;font-size:14px;font-weight:700;flex:none}
+.portal-person strong,.portal-person small{display:block}.portal-person strong{font-size:14px}.portal-person small{font-size:12px;color:var(--sd-muted)}
+
+.portal-content{width:100%;max-width:1440px;margin:0 auto;padding:28px 32px 48px;min-width:0}
+.portal-skip{position:fixed;top:8px;left:8px;z-index:20;transform:translateY(-160%);padding:12px 18px;border-radius:6px;background:white;color:var(--sd-text)}
+.portal-skip:focus{transform:none}
+.portal-content>p:not([class]):not([role]):first-child{margin-top:0;color:var(--sd-muted)}
+.portal-content h2{font-size:20px;line-height:1.4;letter-spacing:-.3px}
+.portal-content h3{font-size:16px;line-height:1.4;letter-spacing:0}
+.portal-content :where(.profile-card,.webhook-card,.delivery-detail){border-color:var(--sd-border);border-radius:var(--sd-radius);box-shadow:var(--sd-shadow)}
+.portal-content :where(.profile-primary){background:var(--sd-primary)}
+.portal-content :where(.profile-primary):hover{background:var(--sd-primary-hover)}
+.portal-content :where(.profile-secondary,.secondary,.webhook-secondary){background:white;color:var(--sd-text);border:1px solid var(--sd-border)}
+.portal-content :where(.profile-secondary,.secondary,.webhook-secondary):hover{background:var(--sd-tint)}
+.portal-content .admin-danger{background:var(--sd-danger);color:white}
+.portal-content :where(.profile-banner,.webhook-success){background:var(--sd-success-tint);color:var(--sd-success)}
+.portal-content :where(.profile-banner.error,.webhook-alert,.execution-error){background:var(--sd-danger-tint);color:var(--sd-danger)}
+.portal-content :where(.empty,.execution-empty){border:1px dashed var(--sd-border);border-radius:var(--sd-radius);padding:28px;text-align:center;background:white;color:var(--sd-muted)}
+.portal-content :where(table){border-collapse:collapse;width:100%;font-size:14px}
+.portal-content :where(th){background:var(--sd-background);color:var(--sd-muted);font-size:12px;font-weight:600}
+.portal-content :where(th,td){padding:13px 14px;text-align:left;border-bottom:1px solid var(--sd-border);vertical-align:top}
+.portal-content :where(code){overflow-wrap:anywhere}
+.portal-content.booking-main{padding:24px 24px 40px}
+.portal-content.profile-content,.portal-content.execution-content,.portal-content.webhook-page{max-width:1280px;padding:28px 32px 48px}
+@media(max-width:1120px){.portal-shell,.portal-shell.booking-shell{grid-template-columns:220px minmax(0,1fr)}.portal-sidebar{padding:26px 12px}.portal-brand .identity-brand{font-size:26px}}
+@media(max-width:760px){
+  .portal-shell,.portal-shell.booking-shell{display:block}
+  .portal-sidebar{padding:16px;gap:14px}
+  .portal-brand{padding:0}.portal-brand .identity-brand{font-size:25px}.portal-brand .identity-brand svg{width:35px;height:34px}
+  .portal-sidebar nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;max-width:100%}
+  .portal-sidebar nav a{white-space:nowrap;min-height:44px;padding:10px 12px;flex:none;font-size:13px}
+  .portal-sidebar-note{display:none}.portal-nav-icon{width:18px;height:18px}
+  .portal-header{padding:16px;min-height:76px;gap:12px}.portal-header .portal-title{font-size:20px}
+  .portal-person{display:none}.portal-avatar{width:36px;height:36px}
+  .portal-content,.portal-content.booking-main,.portal-content.profile-content,.portal-content.execution-content,.portal-content.webhook-page{padding:20px 16px 32px}
+}
+@media print{.portal-sidebar,.portal-header,.portal-skip{display:none}.portal-shell,.portal-shell.booking-shell,.portal-shell.sidebar-collapsed,.portal-shell.booking-shell.sidebar-collapsed{display:block}.portal-content{padding:0;max-width:none}}

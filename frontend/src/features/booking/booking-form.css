@@ -92,3 +92,6 @@
   .quote-ready { padding: 26px 0; }
   .booking-review { grid-template-columns: 1fr; }
 }
+
+.saved-address-picker{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:16px 22px;background:var(--sd-tint);border-bottom:1px solid var(--sd-border)}
+.saved-address-picker label{font-weight:600;font-size:14px}.saved-address-picker select{max-width:100%}.saved-address-picker p{width:100%;margin:0}

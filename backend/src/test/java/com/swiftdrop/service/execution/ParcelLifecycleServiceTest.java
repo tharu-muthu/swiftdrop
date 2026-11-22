@@ -25,8 +25,10 @@ class ParcelLifecycleServiceTest {
     private final DeliveryProofRepository proofs = mock(DeliveryProofRepository.class);
     private final OutboxEventRepository outbox = mock(OutboxEventRepository.class);
     private final BookingReadService bookings = mock(BookingReadService.class);
+    private final com.swiftdrop.service.dispatch.CourierAssignmentQuery assignments = mock(com.swiftdrop.service.dispatch.CourierAssignmentQuery.class);
     private final ParcelLifecycleService service = new ParcelLifecycleService(identities, lifecycles, history,
-            proofs, outbox, bookings, new ObjectMapper().findAndRegisterModules(), mock(DispatchCompletionService.class));
+            proofs, outbox, bookings, new ObjectMapper().findAndRegisterModules(), mock(DispatchCompletionService.class), assignments,
+            java.time.Clock.fixed(java.time.Instant.parse("2026-11-22T10:00:00Z"), java.time.ZoneOffset.UTC), "Asia/Colombo");
     private final UUID courier = UUID.randomUUID(), lifecycleId = UUID.randomUUID();
 
     @ParameterizedTest
@@ -74,7 +76,7 @@ class ParcelLifecycleServiceTest {
     void rejectsAccessToAnotherCouriersDelivery() {
         when(identities.requireCurrentRole(IdentityRole.COURIER))
                 .thenReturn(new IdentityContext(courier, UUID.randomUUID(), Set.of("COURIER"), 0));
-        when(lifecycles.findByIdAndAssignedCourierId(lifecycleId, courier)).thenReturn(Optional.empty());
+        when(lifecycles.findFirstByIdAndAssignedCourierId(lifecycleId, courier)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.details(lifecycleId))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
@@ -104,11 +106,11 @@ class ParcelLifecycleServiceTest {
     }
 
     @Test
-    void reassignsExistingActiveLifecycle() {
+    void reassignsExistingLifecycleBeforePickup() {
         UUID bookingId = UUID.randomUUID();
         var lifecycle = mock(ParcelLifecycle.class);
         when(lifecycle.getId()).thenReturn(lifecycleId);
-        when(lifecycle.getStatus()).thenReturn(ParcelStatus.IN_TRANSIT);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.CREATED);
         when(lifecycles.lockByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
 
         UUID result = service.initialize(bookingId, courier, UUID.randomUUID());
@@ -130,5 +132,31 @@ class ParcelLifecycleServiceTest {
                 .isInstanceOf(LifecycleConflictException.class)
                 .hasMessage("Terminal deliveries cannot be reassigned.");
         verify(lifecycles, never()).save(any());
+    }
+    @Test void rejectsReassignmentAfterPickup() {
+        UUID bookingId = UUID.randomUUID();
+        var lifecycle = mock(ParcelLifecycle.class);
+        when(lifecycle.getStatus()).thenReturn(ParcelStatus.PICKED_UP);
+        when(lifecycle.getAssignedCourierId()).thenReturn(UUID.randomUUID());
+        when(lifecycles.lockByBookingId(bookingId)).thenReturn(Optional.of(lifecycle));
+        assertThatThrownBy(() -> service.initialize(bookingId, courier, UUID.randomUUID()))
+                .isInstanceOf(LifecycleConflictException.class).hasMessageContaining("before pickup");
+        verify(lifecycles, never()).save(any());
+    }
+    @Test void workdayUsesColomboMidnightAndKeepsCurrentCarryover() {
+        when(identities.requireCurrentRole(IdentityRole.COURIER))
+                .thenReturn(new IdentityContext(courier, UUID.randomUUID(), Set.of("COURIER"), 0));
+        var start = java.time.Instant.parse("2026-11-21T18:30:00Z");
+        var end = java.time.Instant.parse("2026-11-22T18:30:00Z");
+        when(assignments.bookingsAssignedBetween(start, end)).thenReturn(List.of());
+        service.assignedDeliveries(null);
+        verify(lifecycles).findCourierWorkday(courier, List.of(), start, end, true);
+    }
+    @Test void rejectsFutureWorkdaysWithoutReadingDeliveries() {
+        when(identities.requireCurrentRole(IdentityRole.COURIER))
+                .thenReturn(new IdentityContext(courier, UUID.randomUUID(), Set.of("COURIER"), 0));
+        assertThatThrownBy(() -> service.assignedDeliveries(java.time.LocalDate.parse("2026-11-23")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(assignments, lifecycles, bookings);
     }
 }

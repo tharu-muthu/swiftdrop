@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider.jsx';
-import Brand from '../../components/Brand.jsx';
-import { navigate } from '../../app/navigation.js';
+import PortalShell from '../../components/PortalShell.jsx';
 import './profile.css';
+import AccountSecuritySettings from './AccountSecuritySettings.jsx';
+import SavedAddressBook from './SavedAddressBook.jsx';
 
 const phonePattern = /^\+?[0-9][0-9 -]*[0-9]$/;
 const initials = name => (name || '').split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
@@ -74,31 +75,12 @@ export default function AccountPage() {
     catch (error) { setMessage(error.message); }
     finally { setPending(false); }
   }
-  async function signOut() {
-    setPending(true);
-    try { await client.logout(); navigate('/login'); }
-    catch { setMessage('Sign-out could not be confirmed. Check your connection and try again.'); setPending(false); }
-  }
-  const customer = user.roles.includes('CUSTOMER');
-  return <div className="profile-shell">
-    <aside className="profile-sidebar" aria-label="Account navigation"><Brand />
-      <nav><span className="profile-nav-label">WORKSPACE</span>
-        {customer && <><a href="/booking">Dashboard</a><a href="/bookings">My bookings</a></>}
-        <a href="/tracking">Track parcel</a><span className="profile-nav-label">ACCOUNT</span>
-        <a href="/merchant">Merchant workspace</a>
-        {user.roles.includes('COURIER') && <a href="/courier">Courier deliveries</a>}
-        {user.roles.includes('DISPATCHER_ADMIN') && <><a href="/dispatch">Dispatch</a><a href="/admin/merchants">Merchant approvals</a><a href="/admin/pricing">Pricing</a><a href="/admin/notifications">Notifications</a></>}
-        {user.roles.includes('DISPATCHER_ADMIN') && <a href="/admin/users">User management</a>}
-        <a href="/profile" className="selected" aria-current="page">My profile</a></nav>
-      <button className="profile-rail-signout" onClick={signOut} disabled={pending}>Sign out</button>
-    </aside>
-    <main className="profile-main"><header className="profile-topbar">
-      <div className="profile-mobile-brand"><Brand /></div><span className="profile-breadcrumb">Account / My profile</span>
-      <span className="profile-avatar small" aria-hidden="true">{initials(user.fullName)}</span><span>{user.fullName}</span>
-    </header><div className="profile-content"><h1>My profile</h1><p className="profile-subtitle">Manage your personal details and account security.</p>
+  return <PortalShell title="My profile" contentClassName="profile-content">
+    <p className="profile-subtitle">Manage your personal details and account security.</p>
       <section className="profile-card profile-summary" aria-label="Account summary"><span className="profile-avatar" aria-hidden="true">{initials(user.fullName)}</span>
         <div className="profile-summary-person"><strong>{user.fullName}</strong><span>{user.email}</span>
           <div className="profile-badges">{user.roles.map(role => <span className="profile-badge" key={role}>{role.replaceAll('_', ' ')}</span>)}<span className="profile-badge active">{user.active ? 'Active' : 'Inactive'}</span></div>
+          <p className="profile-note">Your roles and account status are managed by SwiftDrop.</p>
         </div><div className="profile-membership"><small>MEMBER SINCE</small><strong>{month(user.createdAt)}</strong></div>
       </section>
       <section className="profile-card" aria-labelledby="personal-heading"><div className="profile-card-heading"><div><h2 id="personal-heading">Personal information</h2>
@@ -109,17 +91,16 @@ export default function AccountPage() {
         <form onSubmit={save} noValidate><div className="profile-field-grid">
           <ProfileField id="profile-name" label={editing ? 'Full name *' : 'Full name'} value={editing ? draft.fullName : user.fullName} editable={editing} error={errors.fullName} onChange={event => setDraft({ ...draft, fullName: event.target.value })} />
           <ProfileField id="profile-phone" label={editing ? 'Mobile number (optional)' : 'Mobile number'} value={editing ? draft.phone : user.phone || ''} editable={editing} error={errors.phone} onChange={event => setDraft({ ...draft, phone: event.target.value })} />
-        </div><ProfileField id="profile-email" label="Email address" value={user.email} help="Your sign-in email. Changing it requires a separate verification process." />
-        {editing ? <div className="profile-form-actions"><span>Changes apply to your account only.</span><div><button type="button" className="profile-secondary" onClick={cancel} disabled={pending}>Cancel</button><button type="submit" className="profile-primary" disabled={pending}>{pending ? 'Saving changes…' : 'Save changes'}</button></div></div>
-          : <p className="profile-note">Your roles and account status are managed by SwiftDrop.</p>}</form>
+        </div><ProfileField id="profile-email" label="Email address" value={user.email} help={user.emailVerified ? "Your sign-in email. Use Change email under Security & sign-in to verify a new address." : "Verify your inbox before changing your sign-in email."} />
+        {editing && <div className="profile-form-actions"><span>Changes apply to your account only.</span><div><button type="button" className="profile-secondary" onClick={cancel} disabled={pending}>Cancel</button><button type="submit" className="profile-primary" disabled={pending}>{pending ? 'Saving changes…' : 'Save changes'}</button></div></div>}</form>
+        <SavedAddressBook />
       </section>
       <section className="profile-card" aria-labelledby="security-heading"><h2 id="security-heading">Security & sign-in</h2>
         {new URLSearchParams(window.location.search).get('google') === 'linked' && <p className="profile-banner" role="status">Google account linked. Reload your profile to see the connection.</p>}
         {new URLSearchParams(window.location.search).get('google') === 'failed' && <p className="profile-banner error" role="alert">Google linking failed. Sign in again and retry.</p>}
-        <div className="profile-security-grid"><div><strong>Password</strong><span>{user.passwordConfigured ? 'Password configured' : 'No password configured'}</span></div><div><strong>Google account</strong><span>{user.googleConnected ? 'Connected' : 'Not connected'}</span></div></div>
-        {!user.googleConnected && user.passwordConfigured && <form onSubmit={linkGoogle}><label htmlFor="link-password">Confirm your password to connect Google</label><input id="link-password" type="password" autoComplete="current-password" required value={linkPassword} onChange={event=>setLinkPassword(event.target.value)} /><button className="profile-primary" disabled={pending}>Connect Google account</button></form>}
-        <div className="profile-security-footer"><span>Using a shared computer? Sign out when you finish.</span><button type="button" className="profile-secondary" onClick={signOut} disabled={pending}>Sign out</button></div>
+        <div className="profile-security-grid"><div><strong>Email verification</strong><span>{user.emailVerified ? 'Verified' : 'Not verified'}</span></div><div><strong>Password</strong><span>{user.passwordConfigured ? 'Password configured' : 'No password configured'}</span></div><div><strong>Google account</strong><span>{user.googleConnected ? 'Connected' : 'Not connected'}</span></div></div>
+        {!user.googleConnected && user.passwordConfigured && <form className="profile-link-form" onSubmit={linkGoogle}><label htmlFor="link-password">Confirm your password to connect Google</label><input id="link-password" type="password" autoComplete="current-password" required value={linkPassword} onChange={event=>setLinkPassword(event.target.value)} /><button className="profile-primary" disabled={pending}>Connect Google account</button></form>}
+        <AccountSecuritySettings />
       </section>
-    </div></main>
-  </div>;
+  </PortalShell>;
 }

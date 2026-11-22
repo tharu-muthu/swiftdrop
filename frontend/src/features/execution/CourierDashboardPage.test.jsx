@@ -60,4 +60,31 @@ describe('courier execution dashboard', () => {
       }),
     ));
   });
+  it('requests the selected workday without accepting a courier identity from the browser', async () => {
+    const request = vi.fn().mockResolvedValue([]);
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    const date = screen.getByLabelText('Workday (Sri Lanka)');
+    await waitFor(() => expect(request).toHaveBeenCalledWith(`/api/v1/courier/deliveries?date=${date.value}`));
+    fireEvent.change(date, { target: { value: '2026-11-01' } });
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/courier/deliveries?date=2026-11-01'));
+    expect(screen.getByText(/unfinished work carried over/)).toBeVisible();
+  });
+  it('clears delivery details if an assignment is withdrawn during an update', async () => {
+    let withdrawn = false;
+    const request = vi.fn().mockImplementation(path => {
+      if (path.endsWith('/status')) { withdrawn = true; return Promise.reject(Object.assign(new Error('Delivery is no longer assigned to you.'), { status: 403 })); }
+      if (path.endsWith('/lifecycle-1')) return Promise.resolve(details);
+      return Promise.resolve(withdrawn ? [] : [summary]);
+    });
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: /SD-1001/i }));
+    fireEvent.change(await screen.findByLabelText('Recipient name'), { target: { value: 'Alex' } });
+    fireEvent.click(screen.getByRole('button', { name: 'DELIVERED' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('no longer assigned');
+    expect(screen.queryByText('Kandy')).not.toBeInTheDocument();
+  });
 });

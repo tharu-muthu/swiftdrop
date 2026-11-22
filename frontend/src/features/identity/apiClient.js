@@ -163,7 +163,8 @@ export function createAuthClient({ fetchImpl = (...args) => globalThis.fetch(...
     if (snapshot.status === 'authenticated') publish({ ...snapshot, user });
     return user;
   }
-  return { subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); },
+  function endLocalSession() { clear(); announceChange(); }
+  return { endLocalSession, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); },
     getSnapshot: () => snapshot, bootstrap, login, logout, request, updateProfile, reloadProfile };
 }
 
