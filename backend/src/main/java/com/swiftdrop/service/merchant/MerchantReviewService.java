@@ -63,6 +63,19 @@ public class MerchantReviewService {
         return MerchantAdminResponse.from(merchant);
     }
 
+    @Transactional
+    public MerchantAdminResponse suspendByOwner(UUID ownerUserId, String reason) {
+        var admin = identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        var merchant = merchants.findByOwnerUserIdForUpdate(ownerUserId)
+                .orElseThrow(MerchantNotFoundException::new);
+        if (!merchant.isApproved()) throw new MerchantDecisionConflictException();
+        var explanation = reason.trim();
+        merchant.suspend(admin.userId(), explanation, Instant.now());
+        merchants.saveAndFlush(merchant);
+        roleManagement.revokeMerchantForOwner(ownerUserId, explanation);
+        return MerchantAdminResponse.from(merchant);
+    }
+
     private Merchant loadPending(UUID merchantId) {
         var merchant = merchants.findForUpdate(merchantId).orElseThrow(MerchantNotFoundException::new);
         if (!merchant.isPending()) {

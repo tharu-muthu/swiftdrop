@@ -22,8 +22,9 @@ public class AdminUserController {
 
     @GetMapping("/api/v1/admin/users")
     public ResponseEntity<AdminUsersPage> list(@RequestParam(required = false) String query,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(users.list(query, page, size));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(users.list(query, role, page, size));
     }
 
     @GetMapping("/api/v1/admin/users/{id}")

@@ -30,6 +30,7 @@ describe('CustomerToolsPage', () => {
     renderTools('/receipts', request);
     expect(await screen.findByText('SDP-DELIVERED')).toBeInTheDocument();
     expect(screen.queryByText('SDP-CREATED')).not.toBeInTheDocument();
+    expect(screen.queryByText('Completed deliveries')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open receipt' })).toBeInTheDocument();
   });
 });
