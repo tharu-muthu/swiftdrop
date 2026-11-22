@@ -1,0 +1,126 @@
+.pricing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pricing-formula-banner {
+  background: linear-gradient(135deg, #eef5ff 0%, #f4f8fe 100%);
+  border: 1px solid #c8dcf7;
+  border-left: 4px solid var(--sd-primary, #0877f9);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.pricing-formula-banner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sd-text, #071b48);
+}
+
+.pricing-formula-banner strong {
+  color: var(--sd-primary-hover, #065ec7);
+}
+
+.pricing-group-card {
+  background: #fbfcfe;
+  border: 1px solid var(--sd-border, #d7e1ee);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pricing-group-heading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sd-text, #071b48);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pricing-group-sub {
+  margin: -10px 0 0;
+  font-size: 12px;
+  color: var(--sd-muted, #5a6e8c);
+}
+
+.pricing-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.pricing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pricing-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pricing-field-label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--sd-text, #071b48);
+}
+
+.pricing-preview-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sd-primary-hover, #065ec7);
+  background: #e8f1fd;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pricing-field-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sd-muted, #5a6e8c);
+  margin: 0;
+}
+
+.pricing-field input,
+.pricing-field select {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--sd-border, #d7e1ee);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--sd-text, #071b48);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pricing-field input:focus,
+.pricing-field select:focus {
+  outline: none;
+  border-color: var(--sd-primary, #0877f9);
+  box-shadow: 0 0 0 3px rgba(8, 119, 249, 0.15);
+}
+
+.pricing-submit-btn {
+  margin-top: 10px;
+  align-self: flex-start;
+}
+
+@media(max-width: 760px) {
+  .pricing-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
