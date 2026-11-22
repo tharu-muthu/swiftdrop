@@ -36,7 +36,7 @@ export default function MyBookingsPage() {
   const summary = data?.summary;
   const visiblePages = data ? Array.from({ length: Math.min(data.totalPages, 5) }, (_, index) => index) : [];
   return <BookingFrame activePath="/bookings" headerTitle="My Bookings"><div className="booking-history-page">
-    <section className="history-hero"><div><p>Home <span>›</span> My Bookings</p><h1>My Bookings</h1><span>View, track and manage all your parcel bookings in one place.</span></div><button onClick={() => navigate('/bookings/new')}>＋ Create New Booking</button></section>
+    <div className="history-toolbar"><button onClick={() => navigate('/bookings/new')}>＋ Create New Booking</button></div>
     <section className="history-metrics" aria-label="Booking summary">
       <Metric icon="□" label="Total Bookings" value={summary ? summary.totalBookings : '—'} tone="blue" />
       <Metric icon="▱" label="In Transit" value={summary?.inTransitBookings ?? '—'} tone="blue" />
