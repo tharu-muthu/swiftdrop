@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from './AuthProvider.jsx';
 import PortalShell from '../../components/PortalShell.jsx';
 import { navigate } from '../../app/navigation.js';
@@ -15,6 +16,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedSeed, setSelectedSeed] = useState(null);
   const [selected, setSelected] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [reason, setReason] = useState('');
@@ -41,6 +43,7 @@ export default function AdminUsersPage() {
   function closeModal() {
     ++detailRequest.current;
     setSelectedId(null);
+    setSelectedSeed(null);
     setSelected(null);
     setDetailLoading(false);
     setReason('');
@@ -56,14 +59,17 @@ export default function AdminUsersPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId]);
 
-  async function choose(id) {
+  async function choose(target) {
+    const targetId = typeof target === 'object' && target !== null ? target.id : target;
+    const seed = typeof target === 'object' && target !== null ? target : null;
     const requestId = ++detailRequest.current;
-    setSelectedId(id);
+    setSelectedId(targetId);
+    setSelectedSeed(seed);
     setSelected(null);
     setDetailLoading(true);
     setError(''); setNotice(''); setReason(''); setRoleReason('');
     try {
-      const account = await client.request(`/api/v1/admin/users/${id}`);
+      const account = await client.request(`/api/v1/admin/users/${targetId}`);
       if (requestId === detailRequest.current) {
         setSelected(account);
         setDetailLoading(false);
@@ -145,9 +151,9 @@ export default function AdminUsersPage() {
                   <td>{account.active ? 'Active' : 'Suspended'}</td>
                   <td>
                     <button
-                      className="profile-secondary"
+                      className="profile-secondary admin-view-btn"
                       disabled={busy}
-                      onClick={() => choose(account.id)}
+                      onClick={() => choose(account)}
                     >
                       View
                     </button>
@@ -167,7 +173,7 @@ export default function AdminUsersPage() {
       )}
     </section>
 
-    {selectedId && (
+    {selectedId && typeof document !== 'undefined' && createPortal(
       <div className="admin-modal-backdrop" onClick={closeModal}>
         <div
           className="admin-modal"
@@ -178,15 +184,15 @@ export default function AdminUsersPage() {
         >
           <div className="admin-modal-header">
             <div className="admin-modal-title-group">
-              {detailLoading && !selected ? (
+              {(selected || selectedSeed) ? (
                 <>
-                  <div className="sd-skeleton sd-skel-title" />
-                  <div className="sd-skeleton sd-skel-sub" />
+                  <h2>{(selected || selectedSeed).fullName}</h2>
+                  <p>{(selected || selectedSeed).email}</p>
                 </>
               ) : (
                 <>
-                  <h2>{selected?.fullName}</h2>
-                  <p>{selected?.email}</p>
+                  <div className="sd-skeleton sd-skel-title" />
+                  <div className="sd-skeleton sd-skel-sub" />
                 </>
               )}
             </div>
@@ -272,7 +278,8 @@ export default function AdminUsersPage() {
             )}
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
   </PortalShell>;
 }

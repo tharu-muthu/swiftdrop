@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './AuthProvider.jsx';
 import AdminUsersPage from './AdminUsersPage.jsx';
@@ -110,7 +110,9 @@ describe('admin user management', () => {
 
     // When request resolves, details are shown in the modal
     delayResolve();
-    expect(await screen.findByText('one@example.test')).toBeVisible();
+    const modal = await screen.findByRole('dialog', { name: 'Account details modal' });
+    expect(await within(modal).findByRole('region', { name: 'Account details' })).toBeVisible();
+    expect(within(modal).getByText('Account roles')).toBeVisible();
     expect(screen.queryByLabelText('Loading account details')).not.toBeInTheDocument();
 
     // Close via close button: modal closes, original list is intact
@@ -122,6 +124,13 @@ describe('admin user management', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View' }));
     expect(await screen.findByRole('dialog', { name: 'Account details modal' })).toBeVisible();
     fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
+    expect(screen.getByText('Customer One')).toBeVisible();
+
+    // Reopen and close via backdrop click
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(await screen.findByRole('dialog', { name: 'Account details modal' })).toBeVisible();
+    fireEvent.click(document.querySelector('.admin-modal-backdrop'));
     expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
     expect(screen.getByText('Customer One')).toBeVisible();
   });

@@ -4,8 +4,11 @@
 .admin-action form{display:grid;gap:10px;max-width:560px}.admin-action input:not([type="checkbox"]){font:inherit;border:1px solid var(--sd-border);border-radius:7px;padding:10px 12px;min-width:0}.admin-action input[type="checkbox"]{width:auto;margin-right:8px}
 
 /* Centered Pop-up Modal Window */
-.admin-modal-backdrop{position:fixed;inset:0;background:rgba(7,27,72,0.48);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;animation:adminModalFadeIn .2s ease-out}
-.admin-modal{width:min(680px,94vw);max-height:min(88vh,850px);background:#ffffff;border:1px solid var(--sd-border,#e2e9f2);border-radius:16px;box-shadow:0 24px 64px rgba(7,27,72,0.22);display:flex;flex-direction:column;overflow:hidden;animation:adminModalPopIn .24s cubic-bezier(0.16,1,0.3,1)}
+.admin-view-btn{transition:transform .1s ease,background .15s ease}
+.admin-view-btn:active{transform:scale(0.94)}
+
+.admin-modal-backdrop{position:fixed!important;inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;background:rgba(6,25,56,0.65)!important;-webkit-backdrop-filter:blur(6px)!important;backdrop-filter:blur(6px)!important;z-index:99999!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;box-sizing:border-box!important;animation:adminModalFadeIn .2s cubic-bezier(0.16,1,0.3,1)!important}
+.admin-modal{position:relative!important;width:100%!important;max-width:660px!important;max-height:min(86vh,820px)!important;margin:auto!important;background:#ffffff!important;border:1px solid var(--sd-border,#d7e1ee)!important;border-radius:16px!important;box-shadow:0 25px 60px -15px rgba(6,25,56,0.35),0 0 0 1px rgba(6,25,56,0.08)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;animation:adminModalPopIn .22s cubic-bezier(0.16,1,0.3,1)!important}
 .admin-modal-header{padding:20px 24px;background:#ffffff;border-bottom:1px solid var(--sd-border,#e2e9f2);display:flex;align-items:center;justify-content:space-between;gap:16px;flex:none}
 .admin-modal-title-group{display:flex;flex-direction:column;gap:3px;min-width:0}
 .admin-modal-title-group h2{margin:0;font-size:20px;line-height:1.3;color:var(--sd-text,#071b48)}
@@ -17,26 +20,26 @@
 .admin-modal-card{border:none!important;padding:0!important;margin-bottom:0!important;box-shadow:none!important}
 
 @keyframes adminModalFadeIn{from{opacity:0}to{opacity:1}}
-@keyframes adminModalPopIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes adminModalPopIn{from{opacity:0;transform:scale(0.92) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
 @media(max-width:640px){
-  .admin-modal-backdrop{padding:10px}
-  .admin-modal{max-height:94vh;border-radius:12px}
+  .admin-modal-backdrop{padding:12px!important}
+  .admin-modal{max-height:92vh!important;border-radius:14px!important}
   .admin-modal-header{padding:16px 18px}
   .admin-modal-body{padding:18px}
 }
 
 /* Skeleton Loading Shimmer */
 @keyframes sdSkeletonPulse{0%{background-position:-200% 0}100%{background-position:200% 0}}
-.sd-skeleton{background:linear-gradient(90deg,#edf2f7 25%,#f8fafc 50%,#edf2f7 75%);background-size:200% 100%;animation:sdSkeletonPulse 1.4s infinite ease-in-out;border-radius:6px}
+.sd-skeleton{background:linear-gradient(90deg,#edf2f7 0%,#f7fafc 40%,#edf2f7 80%);background-size:200% 100%;animation:sdSkeletonPulse 1.2s infinite ease-in-out;border-radius:6px}
 .sd-skel-title{width:180px;height:24px;margin-bottom:4px}
 .sd-skel-sub{width:240px;height:14px}
 .admin-skeleton-card{display:flex;flex-direction:column;gap:24px}
 .admin-skeleton-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .admin-skeleton-field{display:flex;flex-direction:column;gap:6px}
-.sd-skel-label{width:60px;height:12px}
-.sd-skel-val{width:110px;height:18px}
+.sd-skel-label{width:64px;height:12px}
+.sd-skel-val{width:120px;height:18px}
 .admin-skeleton-section{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--sd-border,#e2e9f2);padding-top:20px}
-.sd-skel-heading{width:130px;height:18px}
-.sd-skel-block{width:100%;height:64px;border-radius:8px}
+.sd-skel-heading{width:140px;height:18px}
+.sd-skel-block{width:100%;height:56px;border-radius:8px}
 .sd-skel-btn{width:130px;height:42px;border-radius:7px}
