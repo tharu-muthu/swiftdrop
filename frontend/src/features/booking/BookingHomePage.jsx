@@ -64,7 +64,7 @@ export default function BookingHomePage() {
         {error && <p className="dashboard-error" role="alert">{error}</p>}
         <div className="stat-grid" aria-busy={!summary}>
           <StatCard icon="□" tone="blue" label="Active Bookings" value={summary ? summary.activeBookings : '—'} hint="Live" />
-          <StatCard icon="▱" tone="green" label="Delivered Parcels" value="—" hint="M6 status" />
+          <StatCard icon="▱" tone="green" label="Delivered Parcels" value={summary ? summary.deliveredBookings : '—'} hint="Live" />
           <StatCard icon="▤" tone="red" label="Pending Receipts" value={summary ? summary.pendingReceipts : '—'} hint="Live" />
           <StatCard icon="▣" tone="purple" label="This Month Shipments" value={summary ? summary.thisMonthShipments : '—'} hint="Live" />
         </div>
