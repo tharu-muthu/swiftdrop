@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import BookingFrame from './BookingFrame.jsx';
+import BookingIcon from './BookingIcon.jsx';
 import SavedAddressPicker from './SavedAddressPicker.jsx';
 import { createQuotePreparationRequest, requestQuote, confirmBooking } from './bookingFormApi.js';
 import './booking-form.css';
@@ -59,7 +60,7 @@ function QuoteReadiness({ draft, quote, quoteError }) {
   const parcelSize = quoteRequest.parcel.size.replaceAll('_', ' ').toLowerCase();
 
   return <section className="quote-ready" aria-labelledby="quote-ready-title">
-    <div className="quote-ready-icon" aria-hidden="true">◇</div>
+    <div className="quote-ready-icon"><BookingIcon name="quote" /></div>
     <p className="quote-eyebrow">Booking details reviewed</p>
     <h3 id="quote-ready-title">Ready to request a delivery quote</h3>
     <p>Review your details and request a delivery quote.</p>
@@ -138,15 +139,15 @@ export default function BookingFormPage({ merchant = false }) {
     <ol className="progress-steps" aria-label="Booking progress">{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'current' : step > index + 1 ? 'complete' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol>
     <div className="booking-form-grid"><form className="booking-form-card" onSubmit={advance} noValidate>
       {(step === 1 || step === 2) && <SavedAddressPicker key={step} kind={step === 1 ? 'pickup' : 'delivery'} onSelect={applySavedAddress} />}
-      <div className="form-section-heading"><span aria-hidden="true">{step === 1 ? '⌖' : step === 2 ? '♙' : step === 3 ? '□' : '◇'}</span><div><h2>{steps[step - 1][0]}</h2><p>{steps[step - 1][1]}</p></div></div>
+      <div className="form-section-heading"><span><BookingIcon name={step === 1 ? 'location' : step === 2 ? 'user' : step === 3 ? 'package' : 'quote'} /></span><div><h2>{steps[step - 1][0]}</h2><p>{steps[step - 1][1]}</p></div></div>
       {step < 3 && <div className="booking-field-grid">{fields[step].map(([name, label, type, placeholder]) => <TextField key={name} name={name} label={label} type={type} placeholder={placeholder} draft={draft} errors={errors} update={update} />)}</div>}
       {step === 3 && <div className="booking-field-grid"><TextField name="weightGrams" label="Weight in grams" type="number" placeholder="e.g. 1500" draft={draft} errors={errors} update={update} />
         <div className="booking-field"><label htmlFor="booking-parcelSize">Parcel size <b>*</b></label><select id="booking-parcelSize" value={draft.parcelSize} onChange={event => update('parcelSize', event.target.value)} aria-invalid={Boolean(errors.parcelSize)}><option value="">Select size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option><option value="EXTRA_LARGE">Extra large</option></select>{errors.parcelSize && <small className="field-error">{errors.parcelSize}</small>}</div>
         <div className="booking-field field-wide"><label htmlFor="booking-description">Parcel description <b>*</b></label><textarea id="booking-description" value={draft.description} maxLength="200" placeholder="Describe parcel contents (no prohibited items)." onChange={event => update('description', event.target.value)} aria-invalid={Boolean(errors.description)} />{errors.description && <small className="field-error">{errors.description}</small>}</div></div>}
       {step === 4 && <QuoteReadiness draft={draft} quote={quote} quoteError={quoteError} />}
-      <div className="form-actions"><button type="button" className="cancel-booking" onClick={() => navigate(merchant ? '/merchant' : '/booking')}>← Cancel</button><span />{step > 1 && <button type="button" className="back-step" onClick={back} disabled={quotePending}>← Back</button>}{step < 4 ? <button className="next-step">Next: {steps[step][0]} →</button> : quote ? <button type="button" className="next-step" disabled={quotePending} onClick={confirm}>{quotePending ? 'Please wait…' : 'Confirm booking'}</button> : <button type="button" className="next-step" disabled={quotePending} onClick={getQuote}>{quotePending ? 'Please wait…' : 'Get quote'}</button>}</div>
+      <div className="form-actions"><button type="button" className="cancel-booking" aria-label="← Cancel" onClick={() => navigate(merchant ? '/merchant' : '/booking')}><BookingIcon name="arrowLeft" /> Cancel</button><span />{step > 1 && <button type="button" className="back-step" aria-label="← Back" onClick={back} disabled={quotePending}><BookingIcon name="arrowLeft" /> Back</button>}{step < 4 ? <button className="next-step" aria-label={`Next: ${steps[step][0]} →`}>Next: {steps[step][0]} <BookingIcon name="arrowRight" /></button> : quote ? <button type="button" className="next-step" disabled={quotePending} onClick={confirm}>{quotePending ? 'Please wait…' : 'Confirm booking'}</button> : <button type="button" className="next-step" disabled={quotePending} onClick={getQuote}>{quotePending ? 'Please wait…' : 'Get quote'}</button>}</div>
     </form>
-    <aside className="booking-steps-card"><h2>▱ Booking Steps</h2><ol>{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'active-step' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol><div className="quick-tips"><h3>☼ Quick Tips</h3><ul><li>Use a reachable contact number.</li><li>Provide a complete pickup address.</li><li>Check all details before getting a quote.</li></ul></div></aside>
+    <aside className="booking-steps-card"><h2><BookingIcon name="route" /> Booking Steps</h2><ol>{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'active-step' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol><div className="quick-tips"><h3><BookingIcon name="quote" /> Quick Tips</h3><ul><li>Use a reachable contact number.</li><li>Provide a complete pickup address.</li><li>Check all details before getting a quote.</li></ul></div></aside>
     </div>
   </div></BookingFrame>;
 }

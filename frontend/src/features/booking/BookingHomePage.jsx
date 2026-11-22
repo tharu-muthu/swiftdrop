@@ -4,20 +4,21 @@ import { useAuth } from '../identity/AuthProvider.jsx';
 import { loadBookingDashboard } from './bookingApi.js';
 import heroVan from '../../assets/booking-hero-van.png';
 import BookingFrame from './BookingFrame.jsx';
+import BookingIcon from './BookingIcon.jsx';
 import './booking.css';
 import './booking-validation.css';
 import './booking-brand-theme.css';
 
 function ActionCard({ icon, tone, title, description, to }) {
   return <button className="quick-action" onClick={() => navigate(to)}>
-    <span className={`action-icon ${tone}`} aria-hidden="true">{icon}</span>
-    <span className="quick-copy"><strong>{title}</strong><small>{description}</small></span><span className="arrow" aria-hidden="true">›</span>
+    <span className={`action-icon ${tone}`}><BookingIcon name={icon} /></span>
+    <span className="quick-copy"><strong>{title}</strong><small>{description}</small></span><span className="arrow"><BookingIcon name="chevronRight" /></span>
   </button>;
 }
 
 function StatCard({ icon, tone, label, value, hint }) {
   return <div className="booking-stat">
-    <span className={`stat-icon ${tone}`} aria-hidden="true">{icon}</span>
+    <span className={`stat-icon ${tone}`}><BookingIcon name={icon} /></span>
     <span><small>{label}</small><strong>{value}</strong></span><em>{hint}</em>
   </div>;
 }
@@ -51,26 +52,26 @@ export default function BookingHomePage() {
       <section className="booking-hero">
         <img src={heroVan} alt="Delivery van and parcels on a sunny campus street" />
         <div className="hero-overlay"><p>Welcome to <b>SwiftDrop</b></p><span>Create parcel bookings, manage shipments, track their status, and access receipts — all in one place.</span>
-          <button onClick={() => navigate('/bookings/new')}><b aria-hidden="true">＋</b> Create New Booking <i aria-hidden="true">→</i></button></div>
+          <button onClick={() => navigate('/bookings/new')}><BookingIcon name="plus" /> <span>Create New Booking</span> <BookingIcon name="arrowRight" /></button></div>
       </section>
       <section className="quick-actions" aria-label="Quick actions">
-        <ActionCard icon="◇" tone="blue" title="Get Quote" description="Check parcel delivery rates instantly." to="/quote" />
-        <ActionCard icon="□" tone="cyan" title="Create Booking" description="Book a parcel in just a few steps." to="/bookings/new" />
-        <ActionCard icon="⌖" tone="green" title="Track Parcel" description="Check the real-time status of your parcel." to="/tracking" />
-        <ActionCard icon="▤" tone="purple" title="Delivery Receipts" description="View receipts issued after delivery." to="/receipts" />
+        <ActionCard icon="quote" tone="blue" title="Get Quote" description="Check parcel delivery rates instantly." to="/quote" />
+        <ActionCard icon="package" tone="cyan" title="Create Booking" description="Book a parcel in just a few steps." to="/bookings/new" />
+        <ActionCard icon="location" tone="green" title="Track Parcel" description="Check the real-time status of your parcel." to="/tracking" />
+        <ActionCard icon="receipt" tone="purple" title="Delivery Receipts" description="View receipts issued after delivery." to="/receipts" />
       </section>
       <section className="summary-panel" aria-labelledby="booking-summary-heading">
         <div className="summary-heading"><h2 id="booking-summary-heading"><span aria-hidden="true">▥</span> Booking Summary</h2><small>This Month Overview</small></div>
         {error && <p className="dashboard-error" role="alert">{error}</p>}
         <div className="stat-grid" aria-busy={!summary}>
-          <StatCard icon="□" tone="blue" label="Active Bookings" value={summary ? summary.activeBookings : '—'} hint="Live" />
-          <StatCard icon="▱" tone="green" label="Delivered Parcels" value={summary ? summary.deliveredBookings : '—'} hint="Live" />
-          <StatCard icon="▤" tone="red" label="Pending Receipts" value={summary ? summary.pendingReceipts : '—'} hint="Live" />
-          <StatCard icon="▣" tone="purple" label="This Month Shipments" value={summary ? summary.thisMonthShipments : '—'} hint="Live" />
+          <StatCard icon="package" tone="blue" label="Active Bookings" value={summary ? summary.activeBookings : '—'} hint="Live" />
+          <StatCard icon="check" tone="green" label="Delivered Parcels" value={summary ? summary.deliveredBookings : '—'} hint="Live" />
+          <StatCard icon="receipt" tone="red" label="Pending Receipts" value={summary ? summary.pendingReceipts : '—'} hint="Live" />
+          <StatCard icon="truck" tone="purple" label="This Month Shipments" value={summary ? summary.thisMonthShipments : '—'} hint="Live" />
         </div>
       </section>
       <section className="tracking-card" aria-labelledby="track-heading">
-        <div><p className="tracking-kicker" aria-hidden="true">⌖</p><h2 id="track-heading">Track Your Parcel</h2><span>Enter a tracking number to check the latest status.</span></div>
+        <div><p className="tracking-kicker"><BookingIcon name="location" /></p><h2 id="track-heading">Track Your Parcel</h2><span>Enter a tracking number to check the latest status.</span></div>
         <form onSubmit={track} noValidate><label className="sr-only" htmlFor="tracking-number">Tracking number</label><input id="tracking-number" value={trackingNumber} onChange={event => { setTrackingNumber(event.target.value); setTrackingError(''); }} maxLength="40" placeholder="e.g. SDP-000526" aria-invalid={Boolean(trackingError)} aria-describedby={trackingError ? 'tracking-error' : undefined} />
           <button>Track Parcel</button></form>
         {trackingError && <p id="tracking-error" className="tracking-error" role="alert">{trackingError}</p>}
