@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState('');
+  const [verificationRequired, setVerificationRequired] = useState(false);
   const [pending, setPending] = useState(false);
   const submitting = useRef(false);
 
@@ -28,21 +29,22 @@ export default function LoginPage() {
     const invalid = {};
     if (!email.trim()) invalid.email = 'Enter your email address.';
     if (!password) invalid.password = 'Enter your password.';
-    setErrors(invalid); setMessage('');
+    setErrors(invalid); setMessage(''); setVerificationRequired(false);
     if (Object.keys(invalid).length) { document.getElementById(Object.keys(invalid)[0])?.focus(); return; }
     submitting.current = true; setPending(true);
     try {
       await auth.client.login(email, password);
-      setPassword(''); navigate('/booking');
-    } catch (error) { setMessage(error.message); }
+      setPassword(''); navigate('/workspaces');
+    } catch (error) { setMessage(error.message); setVerificationRequired(error.code === 'EMAIL_VERIFICATION_REQUIRED'); }
     finally { submitting.current = false; setPending(false); }
   }
   return <AuthLayout><div className="registration-card login-card">
     <Brand /><h2>Welcome back</h2><p className="form-subtitle">Log in to your SwiftDrop account</p>
+    {new URLSearchParams(window.location.search).get('notice') === 'security-updated' && <p className="profile-banner" role="status">Your account security was updated and all sessions ended. Sign in again.</p>}
     {googleError && <p className="form-alert" role="alert">{googleError}</p>}
     <form onSubmit={submit} noValidate aria-busy={pending}>
       <FormField name="email" label="Email address" type="email" placeholder="Enter your email" autoComplete="username"
-        value={email} onChange={event => setEmail(event.target.value)} error={errors.email} disabled={pending} maxLength={320} required />
+        value={email} onChange={event => { setEmail(event.target.value); setVerificationRequired(false); setMessage(''); }} error={errors.email} disabled={pending} maxLength={320} required />
       <FormField name="password" label="Password" type="password" placeholder="Enter your password" autoComplete="current-password"
         value={password} onChange={event => setPassword(event.target.value)} error={errors.password} disabled={pending} required />
       <p className="recovery-note"><a href="/forgot-password">Forgot password?</a></p>
@@ -53,6 +55,6 @@ export default function LoginPage() {
     <div className="auth-divider"><span>or sign in with</span></div>
     <GoogleSignInButton />
     <p className="login-note">New to SwiftDrop? <a href="/register">Sign up</a></p>
-    <p className="login-note">Need to verify your email? <a href="/verify-email/request">Resend link</a></p>
+    {verificationRequired && <p className="login-note">Verify your email to continue. <a href="/verify-email/request">Resend verification link</a></p>}
   </div></AuthLayout>;
 }

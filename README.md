@@ -9,7 +9,7 @@ before adding authenticated feature endpoints or calling identity services.
 For administrator setup, merchant approval grants and courier onboarding, use the
 [role handoff](contracts/identity-role-handoff.md).
 Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
-to search accounts and suspend or reactivate them with an audited reason.
+to search accounts, suspend or reactivate them, and manage permitted roles with an audited reason.
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 
@@ -146,10 +146,14 @@ without quotes, spaces or `$`. Never commit `.env`; never put credentials in
 `VITE_*` variables, which would expose them to browsers.
 
 The database is hosted in Neon; no local PostgreSQL container or password is
-needed. Local password-reset and email-verification messages are captured by
-Mailpit in Docker and require no mail account. Open `http://localhost:8025` to
-view the local inbox. To send real Gmail messages instead, follow the private backend SMTP settings in
-[`contracts/identity-password-recovery.md`](contracts/identity-password-recovery.md).
+needed. Verification and password-reset messages use the real SMTP provider configured in
+private `backend/.env`. Fill the `SPRING_MAIL_*` and `MAIL_FROM` placeholders in
+`backend/.env.example` using your own sending account. See
+[real SMTP setup](contracts/identity-password-recovery.md#real-gmail-delivery).
+No local mail inbox is included. After changing private settings, recreate the
+backend with `docker compose up --detach --force-recreate --wait backend`.
+If upgrading from the previous local-mail setup, run
+`docker compose up --detach --remove-orphans --wait` to remove the old mail container.
 
 ## 2A. Run the application with Neon and RabbitMQ
 
@@ -442,3 +446,48 @@ names/IDs, deadline and hosting decisions. The assignment found beside this
 repository was copied unchanged into `docs/reference/` for teammates. Later
 Google, JWT, provider and deployment secrets belong to their feature/deployment
 tasks. This repository foundation does not fulfill the complete assignment yet.
+
+## Role workspaces
+
+After sign-in, open `/workspaces` to choose among assigned roles. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
+
+The [assignment RBAC matrix](docs/identity/rbac-assignment-review.md) documents role and ownership rules. Courier deliveries now have a Sri Lankan workday filter with unfinished carryover; reassignment stops after pickup.
+
+
+### Profile security and saved addresses
+
+`/account` now includes verified email change, password change/set-password,
+email verification status and an owned saved-address book. Booking pickup and
+recipient forms can copy a saved address into their draft without linking or
+rewriting earlier bookings. See [the account-settings contract](contracts/identity-account-settings.md)
+for API fields, step-up checks, revocation and migration coordination.
+
+Coordinate the new **V13** migration before applying it to a shared Neon branch.
+Existing SMTP credentials are reused. Google-only security changes require
+Google authentication-time metadata and recent provider authentication; missing
+or stale signed claims are rejected. Follow the [Google OIDC reference](https://developers.google.com/identity/openid-connect/reference)
+for the `auth_time` claim and check it with your configured Google project.
+
+With Docker Desktop running, validate from the repository root:
+
+```powershell
+npm.cmd --prefix frontend test
+npm.cmd --prefix frontend run build
+.\backend\mvnw.cmd -f backend/pom.xml -Pintegration verify
+```
+
+For a focused new backend integration run:
+
+```powershell
+.\backend\mvnw.cmd -f backend/pom.xml -Pintegration -Dit.test=AccountSettingsIT verify
+```
+
+After tests and shared-migration/SMTP coordination, rebuild both applications:
+
+```powershell
+docker compose up --build --detach --wait
+```
+
+The agent added regression tests and performed source syntax/whitespace review;
+application compilation, test execution, migrations and real-provider checks
+remain user-run in this change.

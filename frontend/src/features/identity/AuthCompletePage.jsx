@@ -1,17 +1,15 @@
 import { useEffect } from 'react';
+import { useAuth } from './AuthProvider.jsx';
+import { navigate } from '../../app/navigation.js';
+import AppLoading from '../../app/AppLoading.jsx';
 
 export default function AuthCompletePage() {
+  const { status } = useAuth();
   useEffect(() => {
-    // The backend set the refresh cookie in the OAuth callback redirect.
-    // A full navigation re-runs bootstrap (refresh → /me) from a clean state.
-    // Use replace() so /auth/complete does not remain in browser history.
-    window.location.replace('/account');
-  }, []);
-
-  return (
-    <main className="auth-loading" role="status" aria-live="polite">
-      Completing Google sign-in…
-    </main>
-  );
+    // AuthProvider restores the callback cookie exactly once. A second full-page
+    // navigation here could interrupt refresh after its token was consumed.
+    if (status === 'authenticated') navigate('/workspaces', { replace: true });
+    else if (status === 'anonymous') navigate('/login', { replace: true });
+  }, [status]);
+  return <AppLoading />;
 }
-

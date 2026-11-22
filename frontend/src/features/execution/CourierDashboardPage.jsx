@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
+import PortalShell from '../../components/PortalShell.jsx';
 import { loadAssignedDeliveries, loadDelivery, updateDeliveryStatus } from './executionApi.js';
 import './execution.css';
 
@@ -10,8 +11,18 @@ const nextStatuses = {
   OUT_FOR_DELIVERY: ['DELIVERED', 'FAILED'],
 };
 
+function currentWorkday() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const part = type => parts.find(item => item.type === type).value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 export default function CourierDashboardPage() {
-  const { client, user } = useAuth();
+  const { client } = useAuth();
+  const [date, setDate] = useState(currentWorkday);
+  const [loading, setLoading] = useState(true);
+  const listRequest = useRef(0);
+  const detailRequest = useRef(0);
   const [deliveries, setDeliveries] = useState([]);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState('');
@@ -20,14 +31,22 @@ export default function CourierDashboardPage() {
   const [failureReason, setFailureReason] = useState('');
 
   async function refresh() {
-    try { setError(''); setDeliveries(await loadAssignedDeliveries(client)); }
-    catch (requestError) { setError(requestError.message); }
+    const request = ++listRequest.current;
+    setLoading(true); setError('');
+    try {
+      const items = await loadAssignedDeliveries(client, date);
+      if (request === listRequest.current) setDeliveries(items);
+    } catch (requestError) { if (request === listRequest.current) setError(requestError.message); }
+    finally { if (request === listRequest.current) setLoading(false); }
   }
-  useEffect(() => { refresh(); }, [client]);
+  useEffect(() => { refresh(); return () => { ++listRequest.current; ++detailRequest.current; }; }, [client, date]);
 
   async function selectDelivery(id) {
-    try { setError(''); setSelected(await loadDelivery(client, id)); }
-    catch (requestError) { setError(requestError.message); }
+    const request = ++detailRequest.current;
+    try {
+      setError(''); const delivery = await loadDelivery(client, id);
+      if (request === detailRequest.current) { setSelected(delivery); setRecipientName(''); setFailureReason(''); }
+    } catch (requestError) { if (request === detailRequest.current) setError(requestError.message); }
   }
   async function update(status) {
     if (status === 'DELIVERED' && !recipientName.trim()) return setError('Recipient name is required.');
@@ -40,19 +59,24 @@ export default function CourierDashboardPage() {
         failureReason: status === 'FAILED' ? failureReason.trim() : null,
       });
       setSelected(result); setRecipientName(''); setFailureReason(''); await refresh();
-    } catch (requestError) { setError(requestError.message); }
-    finally { setPending(false); }
+    } catch (requestError) {
+      if ([403, 404].includes(requestError.status)) { setSelected(null); await refresh(); }
+      setError(requestError.message);
+    } finally { setPending(false); }
   }
 
-  return <main className="execution-shell">
-    <header className="execution-header"><span className="execution-brand">◇ SwiftDrop</span>
-      <span>{user.fullName} · Courier</span></header>
-    <section className="execution-content">
-      <div><p className="execution-kicker">M6 · COURIER OPERATIONS</p><h1>Assigned deliveries</h1>
-        <p className="execution-muted">Update only parcels currently assigned to you.</p></div>
+  return <PortalShell title="Assigned deliveries" contentClassName="execution-content">
+    <p className="execution-muted">Update only parcels currently assigned to you.</p>
       {error && <p className="execution-error" role="alert">{error}</p>}
-      {!selected ? <div className="delivery-list" aria-busy={!deliveries}>
-        {deliveries.length === 0 && <p className="execution-empty">No assigned deliveries.</p>}
+      <div className="execution-filters"><label htmlFor="courier-workday">Workday (Sri Lanka)</label>
+        <input id="courier-workday" type="date" value={date} max={currentWorkday()} disabled={pending} onChange={event => { if (event.target.value) { setDate(event.target.value); setSelected(null); } }} />
+        <button disabled={pending} onClick={() => { setDate(currentWorkday()); setSelected(null); }}>Today</button>
+        <button disabled={pending || loading} onClick={refresh}>Refresh deliveries</button>
+      </div>
+      <p className="execution-muted">Today's list includes unfinished work carried over from earlier days. Earlier dates show assignments or activity on that date that are still assigned to you.</p>
+      {loading && <p role="status">Loading deliveries...</p>}
+      {!selected ? <div className="delivery-list" aria-busy={loading}>
+        {!loading && !error && deliveries.length === 0 && <p className="execution-empty">No assigned deliveries. Your dispatcher can check your courier profile and assign parcels.</p>}
         {deliveries.map(delivery => <button className="delivery-card" key={delivery.lifecycleId}
           onClick={() => selectDelivery(delivery.lifecycleId)}>
           <strong>{delivery.trackingNumber}</strong><span>{delivery.status.replaceAll('_', ' ')}</span>
@@ -61,8 +85,7 @@ export default function CourierDashboardPage() {
       </div> : <DeliveryDetails delivery={selected} recipientName={recipientName}
         setRecipientName={setRecipientName} failureReason={failureReason} setFailureReason={setFailureReason}
         pending={pending} onUpdate={update} onBack={() => setSelected(null)} />}
-    </section>
-  </main>;
+  </PortalShell>;
 }
 
 function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason, pending, onUpdate, onBack }) {

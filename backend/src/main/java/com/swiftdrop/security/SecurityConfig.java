@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm",
-                                "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm").permitAll()
+                                "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm", "/api/v1/auth/email-change/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings", "/api/v1/bookings/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/registration").authenticated()
@@ -68,25 +68,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/webhooks/*/deliveries/*/attempts").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/webhooks/*/deliveries/*/retry").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/merchant/webhooks", "/api/v1/merchant/webhooks/*/rotate-secret",
-                                "/api/v1/merchant/webhooks/*/test").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/webhooks/*").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").authenticated()
+                                "/api/v1/merchant/webhooks/*/test").hasRole("MERCHANT")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/merchant/webhooks/*").hasRole("MERCHANT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/merchant/webhooks/*").hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.GET,"/api/v1/courier/deliveries","/api/v1/courier/deliveries/{id}").hasRole("COURIER")
                         .requestMatchers(HttpMethod.POST,"/api/v1/courier/deliveries/{id}/status").hasRole("COURIER")
                         .requestMatchers(HttpMethod.GET,"/api/v1/dispatch/couriers","/api/v1/dispatch/couriers/active","/api/v1/dispatch/couriers/{id}/workload",
                                 "/api/v1/dispatch/bookings","/api/v1/dispatch/bookings/{id}","/api/v1/dispatch/bookings/{id}/assignments","/api/v1/dispatch/reports/daily").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.PUT,"/api/v1/dispatch/couriers/{id}").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST,"/api/v1/dispatch/assignments","/api/v1/dispatch/assignments/reassign").hasRole("DISPATCHER_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/quotes").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/quotes/*").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/zones", "/api/v1/admin/rate-cards").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/quotes").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/quotes/*").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/zones", "/api/v1/admin/rate-cards").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/zones", "/api/v1/admin/zones/*/postcodes",
-                                "/api/v1/admin/rate-cards").authenticated()
+                                "/api/v1/admin/rate-cards").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/postcodes").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/postcodes/*").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/zones/*", "/api/v1/admin/rate-cards/*").hasRole("DISPATCHER_ADMIN")
                         .anyRequest().denyAll())
-                .csrf(config -> config.csrfTokenRepository(csrf))
+                .csrf(config -> config.csrfTokenRepository(csrf)
+                        // Resource-server defaults otherwise exempt Bearer requests from CSRF.
+                        // Browser mutations follow the same CSRF contract as cookie auth operations.
+                        .withObjectPostProcessor(new org.springframework.security.config.ObjectPostProcessor<Object>() {
+                            @Override public <O> O postProcess(O object) {
+                                if (object instanceof CsrfFilter filter) {
+                                    filter.setRequireCsrfProtectionMatcher(CsrfFilter.DEFAULT_CSRF_MATCHER);
+                                }
+                                return object;
+                            }
+                        }))
                 .addFilterBefore(new AuthRequestFilter(settings, limiter, json, loginLimit), CsrfFilter.class)
                 .addFilterBefore(new TrackingRateLimitFilter(limiter, json), CsrfFilter.class)
                 .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
@@ -104,13 +114,15 @@ public class SecurityConfig {
     @ConditionalOnProperty(prefix = "swiftdrop.google", name = "enabled", havingValue = "true")
     SecurityFilterChain futureOAuthSecurity(HttpSecurity http, ObjectMapper json,
             GoogleCallbackHandler successHandler, GoogleFailureHandler failureHandler,
-            com.swiftdrop.config.GoogleSettings googleSettings) throws Exception {
+            com.swiftdrop.config.GoogleSettings googleSettings,
+            org.springframework.security.oauth2.client.registration.ClientRegistrationRepository clients) throws Exception {
         return http
                 .securityMatcher("/oauth2/**", "/login/oauth2/**")
                 .addFilterBefore(new GoogleOriginFilter(googleSettings),
                         org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(new com.swiftdrop.integration.identity.GoogleSecurityRequestResolver(clients)))
                         .successHandler(successHandler)
                         .failureHandler(failureHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

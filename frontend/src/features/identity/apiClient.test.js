@@ -18,6 +18,17 @@ const calls = (fetch, url) => fetch.mock.calls.filter(call => call[0] === url);
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 
 describe('in-memory authentication client', () => {
+  it('clears memory and informs other tabs after a confirmed server security change without another logout request', async () => {
+    const fetch = server(url => url.endsWith('refresh') ? token('access-one') : reply(profile));
+    const channel = { postMessage: vi.fn() };
+    const client = createAuthClient({ fetchImpl: fetch, locks: serialLocks(), channel });
+    await client.bootstrap();
+    client.endLocalSession();
+    expect(client.getSnapshot()).toMatchObject({ status: 'anonymous', user: null });
+    expect(channel.postMessage).toHaveBeenCalledWith({ type: 'identity-changed' });
+    expect(calls(fetch, '/api/v1/auth/logout')).toHaveLength(0);
+    await expect(client.request('/api/v1/me')).rejects.toMatchObject({ status: 401 });
+  });
   it('bootstraps once with refresh then me and does not use browser token storage', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem');
     const fetch = server(url => url.endsWith('refresh') ? token('access-one') : reply(profile));

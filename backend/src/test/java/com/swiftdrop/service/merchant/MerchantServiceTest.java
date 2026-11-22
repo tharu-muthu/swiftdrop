@@ -112,4 +112,10 @@ class MerchantServiceTest {
 
         assertThat(service.myApplication()).isEmpty();
     }
+    @Test void staffOnlyAccountsCannotReadOrEditMerchantApplications() {
+        when(identities.requireCurrentIdentity()).thenReturn(new IdentityContext(owner, UUID.randomUUID(), Set.of("COURIER"), 1));
+        assertThatThrownBy(service::myApplication).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> service.update(null)).isInstanceOf(AccessDeniedException.class);
+        verifyNoInteractions(merchants);
+    }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import BookingFrame from './BookingFrame.jsx';
+import SavedAddressPicker from './SavedAddressPicker.jsx';
 import { createQuotePreparationRequest, requestQuote, confirmBooking } from './bookingFormApi.js';
 import './booking-form.css';
 import './booking-brand-theme.css';
@@ -103,6 +104,12 @@ export default function BookingFormPage({ merchant = false }) {
     recipientName: '', recipientPhone: '', deliveryAddress: '', deliveryCity: '', deliveryPostalCode: '',
     weightGrams: '', parcelSize: '', description: '', externalReference: '',
   }));
+  function applySavedAddress(address) {
+    const contact = { name: address.contactName, phone: address.contactPhone, address: [address.addressLine1, address.addressLine2].filter(Boolean).join(', '), city: address.city, postalCode: address.postalCode };
+    const values = step === 1 ? { senderName: contact.name, senderPhone: contact.phone, pickupAddress: contact.address, pickupCity: contact.city, pickupPostalCode: contact.postalCode }
+      : { recipientName: contact.name, recipientPhone: contact.phone, deliveryAddress: contact.address, deliveryCity: contact.city, deliveryPostalCode: contact.postalCode };
+    setDraft(current => ({ ...current, ...values }));setErrors({});setQuote(null);setQuoteError('');setRequestKey(crypto.randomUUID());
+  }
   const update = (name, value) => { setRequestKey(crypto.randomUUID()); setQuote(null); setQuoteError(''); setDraft(current => ({ ...current, [name]: value })); setErrors(current => ({ ...current, [name]: '' })); };
   const getQuote = async () => {
     setQuotePending(true); setQuoteError('');
@@ -127,10 +134,11 @@ export default function BookingFormPage({ merchant = false }) {
   };
   const back = () => { setErrors({}); setStep(current => Math.max(1, current - 1)); };
 
-  return <BookingFrame activePath="/bookings/new"><div className="booking-form-page">
+  return <BookingFrame activePath={merchant ? '/merchant/orders/new' : '/bookings/new'}><div className="booking-form-page">
     <section className="form-banner"><div><p>Book Parcel <span>›</span> Create Booking</p><h1>Create Parcel Booking</h1><span>Fill in the details below to book your parcel delivery.</span></div><div className="form-banner-art" aria-hidden="true">▱</div></section>
     <ol className="progress-steps" aria-label="Booking progress">{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'current' : step > index + 1 ? 'complete' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol>
     <div className="booking-form-grid"><form className="booking-form-card" onSubmit={advance} noValidate>
+      {(step === 1 || step === 2) && <SavedAddressPicker key={step} kind={step === 1 ? 'pickup' : 'delivery'} onSelect={applySavedAddress} />}
       <div className="form-section-heading"><span aria-hidden="true">{step === 1 ? '⌖' : step === 2 ? '♙' : step === 3 ? '□' : '◇'}</span><div><h2>{steps[step - 1][0]}</h2><p>{steps[step - 1][1]}</p></div></div>
       {step < 3 && <div className="booking-field-grid">{fields[step].map(([name, label, type, placeholder]) => <TextField key={name} name={name} label={label} type={type} placeholder={placeholder} draft={draft} errors={errors} update={update} />)}</div>}
       {step === 3 && <div className="booking-field-grid"><TextField name="weightGrams" label="Weight in grams" type="number" placeholder="e.g. 1500" draft={draft} errors={errors} update={update} />

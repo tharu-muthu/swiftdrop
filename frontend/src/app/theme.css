@@ -1,0 +1,38 @@
+/* Shared SwiftDrop palette, taken from the identity and booking references. */
+:root {
+  --sd-navy: #061938;
+  --sd-navy-end: #102e60;
+  --sd-text: #142c52;
+  --sd-muted: #607697;
+  --sd-primary: #0877f9;
+  --sd-primary-hover: #0862d1;
+  --sd-accent: #ff752d;
+  --sd-background: #f5f7fb;
+  --sd-surface: #fff;
+  --sd-border: #d7e1ee;
+  --sd-tint: #edf4fd;
+  --sd-danger: #a12f27;
+  --sd-danger-tint: #fff3f1;
+  --sd-success: #176241;
+  --sd-success-tint: #e8f5ee;
+  --sd-radius: 12px;
+  --sd-shadow: 0 4px 16px #17326008;
+}
+:where(.portal-shell,.tracking-page) { color:var(--sd-text); background:var(--sd-background); font-size:14px; line-height:1.5; }
+:where(.portal-shell,.tracking-page) :where(input,select,textarea) {
+  font:inherit; color:var(--sd-text); background:var(--sd-surface);
+  border:1px solid var(--sd-border); border-radius:6px; padding:11px 13px;
+  min-height:46px; min-width:0; max-width:100%;
+}
+:where(.portal-shell,.tracking-page) :where(input[type=checkbox],input[type=radio]) { min-height:auto; accent-color:var(--sd-primary); }
+:where(.portal-shell,.tracking-page) :where(input,select,textarea):disabled { background:var(--sd-background); cursor:not-allowed; }
+:where(.portal-shell,.tracking-page) :where(button,.button) {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  font:inherit; font-weight:600; min-height:46px; padding:10px 17px;
+  background:var(--sd-primary); color:white; border:1px solid transparent; border-radius:6px;
+  cursor:pointer; text-decoration:none;
+}
+:where(.portal-shell,.tracking-page) :where(button,.button):hover { background:var(--sd-primary-hover); }
+:where(.portal-shell,.tracking-page) button:disabled { opacity:.55; cursor:not-allowed; }
+:where(.portal-shell,.tracking-page) :focus-visible { outline:3px solid var(--sd-accent); outline-offset:3px; }
+:where(.portal-shell,.tracking-page) a { text-underline-offset:3px; }
