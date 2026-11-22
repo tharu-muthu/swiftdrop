@@ -27,7 +27,8 @@ public class BookingDashboardService {
         var statuses=lifecycles.statuses(all.stream().map(row->row.getId()).toList());
         long active=all.stream().filter(row->!"CANCELLED".equals(row.getBookingState()))
                 .filter(row->!java.util.Set.of("DELIVERED","FAILED").contains(statuses.getOrDefault(row.getId(),"CREATED"))).count();
-        return new BookingDashboardSummary(active, aggregate.getPendingReceipts(),
+        long delivered=all.stream().filter(row -> "DELIVERED".equals(statuses.get(row.getId()))).count();
+        return new BookingDashboardSummary(active, delivered, aggregate.getPendingReceipts(),
                 aggregate.getThisMonthShipments());
     }
 }
