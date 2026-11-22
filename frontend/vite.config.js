@@ -28,6 +28,9 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: './src/test/setup.js',
+      // Reuse the jsdom VM between test files while preserving per-file isolation.
+      // This avoids individual async UI tests being starved during a full Docker build.
+      pool: 'vmThreads',
       restoreMocks: true,
       unstubGlobals: true,
     },
