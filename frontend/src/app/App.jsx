@@ -1,3 +1,4 @@
+import LandingPage from '../features/landing/LandingPage.jsx';
 import WorkspacesPage from '../features/identity/WorkspacesPage.jsx';
 import AppLoading from './AppLoading.jsx';
 import ConfirmEmailChangePage from '../features/identity/ConfirmEmailChangePage.jsx';
@@ -56,6 +57,7 @@ export default function App() {
       : new URLSearchParams(window.location.search).get('number') || '';
     return <PublicTrackingPage trackingNumber={trackingNumber} inPortal={auth.status === 'authenticated'} />;
   }
+  if (requestedPath === '/' && auth.status !== 'authenticated') return <LandingPage />;
   if (auth.status === 'loading') return <AppLoading />;
   if (auth.status === 'authenticated') {
     if (!canAccess(auth.user, path)) return <WorkspacePage title="Access unavailable"><p role="alert">Your account does not have the role required for this workspace.</p><a href="/workspaces">View your workspaces</a></WorkspacePage>;

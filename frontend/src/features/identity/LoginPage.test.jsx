@@ -14,6 +14,8 @@ describe('password login screen', () => {
   afterEach(()=>vi.unstubAllGlobals());
   it('uses neutral wording, accessible visibility and registration navigation', async () => {
     setup(); expect(screen.getByText('Log in to your SwiftDrop account')).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'SwiftDrop home' })).toHaveLength(2);
+    screen.getAllByRole('link', { name: 'SwiftDrop home' }).forEach(link => expect(link).toHaveAttribute('href', '/'));
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/register');
     expect(screen.queryByRole('link', { name: /Resend.*link/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
