@@ -50,7 +50,7 @@ export default function BookingHomePage() {
   return <BookingFrame activePath="/booking" headerTitle="Booking Home">
       <section className="booking-hero">
         <img src={heroVan} alt="Delivery van and parcels on a sunny campus street" />
-        <div className="hero-overlay"><p>Welcome to <b>SwiftDrop</b></p><h1>Book a Parcel</h1><span>Create parcel bookings, manage shipments, track their status, and access receipts — all in one place.</span>
+        <div className="hero-overlay"><p>Welcome to <b>SwiftDrop</b></p><span>Create parcel bookings, manage shipments, track their status, and access receipts — all in one place.</span>
           <button onClick={() => navigate('/bookings/new')}><b aria-hidden="true">＋</b> Create New Booking <i aria-hidden="true">→</i></button></div>
       </section>
       <section className="quick-actions" aria-label="Quick actions">

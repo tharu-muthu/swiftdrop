@@ -135,7 +135,6 @@ export default function BookingFormPage({ merchant = false }) {
   const back = () => { setErrors({}); setStep(current => Math.max(1, current - 1)); };
 
   return <BookingFrame activePath={merchant ? '/merchant/orders/new' : '/bookings/new'}><div className="booking-form-page">
-    <section className="form-banner"><div><p>Book Parcel <span>›</span> Create Booking</p><h1>Create Parcel Booking</h1><span>Fill in the details below to book your parcel delivery.</span></div><div className="form-banner-art" aria-hidden="true">▱</div></section>
     <ol className="progress-steps" aria-label="Booking progress">{steps.map(([title, subtitle], index) => <li key={title} className={step === index + 1 ? 'current' : step > index + 1 ? 'complete' : ''}><span>{index + 1}</span><div><strong>{title}</strong><small>{subtitle}</small></div></li>)}</ol>
     <div className="booking-form-grid"><form className="booking-form-card" onSubmit={advance} noValidate>
       {(step === 1 || step === 2) && <SavedAddressPicker key={step} kind={step === 1 ? 'pickup' : 'delivery'} onSelect={applySavedAddress} />}
