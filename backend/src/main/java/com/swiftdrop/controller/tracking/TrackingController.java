@@ -1,11 +1,9 @@
 package com.swiftdrop.controller.tracking;
 
-import com.swiftdrop.dto.tracking.PublicTrackingResponse;
 import com.swiftdrop.exception.ApiError;
 import com.swiftdrop.service.tracking.TrackingService;
 import com.swiftdrop.service.tracking.TrackingSseService;
 import org.springframework.http.MediaType;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,7 +45,7 @@ public class TrackingController {
     @GetMapping(value = "/api/v1/tracking/{trackingNumber}/events",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<?> events(@PathVariable String trackingNumber) {
-        var normalized = trackingNumber == null ? "" : trackingNumber.trim();
+        var normalized = TrackingService.normalize(trackingNumber);
         return tracking.publicTracking(normalized)
                 .<ResponseEntity<?>>map(current -> ResponseEntity.ok()
                         .cacheControl(CacheControl.noStore())

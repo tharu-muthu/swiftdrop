@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import AuthLayout from '../../components/AuthLayout.jsx';
 import Brand from '../../components/Brand.jsx';
+import AppLink from '../../components/AppLink.jsx';
 import FormField from '../../components/FormField.jsx';
 import { registerCustomer } from './registrationApi.js';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, passwordError, passwordLength } from './passwordPolicy.js';
@@ -57,9 +58,9 @@ export default function RegisterPage() {
       setCreated(true);
     } catch (error) {
       setErrors(Object.fromEntries((error.fieldErrors || []).filter(item => ['fullName', 'email', 'password'].includes(item.field)).map(item => [item.field, item.message])));
-      setMessage(error.name === 'AbortError'
+      setMessage(error.code === 'REQUEST_TIMEOUT'
         ? 'The request timed out. Your account may have been created. Check before trying again.'
-        : error instanceof TypeError ? 'Unable to connect. Check your connection and try again.' : error.message);
+        : error.code === 'NETWORK_ERROR' ? 'Unable to connect. Check your connection and try again.' : error.message);
     } finally {
       submitting.current = false;
       setPending(false);
@@ -68,10 +69,11 @@ export default function RegisterPage() {
     }
   }
   return <AuthLayout><div className="registration-card">
-    <Brand />
+    <AppLink className="auth-brand-link auth-brand-centered" href="/" aria-label="SwiftDrop home"><Brand /></AppLink>
     {created ? <div className="registration-success" ref={feedback} tabIndex="-1" role="status">
-      <span className="success-check" aria-hidden="true">✓</span><h2>Account created</h2>
-      <p>Your customer account is ready. You have not been signed in.</p>
+      <span className="success-check" aria-hidden="true">✓</span><h2>Check your email</h2>
+      <p>Your account was created. Open the verification link in your email before signing in.</p>
+      <p><a href="/verify-email/request">Request another verification link</a></p>
       <p><a href="/login">Continue to login</a></p>
       <button className="primary-button" onClick={() => { setCreated(false); setMessage(''); }}>Back to registration</button>
     </div> : <>

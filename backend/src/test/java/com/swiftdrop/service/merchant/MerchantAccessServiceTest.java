@@ -101,8 +101,8 @@ class MerchantAccessServiceTest {
 
     @Test
     void approvedOwnerResolvesTheirOwnBusiness() {
-        when(identities.requireCurrentIdentity())
-                .thenReturn(new IdentityContext(ownerId, UUID.randomUUID(), Set.of("CUSTOMER"), 1));
+        when(identities.requireCurrentRole(com.swiftdrop.dto.identity.IdentityRole.MERCHANT))
+                .thenReturn(new IdentityContext(ownerId, UUID.randomUUID(), Set.of("MERCHANT"), 1));
         when(merchants.findByOwnerUserId(ownerId)).thenReturn(Optional.of(merchant(true)));
 
         var context = service.requireApprovedOwnerMerchant();
@@ -114,8 +114,8 @@ class MerchantAccessServiceTest {
 
     @Test
     void pendingOwnerIsDeniedAndOwnerWithoutABusinessIsNotFound() {
-        when(identities.requireCurrentIdentity())
-                .thenReturn(new IdentityContext(ownerId, UUID.randomUUID(), Set.of("CUSTOMER"), 1));
+        when(identities.requireCurrentRole(com.swiftdrop.dto.identity.IdentityRole.MERCHANT))
+                .thenReturn(new IdentityContext(ownerId, UUID.randomUUID(), Set.of("MERCHANT"), 1));
         when(merchants.findByOwnerUserId(ownerId)).thenReturn(Optional.of(merchant(false)));
         assertThatThrownBy(service::requireApprovedOwnerMerchant).isInstanceOf(MerchantNotApprovedException.class);
 

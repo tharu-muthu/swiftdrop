@@ -12,6 +12,11 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(AccountSettingsException.class)
+    ResponseEntity<ApiError> accountSettings(AccountSettingsException error) {
+        return ResponseEntity.status(error.status()).body(ApiError.of(error.code(),error.getMessage()));
+    }
+
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
     ResponseEntity<ApiError> missingAuthentication() {
         return ResponseEntity.status(401).body(ApiError.of("UNAUTHORIZED", "Authentication required"));
@@ -27,6 +32,19 @@ public class ApiExceptionHandler {
     @ExceptionHandler({ProfileConflictException.class, org.springframework.orm.ObjectOptimisticLockingFailureException.class})
     ResponseEntity<ApiError> profileConflict() {
         return ResponseEntity.status(409).body(ApiError.of("PROFILE_CONFLICT", "Your profile changed. Reload it before saving again."));
+    }
+    @ExceptionHandler(IdentityRoleConflictException.class)
+    ResponseEntity<ApiError> roleConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ROLE_CHANGE_CONFLICT", "The account or role changed. Reload before trying again."));
+    }
+    @ExceptionHandler(AdminUserNotFoundException.class)
+    ResponseEntity<ApiError> adminUserNotFound() {
+        return ResponseEntity.status(404).body(ApiError.of("USER_NOT_FOUND", "Account not found."));
+    }
+    @ExceptionHandler(AdminUserConflictException.class)
+    ResponseEntity<ApiError> adminUserConflict() {
+        return ResponseEntity.status(409).body(ApiError.of("ACCOUNT_STATUS_CONFLICT",
+                "The account changed or this action would leave no active administrator. Reload before trying again."));
     }
     @ExceptionHandler(WebhookEndpointException.class)
     ResponseEntity<ApiError> webhookEndpoint() {
@@ -52,11 +70,31 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> invalidArgument() {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST", "The request is invalid."));
     }
+    @ExceptionHandler({jakarta.validation.ConstraintViolationException.class,
+            org.springframework.web.method.annotation.HandlerMethodValidationException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingRequestValueException.class})
+    ResponseEntity<ApiError> invalidParameters() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST","Check request parameters and required headers."));
+    }
+    @ExceptionHandler(InvalidResetTokenException.class)
+    ResponseEntity<ApiError> invalidResetToken() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_RESET_TOKEN", "This reset link is invalid or has expired. Request a new link."));
+    }
+    @ExceptionHandler(InvalidVerificationTokenException.class)
+    ResponseEntity<ApiError> invalidVerificationToken() {
+        return ResponseEntity.badRequest().body(ApiError.of("INVALID_VERIFICATION_TOKEN", "This verification link is invalid or has expired. Request a new link."));
+    }
     @ExceptionHandler(IdentityAuthenticationException.class)
     ResponseEntity<ApiError> invalidIdentity(jakarta.servlet.http.HttpServletRequest request) {
         boolean login = request.getRequestURI().equals("/api/v1/auth/login");
         return ResponseEntity.status(401).body(ApiError.of(login ? "INVALID_CREDENTIALS" : "UNAUTHORIZED",
                 login ? "Email or password is incorrect." : "Your session has ended. Please sign in again."));
+    }
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    ResponseEntity<ApiError> emailVerificationRequired() {
+        return ResponseEntity.status(403).body(ApiError.of("EMAIL_VERIFICATION_REQUIRED",
+                "Verify your email before logging in. Check your inbox or request a new link."));
     }
     @ExceptionHandler(RateLimitException.class)
     ResponseEntity<ApiError> throttled(RateLimitException error) {
@@ -82,9 +120,25 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(ApiError.of("INVALID_REQUEST",
                 path.equals("/api/v1/me")
                         ? "Send a JSON object containing only fullName, phone and version."
+                        : path.equals("/api/v1/auth/password-reset/request")
+                        ? "Send a JSON object containing only email."
+                        : path.equals("/api/v1/auth/password-reset/confirm")
+                        ? "Send a JSON object containing only token and password."
+                        : path.equals("/api/v1/auth/email-verification/request")
+                        ? "Send a JSON object containing only email."
+                        : path.equals("/api/v1/auth/email-verification/confirm")
+                        ? "Send a JSON object containing only token."
                         : path.equals("/api/v1/auth/login")
                         ? "Send a JSON object containing only email and password."
-                        : "Send a JSON object containing only fullName, email and password."));
+                        : path.endsWith("/operational-roles")
+                        ? "Send role, grant, reason and expectedVersion."
+                        : path.startsWith("/api/v1/bookings") || path.endsWith("/orders")
+                        ? "Send quoteId, pickup, recipient and parcel details."
+                        : path.startsWith("/api/v1/admin/users/")
+                        ? "Send a JSON object containing only reason and expectedVersion."
+                        : path.equals("/api/v1/auth/register")
+                        ? "Send a JSON object containing only fullName, email and password."
+                        : "Send a valid JSON object with the documented request fields."));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -94,6 +148,9 @@ public class ApiExceptionHandler {
                     && "uq_users_email_normalized".equals(constraint.getConstraintName())) {
                 return ResponseEntity.status(409).body(ApiError.of("REGISTRATION_UNAVAILABLE",
                         "An account could not be created with these details."));
+            }
+            if(cause instanceof java.sql.SQLException sql && "23505".equals(sql.getSQLState())) {
+                return ResponseEntity.status(409).body(ApiError.of("RESOURCE_CONFLICT", "A record with this quote, reference or configuration already exists. Reload before trying again."));
             }
         }
         return internal();

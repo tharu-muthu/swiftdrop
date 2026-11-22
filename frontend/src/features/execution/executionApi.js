@@ -1,5 +1,5 @@
-export function loadAssignedDeliveries(client) {
-  return client.request('/api/v1/courier/deliveries');
+export function loadAssignedDeliveries(client, date) {
+  return client.request(`/api/v1/courier/deliveries${date ? `?date=${encodeURIComponent(date)}` : ''}`);
 }
 
 export function loadDelivery(client, lifecycleId) {

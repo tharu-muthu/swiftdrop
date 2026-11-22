@@ -1,4 +1,8 @@
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 4
   application:
     name: swiftdrop
   # Explicit loading for mvnw spring-boot:run (pom.xml anchors its cwd to backend/).
@@ -48,7 +52,38 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:swiftdrop}
     connection-timeout: 5s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        prefetch: 10
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 1s
+          max-interval: 10s
+          multiplier: 2
+  mail:
+    # SMTP configuration is backend-only; Compose does not provide a local mail server.
+    host: ${SPRING_MAIL_HOST:${MAIL_HOST:localhost}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:1025}}
+    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:}}
+    password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:}}
+    properties:
+      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:${MAIL_SMTP_AUTH:false}}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:${MAIL_SMTP_STARTTLS:false}}
+      mail.smtp.starttls.required: ${SPRING_MAIL_SMTP_STARTTLS_REQUIRED:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
 server:
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+        http-only: true
   port: ${BACKEND_PORT:8081}
   error:
     include-message: never
@@ -61,8 +96,18 @@ logging:
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
     org.hibernate.orm.jdbc.bind: OFF
     org.hibernate.SQL: OFF
+    # HTTP client debug output includes request maps, including login credentials.
+    # Framework DEBUG messages can serialize profile/CSRF request and response bodies.
+    org.springframework.web: INFO
+    org.springframework.http.converter: INFO
+    org.springframework.web.client.RestTemplate: INFO
+    org.springframework.web.HttpLogging: INFO
+    org.springframework.jdbc.core: INFO
 
 swiftdrop:
+  bootstrap:
+    admin-enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
   auth:
     jwt-secret: ${AUTH_JWT_SECRET:}
     issuer: ${AUTH_JWT_ISSUER:https://swiftdrop.local}
@@ -77,3 +122,6 @@ swiftdrop:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     frontend-origin: ${GOOGLE_FRONTEND_ORIGIN:http://127.0.0.1:5173}
+  recovery:
+    frontend-origin: ${RESET_FRONTEND_ORIGIN:http://localhost:8080}
+    from: ${MAIL_FROM:no-reply@swiftdrop.local}

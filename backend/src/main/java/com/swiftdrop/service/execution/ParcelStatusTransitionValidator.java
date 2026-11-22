@@ -10,8 +10,8 @@ final class ParcelStatusTransitionValidator {
     static void validate(ParcelStatus expected, ParcelStatus next, StatusUpdateRequest request) {
         boolean valid = switch (expected) {
             case CREATED -> next == ParcelStatus.PICKED_UP;
-            case PICKED_UP -> next == ParcelStatus.IN_TRANSIT;
-            case IN_TRANSIT -> next == ParcelStatus.OUT_FOR_DELIVERY;
+            case PICKED_UP -> next == ParcelStatus.IN_TRANSIT || next == ParcelStatus.FAILED;
+            case IN_TRANSIT -> next == ParcelStatus.OUT_FOR_DELIVERY || next == ParcelStatus.FAILED;
             case OUT_FOR_DELIVERY -> next == ParcelStatus.DELIVERED || next == ParcelStatus.FAILED;
             case DELIVERED, FAILED -> false;
         };

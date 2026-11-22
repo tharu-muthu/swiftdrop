@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { navigate } from '../../app/navigation.js';
 import { ApiError } from '../identity/apiClient.js';
-import { loadPublicTracking, trackingEventsUrl } from './trackingApi.js';
+import { loadPublicTracking, trackingEventsUrl, acceptTrackingSnapshot } from './trackingApi.js';
+import Brand from '../../components/Brand.jsx';
+import PortalShell from '../../components/PortalShell.jsx';
 import './tracking.css';
+import { deliveryStatus } from '../../app/deliveryStatus.js';
 
-export default function PublicTrackingPage({ trackingNumber = '' }) {
+export default function PublicTrackingPage({ trackingNumber = '', inPortal = false }) {
   const [value, setValue] = useState(trackingNumber);
   const [tracking, setTracking] = useState(null);
   const [error, setError] = useState('');
@@ -26,6 +29,7 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
     let active = true;
     let source;
     let reconnectTimer;
+    const acceptSnapshot=next=>setTracking(current=>acceptTrackingSnapshot(current,next));
     setLoading(true);
     setConnection('connecting');
     setError('');
@@ -35,28 +39,32 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
       source.addEventListener('tracking-update', event => {
         if (!active) return;
         try {
-          setTracking(JSON.parse(event.data));
+          acceptSnapshot(JSON.parse(event.data));
           setConnection('live');
           setError('');
         } catch {
           setError('Received an invalid tracking update.');
         }
       });
+      const reconnect = () => {
+        if (!active) return;
+        reconnectTimer = window.setTimeout(() => {
+          loadPublicTracking(trackingNumber).then(result => {
+            if (!active) return;
+            acceptSnapshot(result);
+            connect();
+          }).catch(() => { if (active) { setConnection('reconnecting'); reconnect(); } });
+        }, 3000);
+      };
       source.onerror = () => {
         source.close();
         if (!active) return;
         setConnection('reconnecting');
-        reconnectTimer = window.setTimeout(() => {
-          loadPublicTracking(trackingNumber).then(result => {
-            if (!active) return;
-            setTracking(result);
-            connect();
-          }).catch(() => { if (active) setConnection('reconnecting'); });
-        }, 3000);
+        reconnect();
       };
     };
     loadPublicTracking(trackingNumber)
-      .then(result => { if (active) { setTracking(result); connect(); } })
+      .then(result => { if (active) { acceptSnapshot(result); connect(); } })
       .catch(result => {
         if (active) {
           setConnection('offline');
@@ -73,7 +81,7 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
 
   function submit(event) {
     event.preventDefault();
-    const next = value.trim();
+    const next = value.trim().toUpperCase();
     if (!next) {
       setError('Enter a tracking number.');
       return;
@@ -96,22 +104,15 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
     await copyLink();
   }
 
-  return <main className="tracking-page">
-    <header className="tracking-header">
-      <button className="tracking-brand" onClick={() => navigate('/tracking')} aria-label="SwiftDrop tracking home">
-        Swift<span>Drop</span>
-      </button>
-      <span className="tracking-eyebrow">Parcel tracking</span>
-    </header>
-    <section className="tracking-card">
+  const content = <section className="tracking-card">
       <p className="tracking-eyebrow">Follow your delivery</p>
-      <h1>Track a parcel</h1>
+      {inPortal ? <h2>Track a parcel</h2> : <h1>Track a parcel</h1>}
       <p className="tracking-intro">Enter the tracking number to see the latest committed delivery status.</p>
       <form className="tracking-search" onSubmit={submit}>
         <label htmlFor="tracking-number">Tracking number</label>
         <div>
           <input id="tracking-number" value={value} onChange={event => setValue(event.target.value)}
-            placeholder="e.g. SD-20261107-A8K4P2" autoComplete="off" />
+            placeholder="e.g. SDP-A8K4P2M7Q9" autoComplete="off" maxLength={40} />
           <button type="submit" disabled={loading}>Track parcel</button>
         </div>
       </form>
@@ -120,7 +121,7 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
       {tracking && !loading && <section className="tracking-result" aria-live="polite">
         <div className="tracking-result-heading">
           <div><p className="tracking-eyebrow">Tracking number</p><h2>{tracking.trackingNumber}</h2></div>
-          <strong className={`tracking-status ${tracking.currentStatus.toLowerCase()}`}>{tracking.currentStatus.replaceAll('_', ' ')}</strong>
+          <strong className={`tracking-status ${deliveryStatus(tracking.currentStatus, tracking.assigned).className}`}>{deliveryStatus(tracking.currentStatus, tracking.assigned).label}</strong>
         </div>
         <p className="tracking-updated">Last updated {new Date(tracking.lastUpdatedAt).toLocaleString()}</p>
         <p className="tracking-connection" role="status">Live updates: {connection}</p>
@@ -135,6 +136,13 @@ export default function PublicTrackingPage({ trackingNumber = '' }) {
           <button type="button" onClick={shareLink}>Share tracking link</button>
         </div>
       </section>}
-    </section>
+    </section>;
+  if (inPortal) return <PortalShell title="Track parcel" activePath="/tracking" contentClassName="tracking-page tracking-in-portal">{content}</PortalShell>;
+  return <main className="tracking-page">
+    <header className="tracking-header">
+      <button className="tracking-brand" onClick={() => navigate('/tracking')} aria-label="SwiftDrop tracking home"><Brand /></button>
+      <span className="tracking-eyebrow">Parcel tracking</span>
+    </header>
+    {content}
   </main>;
 }

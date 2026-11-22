@@ -1,5 +1,7 @@
 # Shared identity integration: Member 1 handoff
 
+Role changes and first-admin setup are described in [the identity role handoff](identity-role-handoff.md).
+
 ## Available now
 
 One Spring application, one shared schema. Backend features inject the Java
@@ -11,7 +13,8 @@ repositories, copy session validation or create parallel user tables.
 | --- | --- | --- |
 | `requireCurrentIdentity()` | Any authenticated application user. Returns current `IdentityContext(userId, sessionId, roles, authorizationVersion)`. | Missing/wrong principal: authentication exception; inactive/revoked/expired/version mismatch: identity authentication exception. |
 | `requireCurrentRole(IdentityRole role)` | Current authenticated user must have the requested role. Returns the current context. Multiple-role users are supported. | Missing role: `AccessDeniedException`. |
-| `requireActiveCourier(UUID userId)` | Current active `DISPATCHER_ADMIN` only. Returns `AccountSummary(id, fullName, active, roles)` for an active COURIER account. | Unauthorized caller: denied before target lookup. Missing/inactive/non-courier target: same access-denied failure. |
+| `requireActiveCourier(UUID userId)` | Current active `DISPATCHER_ADMIN` only. Returns `AccountSummary(id, fullName, active, roles)` for an active, verified COURIER account. | Unauthorized caller: denied before target lookup. Missing/inactive/unverified/non-courier target: same access-denied failure. |
+| `eligibleCourierIds(Collection<UUID> candidateIds)` | Current active `DISPATCHER_ADMIN` only. Returns immutable IDs among the candidates that are active, verified and currently have COURIER role. M5 combines these with its own operational profile state. | Unauthorized caller: denied before lookup, including empty inputs. Null input is invalid. Ineligible targets are omitted; DB failures propagate. |
 
 Roles: `CUSTOMER`, `MERCHANT`, `COURIER`, `DISPATCHER_ADMIN`. Checks reload live
 account/session/version/role state through existing identity services. The
@@ -73,6 +76,13 @@ checking the M5-owned courier profile, availability, capacity and assignment.
 The selected courier ID is a TARGET, never the acting user. M5 still authorizes
 the dispatch operation and enforces its own resource constraints.
 
+For a selector, pass operational-profile IDs to `eligibleCourierIds` in one bulk
+read, then exclude unavailable/inactive profiles. Do not catch per-account
+authorization exceptions inside the dispatch transaction to build a list: an
+exception can mark the shared transaction rollback-only. Eligibility lists are
+snapshots, so assignment must still call `requireActiveCourier` at submission.
+See [dispatch monitoring](dispatch-monitoring.md).
+
 New APIs remain denied by default. Coordinate the exact method/path permission
 in `SecurityConfig` with M1 and add HTTP security tests. Do not use broad
 `permitAll`, disable CSRF or create a public account-directory endpoint.
@@ -104,16 +114,10 @@ Never put tokens in localStorage, VITE variables, screenshots or logs.
 
 ## Pending: do not implement workarounds
 
-- No general user directory, account administration or profile-update contract.
-- No role grant/revoke API. M2 must agree an approval-to-role operation with M1;
-  merchant approval remains M2-owned. MERCHANT role alone does not prove approval.
-- No first-admin or courier account provisioning procedure is supplied here.
-  Automated fixtures grant roles only in disposable test databases. Never seed a
-  default admin password or manually edit production role tables to unblock a demo.
-- Future role/status mutations must authorize the actor, lock user before session,
-  update authorization version, revoke sessions and append safe audit records in
-  the same transaction. Define the M2 transaction boundary before implementing it.
-- Password recovery, Google linking and business features remain separate work.
+- No general user directory, suspension/reactivation flow or public role-revoke endpoint is published yet. M2 has an in-process merchant revocation method for its future suspension transition.
+- Merchant approval now calls the M1 role-grant service in the same transaction. MERCHANT role alone does not prove approval; M2's approval state remains authoritative.
+- One-time first-admin bootstrap and admin-only courier-role provisioning are documented in [the role handoff](identity-role-handoff.md). Never seed a default password or edit production role tables by hand.
+- Explicit Google account linking remains separate work.
 
 ## Team handoff checklist
 

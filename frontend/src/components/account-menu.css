@@ -1,0 +1,31 @@
+.account-dropdown{position:relative;flex:none;max-width:45%}
+.account-dropdown-trigger{display:flex;align-items:center;gap:10px;padding:5px 8px;min-height:50px;max-width:100%;background:transparent;color:var(--sd-text);border:1px solid transparent;border-radius:8px;text-align:left}
+.account-dropdown-trigger:hover,.account-dropdown-trigger[aria-expanded=true]{background:var(--sd-background);border-color:var(--sd-border)}
+.account-dropdown-trigger .portal-person{min-width:0}
+.account-dropdown-trigger .portal-person strong,.account-dropdown-trigger .portal-person small{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-dropdown-chevron{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;transition:transform 150ms}
+.account-dropdown-trigger[aria-expanded=true] .account-dropdown-chevron{transform:rotate(180deg)}
+.account-dropdown-panel{position:absolute;right:0;top:calc(100% + 12px);z-index:10;width:350px;max-width:calc(100vw - 32px);background:white;border:1px solid var(--sd-border);border-radius:var(--sd-radius);box-shadow:0 16px 44px #0619381f;overflow:hidden}
+.account-dropdown-summary{display:flex;align-items:flex-start;gap:14px;padding:22px;background:var(--sd-background);border-bottom:1px solid var(--sd-border)}
+.account-dropdown-summary>.portal-avatar{width:48px;height:48px;background:white;color:var(--sd-navy-end);border:1px solid var(--sd-border)}
+.account-dropdown-summary>div{min-width:0;flex:1}
+.account-dropdown-summary strong{display:block;font-size:16px;font-weight:650;overflow-wrap:anywhere}
+.account-dropdown-email{display:block;color:var(--sd-muted);font-size:13px;margin-top:3px;overflow-wrap:anywhere}
+.account-dropdown-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.account-dropdown-roles span{font-size:11px;font-weight:600;border-radius:20px;padding:3px 9px;background:var(--sd-tint);color:var(--sd-primary-hover);border:1px solid var(--sd-border)}
+.account-dropdown-panel [role=menuitem]{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:16px 22px;font:inherit;font-weight:500;border:0;border-radius:0;background:white;color:var(--sd-text);text-align:left;text-decoration:none;justify-content:flex-start}
+.account-dropdown-panel [role=menuitem]:hover,.account-dropdown-panel [role=menuitem]:focus-visible{background:var(--sd-tint)}
+.account-dropdown-panel [role=menuitem]:focus-visible{outline:2px solid var(--sd-primary);outline-offset:-3px}
+.account-dropdown-panel [role=menuitem]>svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.account-dropdown-panel .account-dropdown-next{margin-left:auto;width:16px}
+.account-dropdown-panel .account-dropdown-signout{border-top:1px solid var(--sd-border);color:var(--sd-danger)}
+.account-dropdown-panel .account-dropdown-signout:hover,.account-dropdown-panel .account-dropdown-signout:focus-visible{background:var(--sd-danger-tint)}
+.account-dropdown-panel button:disabled{opacity:.55;cursor:wait}
+.account-dropdown-error{margin:0;padding:12px 22px;background:var(--sd-danger-tint);color:var(--sd-danger);font-size:13px}
+@media(max-width:760px){.account-dropdown{max-width:none}.account-dropdown-trigger{padding:4px;min-height:44px}.account-dropdown-chevron{display:none}.account-dropdown-panel{width:320px}.account-dropdown-summary{padding:18px}.account-dropdown-panel [role=menuitem]{padding:16px 18px}}
+@media(prefers-reduced-motion:reduce){.account-dropdown-chevron{transition:none}}
+
+.account-portal-options{padding:4px 12px 10px;background:var(--sd-background)}
+.account-dropdown-panel .account-portal-options [role=menuitem]{min-height:44px;padding:12px 16px;border-radius:6px;background:transparent;font-size:13px}
+.account-dropdown-panel .account-portal-options [aria-current=true]{background:var(--sd-tint);color:var(--sd-primary-hover);font-weight:650}
+.account-portal-options small{margin-left:auto;font-size:10px;color:var(--sd-muted)}

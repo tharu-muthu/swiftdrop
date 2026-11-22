@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAuthClient } from './apiClient.js';
+import { ApiError, createAuthClient, jsonRequest } from './apiClient.js';
 
 const profile = { id: 'fixture', fullName: 'Test Account', email: 'test@example.test', roles: ['CUSTOMER'] };
 const reply = (data, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
@@ -18,6 +18,26 @@ const calls = (fetch, url) => fetch.mock.calls.filter(call => call[0] === url);
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 
 describe('in-memory authentication client', () => {
+  it('classifies timeout and network failures for safe UI recovery', async () => {
+    const timeout = new DOMException('timed out', 'AbortError');
+    await expect(jsonRequest('/api/v1/test', {}, vi.fn().mockRejectedValue(timeout)))
+      .rejects.toMatchObject({ code: 'REQUEST_TIMEOUT', status: 0 });
+    await expect(jsonRequest('/api/v1/test', {}, vi.fn().mockRejectedValue(new TypeError('offline'))))
+      .rejects.toMatchObject({ code: 'NETWORK_ERROR', status: 0 });
+    expect(new ApiError('x')).toBeInstanceOf(Error);
+  });
+
+  it('clears memory and informs other tabs after a confirmed server security change without another logout request', async () => {
+    const fetch = server(url => url.endsWith('refresh') ? token('access-one') : reply(profile));
+    const channel = { postMessage: vi.fn() };
+    const client = createAuthClient({ fetchImpl: fetch, locks: serialLocks(), channel });
+    await client.bootstrap();
+    client.endLocalSession();
+    expect(client.getSnapshot()).toMatchObject({ status: 'anonymous', user: null });
+    expect(channel.postMessage).toHaveBeenCalledWith({ type: 'identity-changed' });
+    expect(calls(fetch, '/api/v1/auth/logout')).toHaveLength(0);
+    await expect(client.request('/api/v1/me')).rejects.toMatchObject({ status: 401 });
+  });
   it('bootstraps once with refresh then me and does not use browser token storage', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem');
     const fetch = server(url => url.endsWith('refresh') ? token('access-one') : reply(profile));

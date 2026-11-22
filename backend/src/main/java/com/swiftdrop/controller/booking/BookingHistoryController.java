@@ -28,7 +28,7 @@ public class BookingHistoryController {
     }
 
     @GetMapping("/api/v1/bookings/{bookingId}")
-    public ResponseEntity<BookingHistoryItem> detail(@PathVariable UUID bookingId) {
+    public ResponseEntity<BookingDetailsResponse> detail(@PathVariable UUID bookingId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(history.detail(bookingId));
     }
 }

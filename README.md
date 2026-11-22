@@ -1,7 +1,15 @@
 # SwiftDrop
 
+The customer, merchant, dispatch, courier, tracking, notification and webhook
+workflows are now connected. Use the [integrated system guide](docs/full-system-implementation.md)
+for the demonstration order, new screens, API contracts, queues and migration notes.
+
 Teammates: start with the [identity integration handoff](contracts/identity-services.md)
 before adding authenticated feature endpoints or calling identity services.
+For administrator setup, merchant approval grants and courier onboarding, use the
+[role handoff](contracts/identity-role-handoff.md).
+Administrators can use [user management](contracts/identity-admin-users.md) at `/admin/users`
+to search accounts, suspend or reactivate them, and manage permitted roles with an audited reason.
 Use the [team quick start](docs/team-onboarding.md) for Docker setup, private
 configuration and the first feature PR.
 
@@ -9,11 +17,16 @@ Team onboarding and collaboration: see [the team development guide](docs/team-de
 for Docker setup, private configuration, feature branches, PRs into `dev`, migration
 coordination and the current Google/Docker readiness limitations.
 
-Customer registration, password login/logout, rotating refresh sessions and safe
-profile reads now work end to end. Open `/register`, `/login` and `/account`.
+Customer registration, password login/logout, rotating refresh sessions, profile
+management and password recovery are implemented. Open `/register`, `/login`,
+`/profile` and `/forgot-password`.
+The email-verification branch adds a required inbox proof for password accounts.
+**Do not start its backend against shared Neon until mail delivery is verified:**
+existing password users must verify before they can sign in again. See the
+[email-verification rollout guide](contracts/identity-email-verification.md).
 See [authentication setup and request flow](docs/identity/sessions.md) and the
-[current API contract](contracts/identity-sessions.md). Google, recovery, admin
-and other business features remain future work.
+[current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
+Administrator controls now include guarded courier/administrator grants and revocation.
 
 **New setup step:** from the root run
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
@@ -25,7 +38,7 @@ preserving Neon credentials. For full Compose use `-Compose` instead.
 ```text
 Browser (React) -> /api proxy -> Spring Security -> Controller -> Service
                                                                -> Repository -> PostgreSQL
-                               One Java application            -> RabbitMQ (future async work)
+                               One Java application            -> RabbitMQ (committed parcel events)
 ```
 
 Controllers handle HTTP, services apply business rules, and repositories access
@@ -133,7 +146,14 @@ without quotes, spaces or `$`. Never commit `.env`; never put credentials in
 `VITE_*` variables, which would expose them to browsers.
 
 The database is hosted in Neon; no local PostgreSQL container or password is
-needed. No Google client ID, JWT key, mail account or merchant key is needed yet.
+needed. Verification and password-reset messages use the real SMTP provider configured in
+private `backend/.env`. Fill the `SPRING_MAIL_*` and `MAIL_FROM` placeholders in
+`backend/.env.example` using your own sending account. See
+[real SMTP setup](contracts/identity-password-recovery.md#real-gmail-delivery).
+No local mail inbox is included. After changing private settings, recreate the
+backend with `docker compose up --detach --force-recreate --wait backend`.
+If upgrading from the previous local-mail setup, run
+`docker compose up --detach --remove-orphans --wait` to remove the old mail container.
 
 ## 2A. Run the application with Neon and RabbitMQ
 
@@ -188,7 +208,7 @@ FROM swiftdrop.flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-Expect successful V1 through V7 entries. Health reports **application liveness**; it
+Expect successful V1 through V13 entries when the account-settings migration is coordinated, or V1 through V12 before that migration is rolled out. Health reports **application liveness**; it
 does not probe broker availability or assert that business integrations work.
 
 Useful commands:
@@ -330,8 +350,10 @@ automatically during startup, so choose your development branch before launching
 See [the identity schema guide](docs/identity/schema.md) for guard limits and exact
 environment loading; private files are preserved.
 
-Expected startup: Flyway applies/validates V1 through V7, Hibernate validates the
-identity, merchant, execution, and webhook tables, followed by `Started SwiftDropApplication`.
+Expected startup: Flyway applies and validates the migrations present in
+`backend/src/main/resources/db/migration/` (currently V1 through V13), Hibernate
+validates the identity, merchant, execution, booking, pricing and webhook tables,
+followed by `Started SwiftDropApplication`.
 Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
 `{"status":"UP","application":"swiftdrop"}`. Run the frontend as shown in 2B;
 it communicates only with the backend API and needs no Neon information.
@@ -423,6 +445,53 @@ reserved by the team and must not be reused.
 
 The team still needs lecturer approval for nine rather than ten members, member
 names/IDs, deadline and hosting decisions. The assignment found beside this
-repository was copied unchanged into `docs/reference/` for teammates. Later
-Google, JWT, provider and deployment secrets belong to their feature/deployment
-tasks. This repository foundation does not fulfill the complete assignment yet.
+repository was copied unchanged into `docs/reference/` for teammates. The current
+branch contains the connected M1–M9 workflows described above. Google
+provider credentials, SMTP/SMS provider credentials, shared-Neon rollout, hosting,
+TLS and the optional Kubernetes/AI bonus remain deployment or team-delivery work.
+
+## Role workspaces
+
+After sign-in, open `/workspaces` to choose among assigned roles. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
+
+The [assignment RBAC matrix](docs/identity/rbac-assignment-review.md) documents role and ownership rules. Courier deliveries now have a Sri Lankan workday filter with unfinished carryover; reassignment stops after pickup.
+
+
+### Profile security and saved addresses
+
+`/account` now includes verified email change, password change/set-password,
+email verification status and an owned saved-address book. Booking pickup and
+recipient forms can copy a saved address into their draft without linking or
+rewriting earlier bookings. See [the account-settings contract](contracts/identity-account-settings.md)
+for API fields, step-up checks, revocation and migration coordination.
+
+Coordinate the new **V13** migration before applying it to a shared Neon branch.
+Existing SMTP credentials are reused. Google-only security changes require
+Google authentication-time metadata and recent provider authentication; missing
+or stale signed claims are rejected. Follow the [Google OIDC reference](https://developers.google.com/identity/openid-connect/reference)
+for the `auth_time` claim and check it with your configured Google project.
+
+With Docker Desktop running, validate from the repository root:
+
+```powershell
+npm.cmd --prefix frontend test
+npm.cmd --prefix frontend run build
+.\backend\mvnw.cmd -f backend/pom.xml -Pintegration verify
+```
+
+For a focused new backend integration run:
+
+```powershell
+.\backend\mvnw.cmd -f backend/pom.xml -Pintegration -Dit.test=AccountSettingsIT verify
+```
+
+After tests and shared-migration/SMTP coordination, rebuild both applications:
+
+```powershell
+docker compose up --build --detach --wait
+```
+
+The current source has been checked with the frontend test suite, frontend build,
+and backend Maven compilation. Run the Docker-backed integration profile before
+submission because it requires the local Docker engine and disposable
+PostgreSQL/RabbitMQ containers.

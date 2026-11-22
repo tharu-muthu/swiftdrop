@@ -55,6 +55,7 @@ class IdentityAccountServiceTest {
         authenticate(Set.of("DISPATCHER_ADMIN"));
         var user = mock(User.class);
         when(users.findById(target)).thenReturn(Optional.of(user));
+        when(user.isEmailVerified()).thenReturn(true);
         when(user.isActive()).thenReturn(true); when(user.getId()).thenReturn(target); when(user.getFullName()).thenReturn("Courier");
         var mutable = new HashSet<>(Set.of("CUSTOMER", "COURIER")); when(roles.namesForUser(target)).thenReturn(mutable);
         var summary = service.requireActiveCourier(target); mutable.clear();
@@ -70,5 +71,20 @@ class IdentityAccountServiceTest {
         assertThatThrownBy(() -> service.requireActiveCourier(target)).hasMessage("Courier account is unavailable");
         when(user.isActive()).thenReturn(true); when(roles.namesForUser(target)).thenReturn(Set.of("CUSTOMER"));
         assertThatThrownBy(() -> service.requireActiveCourier(target)).hasMessage("Courier account is unavailable");
+    }
+    @Test void courierEligibilityCannotBeUsedByCustomersToEnumerateAccounts() {
+        authenticate(Set.of("CUSTOMER"));
+        assertThatThrownBy(()->service.eligibleCourierIds(List.of(target))).isInstanceOf(AccessDeniedException.class);
+        verifyNoInteractions(users,roles);
+    }
+    @Test void courierEligibilityReturnsAnImmutableCurrentResultAndHandlesNoCandidates() {
+        authenticate(Set.of("DISPATCHER_ADMIN"));
+        assertThat(service.eligibleCourierIds(List.of())).isEmpty();
+        verifyNoInteractions(users,roles);
+        var eligible=new HashSet<>(Set.of(target));
+        when(users.eligibleCourierIds(Set.of(target))).thenReturn(eligible);
+        var result=service.eligibleCourierIds(List.of(target,target)); eligible.clear();
+        assertThat(result).containsExactly(target);
+        assertThatThrownBy(()->result.clear()).isInstanceOf(UnsupportedOperationException.class);
     }
 }

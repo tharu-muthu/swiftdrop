@@ -17,10 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingHistoryService {
     private final IdentityAccountService identities;
     private final ParcelBookingRepository bookings;
+    private final com.swiftdrop.service.execution.LifecycleReadService lifecycles;
 
-    public BookingHistoryService(IdentityAccountService identities, ParcelBookingRepository bookings) {
+    public BookingHistoryService(IdentityAccountService identities, ParcelBookingRepository bookings,com.swiftdrop.service.execution.LifecycleReadService lifecycles) {
         this.identities = identities;
         this.bookings = bookings;
+        this.lifecycles=lifecycles;
     }
 
     public BookingHistoryResponse history(String search, String bookingState, LocalDate fromDate, LocalDate toDate,
@@ -29,26 +31,31 @@ public class BookingHistoryService {
         var result = bookings.findHistory(customer.userId(), normalized(search), normalizedState(bookingState),
                 startOfDay(fromDate), startOfFollowingDay(toDate),
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
-        long pending = result.getContent().stream().filter(booking -> isPending(booking.getBookingState())).count();
         // The summary's total must not change with the table filters; it reflects all owned records.
         var all = bookings.findHistory(customer.userId(), null, null, null, null, Pageable.unpaged());
-        long allPending = all.getContent().stream().filter(booking -> isPending(booking.getBookingState())).count();
-        return new BookingHistoryResponse(result.map(this::item).getContent(),
-                new BookingHistorySummary(all.getTotalElements(), allPending, false), result.getNumber(), result.getSize(),
+        var states=lifecycles.statuses(all.getContent().stream().map(row->row.getId()).toList());
+        var lifecycleRows = lifecycles.summaries(all.getContent().stream().map(row -> row.getId()).toList());
+        long allPending = all.getContent().stream().filter(booking -> isPending(booking.getBookingState()))
+                .filter(row->!java.util.Set.of("DELIVERED","FAILED").contains(states.getOrDefault(row.getId(),"CREATED"))).count();
+        return new BookingHistoryResponse(result.map(row->item(row,lifecycleRows.get(row.getId()))).getContent(),
+                new BookingHistorySummary(all.getTotalElements(), allPending, true,
+                        states.values().stream().filter(state->java.util.Set.of("PICKED_UP","IN_TRANSIT","OUT_FOR_DELIVERY").contains(state)).count(),
+                        states.values().stream().filter("DELIVERED"::equals).count()), result.getNumber(), result.getSize(),
                 result.getTotalPages(), result.getTotalElements());
     }
 
-    public BookingHistoryItem detail(UUID bookingId) {
+    public BookingDetailsResponse detail(UUID bookingId) {
         var customer = identities.requireCurrentRole(IdentityRole.CUSTOMER);
         var booking = bookings.findById(bookingId).orElseThrow(() -> new AccessDeniedException("Access denied"));
-        if (!booking.getCustomerId().equals(customer.userId())) throw new AccessDeniedException("Access denied");
-        return item(booking);
+        if (!customer.userId().equals(booking.getCustomerId())) throw new AccessDeniedException("Access denied");
+        return new BookingDetailsResponse(item(booking,lifecycles.summaries(java.util.List.of(bookingId)).get(bookingId)),BookingReadService.snapshot(booking));
     }
 
-    private BookingHistoryItem item(ParcelBooking booking) {
+    private BookingHistoryItem item(ParcelBooking booking, com.swiftdrop.dto.execution.LifecycleSnapshot lifecycle) {
         return new BookingHistoryItem(booking.getId(), booking.getTrackingNumber(), booking.getRecipientName(),
                 booking.getRecipientPhone(), booking.getPickupCity(), booking.getDeliveryCity(), booking.getCreatedAt(),
-                booking.getQuotedAmountMinor(), booking.getCurrencyCode(), booking.getBookingState());
+                booking.getQuotedAmountMinor(), booking.getCurrencyCode(), booking.getBookingState(),
+                lifecycle == null ? null : lifecycle.status().name(), lifecycle != null && lifecycle.courierId() != null);
     }
     private static String normalized(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private static String normalizedState(String value) {

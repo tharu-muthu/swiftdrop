@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './AuthProvider.jsx';
 import LoginPage from './LoginPage.jsx';
 
@@ -10,12 +10,17 @@ function setup(login = vi.fn()) {
   return client;
 }
 describe('password login screen', () => {
-  it('uses neutral wording, accessible visibility and registration navigation', () => {
+  beforeEach(()=>vi.stubGlobal('fetch',vi.fn().mockResolvedValue({ok:true,json:async()=>({googleEnabled:true})})));
+  afterEach(()=>vi.unstubAllGlobals());
+  it('uses neutral wording, accessible visibility and registration navigation', async () => {
     setup(); expect(screen.getByText('Log in to your SwiftDrop account')).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'SwiftDrop home' })).toHaveLength(2);
+    screen.getAllByRole('link', { name: 'SwiftDrop home' }).forEach(link => expect(link).toHaveAttribute('href', '/'));
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/register');
+    expect(screen.queryByRole('link', { name: /Resend.*link/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('button', { name: 'Continue with Google' }))
+    expect(await screen.findByRole('button', { name: 'Continue with Google' }))
       .toHaveAttribute('href', '/oauth2/authorization/google');
   });
   it('announces generic login errors without changing the password', async () => {
@@ -25,6 +30,16 @@ describe('password login screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
     expect(login).toHaveBeenCalledWith('Person@example.test', ' exact password ');
+    expect(screen.queryByRole('link', { name: /Resend.*link/ })).not.toBeInTheDocument();
+  });
+  it('offers verification only after the server requires it and clears it when the email changes', async () => {
+    setup(vi.fn().mockRejectedValue({ code: 'EMAIL_VERIFICATION_REQUIRED', message: 'Verify your email before logging in.' }));
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'unverified@example.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
+    expect(await screen.findByRole('link', { name: 'Resend verification link' })).toHaveAttribute('href', '/verify-email/request');
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'other@example.test' } });
+    expect(screen.queryByRole('link', { name: 'Resend verification link' })).not.toBeInTheDocument();
   });
   it('requires both fields and prevents repeated submission while pending', async () => {
     let finish; const login = vi.fn(() => new Promise(resolve => { finish = resolve; })); setup(login);
@@ -35,5 +50,6 @@ describe('password login screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
     expect(screen.getByRole('button', { name: 'Logging in…' })).toBeDisabled();
     finish(); expect(await screen.findByRole('button', { name: 'Log in', exact: true })).toBeEnabled();
+    expect(window.location.pathname).toBe('/workspaces');
   });
 });

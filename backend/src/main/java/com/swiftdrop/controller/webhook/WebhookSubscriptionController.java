@@ -58,4 +58,8 @@ public class WebhookSubscriptionController {
     public ResponseEntity<WebhookTestDeliveryResponse> test(@PathVariable UUID id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(webhooks.sendTest(id));
     }
+    @GetMapping("/api/v1/merchant/webhooks/{id}/deliveries/{deliveryId}/attempts")
+    public ResponseEntity<List<WebhookAttemptResponse>> attempts(@PathVariable UUID id,@PathVariable UUID deliveryId) { return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(webhooks.attempts(id,deliveryId)); }
+    @PostMapping("/api/v1/merchant/webhooks/{id}/deliveries/{deliveryId}/retry")
+    public ResponseEntity<WebhookDeliveryResponse> retry(@PathVariable UUID id,@PathVariable UUID deliveryId) { return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(webhooks.retry(id,deliveryId)); }
 }

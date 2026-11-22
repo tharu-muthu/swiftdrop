@@ -1,21 +1,30 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './AuthProvider.jsx';
 import AccountPage from './AccountPage.jsx';
 
 const user = { fullName: 'Alex Perera', email: 'alex@example.test', phone: null,
   roles: ['CUSTOMER'], active: true, createdAt: '2026-11-01T00:00:00Z', version: 2,
-  passwordConfigured: true, googleConnected: false };
+  passwordConfigured: true, googleConnected: false, emailVerified: true };
 
 function setup(updateProfile = vi.fn(), reloadProfile = vi.fn()) {
   const state = { status: 'authenticated', user, error: '' };
   const client = { subscribe: () => () => {}, getSnapshot: () => state, bootstrap: vi.fn(),
-    updateProfile, reloadProfile, logout: vi.fn() };
+    updateProfile, reloadProfile, logout: vi.fn(), request: vi.fn().mockResolvedValue([]) };
   render(<AuthProvider client={client}><AccountPage /></AuthProvider>);
   return client;
 }
 
 describe('profile page', () => {
+  it('groups address management under personal information and security changes under sign-in', () => {
+    setup();
+    const personal = screen.getByRole('region', { name: 'Personal information' });
+    const security = screen.getByRole('region', { name: 'Security & sign-in' });
+    expect(within(personal).getByRole('heading', { name: 'Saved addresses' })).toBeInTheDocument();
+    expect(within(security).getByText('Change email', { selector: 'summary' })).toBeInTheDocument();
+    expect(within(security).getByText('Change password', { selector: 'summary' })).toBeInTheDocument();
+    expect(within(personal).queryByText('Change password', { selector: 'summary' })).not.toBeInTheDocument();
+  });
   it('shows only safe account details and makes email and roles read-only', () => {
     setup();
     expect(screen.getAllByText('Alex Perera').length).toBeGreaterThan(0);

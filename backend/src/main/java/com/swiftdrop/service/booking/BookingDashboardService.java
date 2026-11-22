@@ -12,16 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingDashboardService {
     private final IdentityAccountService identities;
     private final ParcelBookingRepository bookings;
+    private final com.swiftdrop.service.execution.LifecycleReadService lifecycles;
 
-    public BookingDashboardService(IdentityAccountService identities, ParcelBookingRepository bookings) {
+    public BookingDashboardService(IdentityAccountService identities, ParcelBookingRepository bookings,com.swiftdrop.service.execution.LifecycleReadService lifecycles) {
         this.identities = identities;
         this.bookings = bookings;
+        this.lifecycles=lifecycles;
     }
 
     public BookingDashboardSummary summary() {
         var customer = identities.requireCurrentRole(IdentityRole.CUSTOMER);
         var aggregate = bookings.dashboardForCustomer(customer.userId());
-        return new BookingDashboardSummary(aggregate.getActiveBookings(), aggregate.getPendingReceipts(),
+        var all=bookings.findHistory(customer.userId(),null,null,null,null,org.springframework.data.domain.Pageable.unpaged()).getContent();
+        var statuses=lifecycles.statuses(all.stream().map(row->row.getId()).toList());
+        long active=all.stream().filter(row->!"CANCELLED".equals(row.getBookingState()))
+                .filter(row->!java.util.Set.of("DELIVERED","FAILED").contains(statuses.getOrDefault(row.getId(),"CREATED"))).count();
+        long delivered=all.stream().filter(row -> "DELIVERED".equals(statuses.get(row.getId()))).count();
+        return new BookingDashboardSummary(active, delivered, aggregate.getPendingReceipts(),
                 aggregate.getThisMonthShipments());
     }
 }

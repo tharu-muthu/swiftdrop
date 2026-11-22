@@ -14,13 +14,16 @@ public class TrackingSseService {
 
     public SseEmitter subscribe(String trackingNumber, PublicTrackingResponse current) {
         var emitter = new SseEmitter(30 * 60 * 1000L);
+        if(subscribers.size()>=1000 && !subscribers.containsKey(trackingNumber)) throw new com.swiftdrop.exception.RateLimitException(60);
         var listeners = subscribers.computeIfAbsent(trackingNumber, ignored -> new CopyOnWriteArraySet<>());
+        if(listeners.size()>=50) throw new com.swiftdrop.exception.RateLimitException(60);
         listeners.add(emitter);
         emitter.onCompletion(() -> remove(trackingNumber, emitter));
         emitter.onTimeout(() -> remove(trackingNumber, emitter));
+        emitter.onError(error -> remove(trackingNumber, emitter));
         try {
             emitter.send(SseEmitter.event().name("tracking-update").data(current));
-        } catch (IOException error) {
+        } catch (IOException | IllegalStateException error) {
             remove(trackingNumber, emitter);
             emitter.completeWithError(error);
         }
@@ -36,7 +39,7 @@ public class TrackingSseService {
     private void send(String trackingNumber, SseEmitter emitter, PublicTrackingResponse update) {
         try {
             emitter.send(SseEmitter.event().name("tracking-update").data(update));
-        } catch (IOException error) {
+        } catch (IOException | IllegalStateException error) {
             remove(trackingNumber, emitter);
             emitter.completeWithError(error);
         }
@@ -47,5 +50,12 @@ public class TrackingSseService {
         if (listeners == null) return;
         listeners.remove(emitter);
         if (listeners.isEmpty()) subscribers.remove(trackingNumber, listeners);
+    }
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=20000)
+    public void heartbeat() {
+        subscribers.forEach((number,listeners)->listeners.forEach(emitter->{
+            try { emitter.send(SseEmitter.event().comment("keepalive")); }
+            catch(IOException|IllegalStateException error) { remove(number,emitter);emitter.complete(); }
+        }));
     }
 }
