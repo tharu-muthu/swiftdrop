@@ -114,13 +114,24 @@ public class AccountSecurityService {
         if(!user.isActive() || !user.isEmailVerified() || !token.getKind().equals("EMAIL_CHANGE")
                 || !token.usable(clock.instant()) || token.getAuthorizationVersion()!=user.getAuthorizationVersion()) throw invalidLink();
         String previous=user.getEmail();
-        user.changeEmail(token.getPendingEmail(),clock.instant());token.use(clock.instant());
-        invalidate(user,"EMAIL_CHANGED");
+        user.changeEmail(token.getPendingEmail(),clock.instant());
+        // Flush before invalidate() runs repository queries: Hibernate may otherwise auto-flush
+        // the email change outside this mapping block when two users claim the same address.
         try { users.flush(); }
         catch(org.springframework.dao.DataIntegrityViolationException conflict) {
-            throw new AccountSettingsException(409,"EMAIL_CHANGE_UNAVAILABLE","The email change could not be completed. Request a new link from your profile.");
+            if(emailConstraint(conflict))
+                throw new AccountSettingsException(409,"EMAIL_CHANGE_UNAVAILABLE","The email change could not be completed. Request a new link from your profile.");
+            throw conflict;
         }
+        token.use(clock.instant());
+        invalidate(user,"EMAIL_CHANGED");
         deliver(previous,"Your SwiftDrop email was changed","Your SwiftDrop sign-in email has been changed and all sessions ended. If this was not you, contact your SwiftDrop administrator immediately.");
+    }
+    private boolean emailConstraint(Throwable failure) {
+        for(Throwable cause=failure;cause!=null;cause=cause.getCause())
+            if(cause instanceof org.hibernate.exception.ConstraintViolationException constraint
+                    && "uq_users_email_normalized".equals(constraint.getConstraintName())) return true;
+        return false;
     }
     @Transactional public void changePassword(IdentityContext identity,ChangePassword request) {
         var user=locked(identity);authenticate(user,identity,request.currentPassword(),request.reauthToken());
