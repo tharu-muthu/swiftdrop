@@ -10,6 +10,7 @@ const nextStatuses = {
   PICKED_UP: ['IN_TRANSIT', 'FAILED'],
   IN_TRANSIT: ['OUT_FOR_DELIVERY', 'FAILED'],
   OUT_FOR_DELIVERY: ['DELIVERED', 'FAILED'],
+  FAILED: ['OUT_FOR_DELIVERY'],
 };
 
 function currentWorkday() {
@@ -187,6 +188,7 @@ function DeliveryDetails({ delivery, recipientName, setRecipientName, failureRea
     <dl><dt>Pickup</dt><dd>{delivery.pickupAddress}</dd><dt>Drop-off</dt><dd>{delivery.dropoffAddress}</dd>
       <dt>Sender contact</dt><dd>{delivery.senderName} {delivery.senderPhone}</dd><dt>Recipient contact</dt><dd>{delivery.recipientName} {delivery.recipientPhone}</dd>
       <dt>Parcel</dt><dd>{delivery.parcelDescription} · {delivery.parcelWeightGrams} g</dd></dl>
+    {delivery.deliveryProofName && <p className="delivery-proof"><strong>Person who received the parcel:</strong> {delivery.deliveryProofName}</p>}
     <h3>Status history</h3><ol className="status-history">{delivery.history.map(item =>
       <li key={item.sequenceNo}><strong className={`status-pill ${deliveryStatus(item.newStatus).className}`}>{deliveryStatus(item.newStatus).label}</strong><small>{new Date(item.occurredAt).toLocaleString()}</small>
         {item.failureReason && <span>{item.failureReason}</span>}</li>)}</ol>
@@ -203,6 +205,8 @@ function DeliveryDetails({ delivery, recipientName, setRecipientName, failureRea
       {failureReasonError && <p id="failure-reason-error" className="field-error" role="alert">{failureReasonError}</p>}
     </div>}
     <div className="execution-actions">{actions.map(status =>
-      <button key={status} disabled={pending} onClick={() => onUpdate(status)}>{status.replaceAll('_', ' ')}</button>)}</div>
+      <button key={status} disabled={pending} onClick={() => onUpdate(status)}>
+        {delivery.status === 'FAILED' && status === 'OUT_FOR_DELIVERY' ? 'Resume delivery' : status.replaceAll('_', ' ')}
+      </button>)}</div>
   </article>;
 }
