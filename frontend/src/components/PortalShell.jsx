@@ -37,7 +37,7 @@ export default function PortalShell({ title, children, className = '', contentCl
         </div>
         <AccountMenu />
       </header>
-      <div className={`portal-content ${contentClassName}`}>{children}</div>
+      <div className="portal-scroll"><div className={`portal-content ${contentClassName}`}>{children}</div></div>
     </main>
   </div>;
 }

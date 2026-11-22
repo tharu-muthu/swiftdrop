@@ -13,6 +13,9 @@ Keep the customer hero illustration and booking steps as feature content.
   into individual headers or replace it with a text symbol.
 - `PortalShell`: desktop navigation rail, white account header, main landmark,
   skip link, content container and horizontally scrolling mobile navigation.
+  On desktop the shell is viewport-height: the sidebar and top header remain
+  stationary while the content region owns vertical scrolling. Mobile returns
+  to normal document scrolling with the horizontal role navigation.
   The header toggle switches between the full sidebar and a narrow icon rail at
   every viewport width. The rail uses the existing SwiftDrop S symbol, retains
   role-filtered links and active states, and gives each icon an accessible name
