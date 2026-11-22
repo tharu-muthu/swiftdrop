@@ -123,7 +123,9 @@ class FullJourneyIT {
         assertThat(terminal).isNotNull();assertThat(terminal.get("timeline").size()).isEqualTo(5);
         } finally { live.body().close();readerThread.interrupt();readerThread.join(1000);liveClient.close(); }
         var receipt=ok(call("/api/v1/bookings/"+id+"/receipt",HttpMethod.GET,null,customer.token(),null),200); assertThat(receipt.get("receiptState").asText()).isEqualTo("ISSUED");
-        assertThat(ok(call("/api/v1/bookings/dashboard",HttpMethod.GET,null,customer.token(),null),200).get("activeBookings").asLong()).isZero();
+        var dashboard = ok(call("/api/v1/bookings/dashboard",HttpMethod.GET,null,customer.token(),null),200);
+        assertThat(dashboard.get("activeBookings").asLong()).isZero();
+        assertThat(dashboard.get("deliveredBookings").asLong()).isEqualTo(1);
         assertThat(count("select count(*) from swiftdrop.parcel_assignments where booking_id=? and is_active",UUID.fromString(id))).isZero();
         var publicTracking=ok(call("/api/v1/tracking/"+tracking,HttpMethod.GET,null,null,null),200);
         assertThat(publicTracking.get("currentStatus").asText()).isEqualTo("DELIVERED"); assertThat(publicTracking.get("timeline").size()).isEqualTo(5);

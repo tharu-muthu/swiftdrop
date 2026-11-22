@@ -57,9 +57,9 @@ export default function RegisterPage() {
       setCreated(true);
     } catch (error) {
       setErrors(Object.fromEntries((error.fieldErrors || []).filter(item => ['fullName', 'email', 'password'].includes(item.field)).map(item => [item.field, item.message])));
-      setMessage(error.name === 'AbortError'
+      setMessage(error.code === 'REQUEST_TIMEOUT'
         ? 'The request timed out. Your account may have been created. Check before trying again.'
-        : error instanceof TypeError ? 'Unable to connect. Check your connection and try again.' : error.message);
+        : error.code === 'NETWORK_ERROR' ? 'Unable to connect. Check your connection and try again.' : error.message);
     } finally {
       submitting.current = false;
       setPending(false);

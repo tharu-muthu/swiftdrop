@@ -1,3 +1,5 @@
+import { ApiError } from './apiClient.js';
+
 export async function registerCustomer(fields) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -12,11 +14,18 @@ export async function registerCustomer(fields) {
     });
     const data = await response.json();
     if (response.status !== 201) {
-      const error = new Error(data.message || 'Unable to create your account. Please try again.');
-      error.fieldErrors = data.fieldErrors;
-      throw error;
+      throw new ApiError(data.message || 'Unable to create your account. Please try again.', response.status,
+        data.code, data.fieldErrors);
     }
     return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new ApiError('The request timed out. Please check before trying again.', 0, 'REQUEST_TIMEOUT');
+    }
+    if (error?.name === 'TypeError') {
+      throw new ApiError('Unable to connect. Check your connection and try again.', 0, 'NETWORK_ERROR');
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

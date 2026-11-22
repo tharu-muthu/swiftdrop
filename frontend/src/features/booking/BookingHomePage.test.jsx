@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../identity/AuthProvider.jsx';
 import BookingHomePage from './BookingHomePage.jsx';
 
-function renderHome(request = vi.fn().mockResolvedValue({ activeBookings: 3, pendingReceipts: 1, thisMonthShipments: 5 })) {
+function renderHome(request = vi.fn().mockResolvedValue({ activeBookings: 3, deliveredBookings: 2, pendingReceipts: 1, thisMonthShipments: 5 })) {
   const snapshot = { status: 'authenticated', user: { fullName: 'Student User', roles: ['CUSTOMER'] }, error: '' };
   const client = {
     getSnapshot: () => snapshot,
@@ -17,6 +17,7 @@ describe('BookingHomePage', () => {
   it('loads customer-owned dashboard figures from the authenticated API client', async () => {
     const request = renderHome();
     expect(await screen.findByText('3')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(request).toHaveBeenCalledWith('/api/v1/bookings/dashboard');
     expect(screen.queryByText('Recent Bookings')).not.toBeInTheDocument();
