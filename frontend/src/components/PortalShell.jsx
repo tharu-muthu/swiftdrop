@@ -1,3 +1,5 @@
+import { useActivePortal } from '../app/activePortal.js';
+import { availableWorkspaces } from '../app/workspaces.js';
 import Brand from './Brand.jsx';
 import AppLink from './AppLink.jsx';
 import WorkspaceNavigation from './WorkspaceNavigation.jsx';
@@ -9,11 +11,13 @@ import './portal.css';
 
 export default function PortalShell({ title, children, className = '', contentClassName = '', activePath, titleAs: Title = 'h1' }) {
   const { user } = useAuth();
+  const activeRole = useActivePortal(user, activePath);
+  const home = availableWorkspaces(user).find(portal => portal.role === activeRole)?.path || '/workspaces';
   const sidebarVisible = useSyncExternalStore(subscribeSidebar, sidebarSnapshot);
   return <div className={`portal-shell ${sidebarVisible ? '' : 'sidebar-collapsed'} ${className}`}>
     <a className="portal-skip" href="#portal-content">Skip to content</a>
     <aside className="portal-sidebar" id="portal-navigation">
-      <AppLink className="portal-brand" href="/workspaces" aria-label="SwiftDrop home"><Brand compact={!sidebarVisible} /></AppLink>
+      <AppLink className="portal-brand" href={home} aria-label="SwiftDrop home"><Brand compact={!sidebarVisible} /></AppLink>
       <WorkspaceNavigation user={user} activePath={activePath} collapsed={!sidebarVisible} />
       <p className="portal-sidebar-note">Every delivery, connected.</p>
     </aside>

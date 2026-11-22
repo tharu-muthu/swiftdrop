@@ -1,3 +1,4 @@
+import { useActivePortal } from '../app/activePortal.js';
 import { workspaceLinks } from '../app/workspaces.js';
 import AppLink from './AppLink.jsx';
 const icons = {
@@ -14,12 +15,13 @@ const icons = {
 const defaultIcon = 'M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5';
 
 export default function WorkspaceNavigation({ user, activePath = window.location.pathname, collapsed = false }) {
+  const role = useActivePortal(user, activePath);
   const current = activePath === '/profile' ? '/account' : activePath;
   function selected(path) {
     if (current === path) return true;
     return path === '/bookings' && current.startsWith('/bookings/') && current !== '/bookings/new';
   }
-  return <nav aria-label="Workspace navigation">{workspaceLinks(user).map(([path, label]) =>
+  return <nav aria-label="Workspace navigation">{workspaceLinks(user, role).map(([path, label]) =>
     <AppLink key={path} href={path} aria-current={selected(path) ? 'page' : undefined}
       aria-label={collapsed ? label : undefined} title={collapsed ? label : undefined}>
       <svg className="portal-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={icons[path] || defaultIcon} /></svg>
