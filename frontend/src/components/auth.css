@@ -5,7 +5,7 @@
 .delivery-illustration{position:absolute;bottom:24px;left:0;width:100%;height:auto}
 .auth-main{display:flex;align-items:center;justify-content:center;padding:48px 32px}
 .registration-card{background:#fff;border:1px solid var(--sd-border);border-radius:11px;width:100%;max-width:518px;padding:42px 36px 54px;min-height:800px}
-.registration-card>.identity-brand{justify-content:center;font-size:30px}
+.auth-brand-link{display:block;width:max-content;color:inherit;text-decoration:none;border-radius:6px}.auth-brand-centered{margin:0 auto}.registration-card .auth-brand-link{color:var(--sd-navy-end)}.registration-card .auth-brand-link .identity-brand{justify-content:center;font-size:30px}
 .registration-card h2{text-align:center;font-size:32px;line-height:1.25;margin:20px 0 10px;letter-spacing:-.6px}
 .form-subtitle{text-align:center;color:var(--sd-muted);font-size:14px;margin:0 0 28px}
 .form-field{margin-bottom:16px}.form-field label{display:block;font-size:14px;font-weight:600;margin-bottom:12px}
@@ -34,4 +34,4 @@
 .secondary-button{margin:16px 0;cursor:pointer}.account-card{min-height:500px}.account-card dl{margin:36px 0}.account-card dt{font-size:13px;color:var(--sd-muted)}.account-card dd{margin:4px 0 20px;overflow-wrap:anywhere}
 .registration-card a{color:#0867ce}.login-note a{margin-left:12px;font-weight:600}
 @media(max-width:1000px){.auth-story{padding:52px 8% 250px}.story-copy h1{font-size:36px}.story-copy p{font-size:18px}.desktop-break{display:none}.registration-card{padding:32px 24px}.auth-main{padding:28px 20px}}
-@media(max-width:700px){.auth-layout{grid-template-columns:1fr}.auth-story{min-height:0;padding:24px}.auth-story>.identity-brand{font-size:26px}.story-copy{display:none}.delivery-illustration{display:none}.auth-main{padding:24px 16px}.registration-card{min-height:0;padding:30px 22px 34px}.registration-card h2{font-size:28px}.registration-success{padding-top:25px}}
+@media(max-width:700px){.auth-layout{grid-template-columns:1fr}.auth-story{min-height:0;padding:24px}.auth-story>.auth-brand-link .identity-brand{font-size:26px}.story-copy{display:none}.delivery-illustration{display:none}.auth-main{padding:24px 16px}.registration-card{min-height:0;padding:30px 22px 34px}.registration-card h2{font-size:28px}.registration-success{padding-top:25px}}

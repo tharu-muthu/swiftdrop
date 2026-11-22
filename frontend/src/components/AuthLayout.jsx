@@ -1,4 +1,5 @@
 import Brand from './Brand.jsx';
+import AppLink from './AppLink.jsx';
 import './auth.css';
 
 function DeliveryIllustration() {
@@ -19,7 +20,7 @@ function DeliveryIllustration() {
 export default function AuthLayout({ children }) {
   return <main className="auth-layout">
     <aside className="auth-story">
-      <Brand />
+      <AppLink className="auth-brand-link" href="/" aria-label="SwiftDrop home"><Brand /></AppLink>
       <div className="story-copy"><h1>The fastest way to<br className="desktop-break" /> send and track<br className="desktop-break" /> across the island.</h1>
         <p>Manage shipments, dispatch couriers,<br className="desktop-break" /> and monitor operations in one place.</p></div>
       <DeliveryIllustration />

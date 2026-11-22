@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import AuthLayout from '../../components/AuthLayout.jsx';
 import Brand from '../../components/Brand.jsx';
+import AppLink from '../../components/AppLink.jsx';
 import FormField from '../../components/FormField.jsx';
 import { registerCustomer } from './registrationApi.js';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, passwordError, passwordLength } from './passwordPolicy.js';
@@ -68,7 +69,7 @@ export default function RegisterPage() {
     }
   }
   return <AuthLayout><div className="registration-card">
-    <Brand />
+    <AppLink className="auth-brand-link auth-brand-centered" href="/" aria-label="SwiftDrop home"><Brand /></AppLink>
     {created ? <div className="registration-success" ref={feedback} tabIndex="-1" role="status">
       <span className="success-check" aria-hidden="true">✓</span><h2>Check your email</h2>
       <p>Your account was created. Open the verification link in your email before signing in.</p>
