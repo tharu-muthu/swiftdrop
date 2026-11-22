@@ -208,7 +208,7 @@ FROM swiftdrop.flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-Expect successful V1 through V12 entries after coordinating the new versions. Health reports **application liveness**; it
+Expect successful V1 through V13 entries when the account-settings migration is coordinated, or V1 through V12 before that migration is rolled out. Health reports **application liveness**; it
 does not probe broker availability or assert that business integrations work.
 
 Useful commands:
@@ -350,8 +350,10 @@ automatically during startup, so choose your development branch before launching
 See [the identity schema guide](docs/identity/schema.md) for guard limits and exact
 environment loading; private files are preserved.
 
-Expected startup: Flyway applies/validates V1 through V7, Hibernate validates the
-identity, merchant, execution, and webhook tables, followed by `Started SwiftDropApplication`.
+Expected startup: Flyway applies and validates the migrations present in
+`backend/src/main/resources/db/migration/` (currently V1 through V13), Hibernate
+validates the identity, merchant, execution, booking, pricing and webhook tables,
+followed by `Started SwiftDropApplication`.
 Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
 `{"status":"UP","application":"swiftdrop"}`. Run the frontend as shown in 2B;
 it communicates only with the backend API and needs no Neon information.
@@ -443,9 +445,10 @@ reserved by the team and must not be reused.
 
 The team still needs lecturer approval for nine rather than ten members, member
 names/IDs, deadline and hosting decisions. The assignment found beside this
-repository was copied unchanged into `docs/reference/` for teammates. Later
-Google, JWT, provider and deployment secrets belong to their feature/deployment
-tasks. This repository foundation does not fulfill the complete assignment yet.
+repository was copied unchanged into `docs/reference/` for teammates. The current
+branch contains the connected M1–M9 workflows described above. Google
+provider credentials, SMTP/SMS provider credentials, shared-Neon rollout, hosting,
+TLS and the optional Kubernetes/AI bonus remain deployment or team-delivery work.
 
 ## Role workspaces
 
@@ -488,6 +491,7 @@ After tests and shared-migration/SMTP coordination, rebuild both applications:
 docker compose up --build --detach --wait
 ```
 
-The agent added regression tests and performed source syntax/whitespace review;
-application compilation, test execution, migrations and real-provider checks
-remain user-run in this change.
+The current source has been checked with the frontend test suite, frontend build,
+and backend Maven compilation. Run the Docker-backed integration profile before
+submission because it requires the local Docker engine and disposable
+PostgreSQL/RabbitMQ containers.

@@ -13,8 +13,10 @@ export async function jsonRequest(path, options = {}, fetchImpl = globalThis.fet
     if (!response.ok) throw new ApiError(data?.message || 'Unable to complete the request.', response.status, data?.code, data?.fieldErrors);
     return data;
   } catch (error) {
-    if (error.name === 'AbortError') throw new ApiError('The request timed out. Please check before trying again.');
-    if (error instanceof TypeError) throw new ApiError('Unable to connect. Check your connection and try again.');
+    if (error.name === 'AbortError') throw new ApiError('The request timed out. Please check before trying again.', 0, 'REQUEST_TIMEOUT');
+    // Use the error name because browser and test-environment realms can have
+    // different TypeError constructors.
+    if (error?.name === 'TypeError') throw new ApiError('Unable to connect. Check your connection and try again.', 0, 'NETWORK_ERROR');
     throw error;
   } finally { clearTimeout(timeout); }
 }
