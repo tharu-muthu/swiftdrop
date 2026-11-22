@@ -27,10 +27,29 @@ public class WebhookWorker {
             WebhookDeliveryService.DeliveryResult result;
             boolean enabled=job.enabled()&&merchants.isApprovedForDelivery(job.merchantId());
             if(!enabled) result=new WebhookDeliveryService.DeliveryResult(false,0,0,"FAILED","SUBSCRIPTION_DISABLED");
-            else try {
-                var secret=secrets.decrypt(new WebhookSecretProtector.ProtectedSecret(job.encryptedSecret(),job.nonce()));
-                result=delivery.deliver(job.eventId(),job.endpoint(),secret,job.body().getBytes(StandardCharsets.UTF_8));
-            } catch(RuntimeException error) { result=new WebhookDeliveryService.DeliveryResult(false,0,0,"FAILED","INVALID_DESTINATION_OR_SECRET"); }
+            else {
+                String secret;
+                try {
+                    secret=secrets.decrypt(new WebhookSecretProtector.ProtectedSecret(job.encryptedSecret(),job.nonce()));
+                } catch(RuntimeException error) {
+                    // Keep the stored error safe: never expose a secret or a provider exception in the API.
+                    result=new WebhookDeliveryService.DeliveryResult(false,0,0,"FAILED","SECRET_DECRYPTION_FAILED");
+                    complete(job,result,started,enabled);
+                    continue;
+                }
+                try {
+                    result=delivery.deliver(job.eventId(),job.endpoint(),secret,job.body().getBytes(StandardCharsets.UTF_8));
+                } catch(IllegalArgumentException error) {
+                    result=new WebhookDeliveryService.DeliveryResult(false,0,0,"FAILED","INVALID_DESTINATION");
+                } catch(RuntimeException error) {
+                    result=new WebhookDeliveryService.DeliveryResult(false,0,0,"FAILED","DELIVERY_CONFIGURATION_ERROR");
+                }
+            }
+            complete(job,result,started,enabled);
+        }
+    }
+
+    private void complete(WebhookJobRepository.Job job, WebhookDeliveryService.DeliveryResult result, Instant started, boolean enabled) {
             var decision=result.statusCode()==0?retries.networkFailure(job.attempt()):retries.response(job.attempt(),result.statusCode());
             boolean retry=enabled&&!"FAILED".equals(result.state())&&!result.successful()&&decision.retry();
             // HTTP 5xx/408/429 are retryable even though the transport labels their single attempt FAILED.
@@ -39,7 +58,6 @@ public class WebhookWorker {
             var completed=clock.instant(); var retryAt=retry?completed.plus(decision.delay()):null;
             final var outcome=result;
             tx.executeWithoutResult(status->jobs.complete(job,state,outcome.statusCode()==0?null:outcome.statusCode(),outcome.failureType(),started,completed,retryAt));
-        }
     }
 }
 

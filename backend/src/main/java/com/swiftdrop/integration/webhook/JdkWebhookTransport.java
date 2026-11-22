@@ -19,10 +19,20 @@ public final class JdkWebhookTransport implements WebhookTransport {
         if(addresses.length==0) throw new IOException("DESTINATION_UNAVAILABLE");
         // Reject mixed public/private DNS answers, and pin the connection to this validated answer.
         for(var address:addresses) if(local?!address.isLoopbackAddress():!isPublicAddress(address)) throw new BlockedWebhookDestinationException();
+        IOException lastFailure=null;
+        for(var address:addresses) {
+            try { return postToAddress(endpoint,headers,body,host,tls,local,address); }
+            catch(IOException failure) { lastFailure=failure; }
+        }
+        throw lastFailure == null ? new IOException("DESTINATION_UNAVAILABLE") : lastFailure;
+    }
+
+    private Response postToAddress(URI endpoint,Map<String,String> headers,byte[] body,
+            String host,boolean tls,boolean local,InetAddress address) throws IOException {
         int port=endpoint.getPort()>0?endpoint.getPort():tls?443:80;
         Socket connection=new Socket();
         try {
-            connection.connect(new InetSocketAddress(addresses[0],port),connectTimeoutMs);
+            connection.connect(new InetSocketAddress(address,port),connectTimeoutMs);
             connection.setSoTimeout(10000);
             if(tls) {
                 var secure=(SSLSocket)((SSLSocketFactory)SSLSocketFactory.getDefault()).createSocket(connection,host,port,true);
