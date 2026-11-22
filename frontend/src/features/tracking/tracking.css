@@ -19,7 +19,14 @@
 .tracking-result { margin-top: 34px; padding-top: 30px; border-top: 1px solid var(--sd-border); }
 .tracking-result-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
 .tracking-result h2 { margin: 6px 0 0; overflow-wrap: anywhere; }
-.tracking-status { padding: 8px 12px; border-radius: 999px; color: #176241; background: #e3f5ea; white-space: nowrap; }
+.tracking-status { padding: 8px 12px; border-radius: 999px; color: #52627a; background: #edf1f7; white-space: nowrap; }
+.tracking-status.assigned { color:#6541a8; background:#e9e1ff; }
+.tracking-status.created { color:#9b6000; background:#fff0dc; }
+.tracking-status.picked_up { color:#075fdf; background:#e6f0ff; }
+.tracking-status.in_transit { color:#006b91; background:#dff4ff; }
+.tracking-status.out_for_delivery { color:#3d4fc1; background:#e7e9ff; }
+.tracking-status.delivered { color:#176241; background:#e8f5ee; }
+.tracking-status.failed { color:#a12f27; background:#fff3f1; }
 .tracking-updated { color: var(--sd-muted); font-size: 14px; }
 .tracking-connection { color: #176241; font-size: 14px; font-weight: 700; }
 .tracking-timeline { margin: 30px 0; padding: 0; list-style: none; }

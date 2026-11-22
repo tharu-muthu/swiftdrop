@@ -5,4 +5,4 @@ import java.time.Instant;
 import java.util.List;
 
 public record PublicTrackingResponse(String trackingNumber, ParcelStatus currentStatus,
-        Instant lastUpdatedAt, List<TrackingTimelineItem> timeline) { }
+        Instant lastUpdatedAt, List<TrackingTimelineItem> timeline, boolean assigned) { }

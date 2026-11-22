@@ -22,7 +22,7 @@ public class TrackingService {
         var number=normalize(raw); if(number==null) return Optional.empty();
         return bookings.byTrackingNumber(number).flatMap(booking->lifecycles.find(booking.id()).map(lifecycle->
             new PublicTrackingResponse(booking.trackingNumber(),lifecycle.status(),lifecycle.updatedAt(),
-                lifecycle.history().stream().map(item->new TrackingTimelineItem(item.sequenceNo(),item.newStatus(),item.occurredAt())).toList())));
+                lifecycle.history().stream().map(item->new TrackingTimelineItem(item.sequenceNo(),item.newStatus(),item.occurredAt())).toList(), lifecycle.courierId() != null)));
     }
     public Optional<CustomerTrackingResponse> customerTracking(String raw) {
         var customer=identities.requireCurrentRole(IdentityRole.CUSTOMER);
@@ -30,7 +30,7 @@ public class TrackingService {
         return bookings.byTrackingNumber(number).filter(booking->customer.userId().equals(booking.customerId()))
             .flatMap(booking->lifecycles.find(booking.id()).map(lifecycle->new CustomerTrackingResponse(booking.trackingNumber(),lifecycle.status(),lifecycle.updatedAt(),
                 lifecycle.history().stream().map(item->new TrackingTimelineItem(item.sequenceNo(),item.newStatus(),item.occurredAt())).toList(),
-                booking.pickupCity(),booking.deliveryCity(),booking.recipientName())));
+                booking.pickupCity(),booking.deliveryCity(),booking.recipientName(), lifecycle.courierId() != null)));
     }
     public static String normalize(String raw) {
         if(raw==null) return null;
