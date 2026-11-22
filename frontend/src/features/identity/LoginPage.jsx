@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import GoogleSignInButton from './GoogleSignInButton.jsx';
 import AuthLayout from '../../components/AuthLayout.jsx';
 import Brand from '../../components/Brand.jsx';
+import AppLink from '../../components/AppLink.jsx';
 import FormField from '../../components/FormField.jsx';
 import { useAuth } from './AuthProvider.jsx';
 import { navigate } from '../../app/navigation.js';
@@ -39,7 +40,7 @@ export default function LoginPage() {
     finally { submitting.current = false; setPending(false); }
   }
   return <AuthLayout><div className="registration-card login-card">
-    <Brand /><h2>Welcome back</h2><p className="form-subtitle">Log in to your SwiftDrop account</p>
+    <AppLink className="auth-brand-link auth-brand-centered" href="/" aria-label="SwiftDrop home"><Brand /></AppLink><h2>Welcome back</h2><p className="form-subtitle">Log in to your SwiftDrop account</p>
     {new URLSearchParams(window.location.search).get('notice') === 'security-updated' && <p className="profile-banner" role="status">Your account security was updated and all sessions ended. Sign in again.</p>}
     {googleError && <p className="form-alert" role="alert">{googleError}</p>}
     <form onSubmit={submit} noValidate aria-busy={pending}>
