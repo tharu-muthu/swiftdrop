@@ -35,7 +35,7 @@ export default function MyBookingsPage() {
 
   const summary = data?.summary;
   const visiblePages = data ? Array.from({ length: Math.min(data.totalPages, 5) }, (_, index) => index) : [];
-  return <BookingFrame activePath="/bookings" headerTitle="My Bookings"><main className="booking-history-page">
+  return <BookingFrame activePath="/bookings" headerTitle="My Bookings"><div className="booking-history-page">
     <section className="history-hero"><div><p>Home <span>›</span> My Bookings</p><h1>My Bookings</h1><span>View, track and manage all your parcel bookings in one place.</span></div><button onClick={() => navigate('/bookings/new')}>＋ Create New Booking</button></section>
     <section className="history-metrics" aria-label="Booking summary">
       <Metric icon="□" label="Total Bookings" value={summary ? summary.totalBookings : '—'} tone="blue" />
@@ -52,5 +52,5 @@ export default function MyBookingsPage() {
     {!loading && !error && data?.bookings.length > 0 && <section className="history-table-wrap"><table className="history-table"><thead><tr><th>Booking</th><th>Recipient</th><th>Route</th><th>Booked on</th><th>Delivery fee</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{data.bookings.map(booking => <tr key={booking.id}><td data-label="Booking"><strong>{booking.id.slice(0, 8).toUpperCase()}</strong><button className="tracking-link" onClick={() => navigate(`/tracking/${encodeURIComponent(booking.trackingNumber)}`)}>{booking.trackingNumber}</button></td><td data-label="Recipient"><strong>{booking.recipientName || 'Not recorded'}</strong><span>{booking.recipientPhone || '—'}</span></td><td data-label="Route">{booking.pickupCity && booking.deliveryCity ? `${booking.pickupCity} → ${booking.deliveryCity}` : 'Route not recorded'}</td><td data-label="Booked on">{formatDate(booking.bookedAt)}</td><td data-label="Delivery fee">{formatAmount(booking.deliveryFeeMinor, booking.currencyCode)}</td><td data-label="Status"><span className={`history-status ${booking.bookingState.toLowerCase()}`}>{stateLabel(booking.deliveryStatus || booking.bookingState)}</span></td><td data-label="Actions"><button className="history-view" onClick={() => navigate(`/bookings/${booking.id}`)}>View Details</button></td></tr>)}</tbody></table>
       <footer className="history-pagination"><span>Showing {data.totalElements === 0 ? 0 : data.page * data.size + 1}–{Math.min((data.page + 1) * data.size, data.totalElements)} of {data.totalElements} bookings</span><div><button disabled={data.page === 0} onClick={() => update('page', data.page - 1)}>‹</button>{visiblePages.map(page => <button key={page} className={page === data.page ? 'current-page' : ''} onClick={() => update('page', page)}>{page + 1}</button>)}<button disabled={data.page >= data.totalPages - 1} onClick={() => update('page', data.page + 1)}>›</button></div></footer>
     </section>}
-  </main></BookingFrame>;
+  </div></BookingFrame>;
 }

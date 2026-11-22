@@ -15,6 +15,7 @@ describe('password login screen', () => {
   it('uses neutral wording, accessible visibility and registration navigation', async () => {
     setup(); expect(screen.getByText('Log in to your SwiftDrop account')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/register');
+    expect(screen.queryByRole('link', { name: /Resend.*link/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
     expect(await screen.findByRole('button', { name: 'Continue with Google' }))
@@ -27,6 +28,16 @@ describe('password login screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
     expect(login).toHaveBeenCalledWith('Person@example.test', ' exact password ');
+    expect(screen.queryByRole('link', { name: /Resend.*link/ })).not.toBeInTheDocument();
+  });
+  it('offers verification only after the server requires it and clears it when the email changes', async () => {
+    setup(vi.fn().mockRejectedValue({ code: 'EMAIL_VERIFICATION_REQUIRED', message: 'Verify your email before logging in.' }));
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'unverified@example.test' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
+    expect(await screen.findByRole('link', { name: 'Resend verification link' })).toHaveAttribute('href', '/verify-email/request');
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'other@example.test' } });
+    expect(screen.queryByRole('link', { name: 'Resend verification link' })).not.toBeInTheDocument();
   });
   it('requires both fields and prevents repeated submission while pending', async () => {
     let finish; const login = vi.fn(() => new Promise(resolve => { finish = resolve; })); setup(login);
@@ -37,5 +48,6 @@ describe('password login screen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Log in', exact: true }));
     expect(screen.getByRole('button', { name: 'Logging in…' })).toBeDisabled();
     finish(); expect(await screen.findByRole('button', { name: 'Log in', exact: true })).toBeEnabled();
+    expect(window.location.pathname).toBe('/workspaces');
   });
 });

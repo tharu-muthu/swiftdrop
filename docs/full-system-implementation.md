@@ -41,8 +41,8 @@ feature calls remain in-process service calls.
    verification inbox before password users can sign in. Pending migrations run at
    application startup; this implementation does not directly migrate your Neon branch.
 5. Run `docker compose up --build -d`, then `docker compose ps`.
-   Open `http://localhost:8080`; local Compose mail is at `http://localhost:8025`.
-   If private `SPRING_MAIL_*` values are configured, those take precedence over Mailpit.
+   Open `http://localhost:8080`. Configure real SMTP delivery through private
+   `SPRING_MAIL_*` settings in `backend/.env`; verify the sender setup before signup.
 6. Register a real account and verify the link delivered to its configured inbox.
    There are no seeded users or passwords. Use the documented private
    [first-admin bootstrap](../contracts/identity-role-handoff.md) for a verified

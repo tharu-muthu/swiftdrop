@@ -16,8 +16,9 @@ public class CourierExecutionController {
     public CourierExecutionController(ParcelLifecycleService lifecycle) { this.lifecycle = lifecycle; }
 
     @GetMapping
-    public ResponseEntity<List<CourierDeliverySummary>> list() {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(lifecycle.assignedDeliveries());
+    public ResponseEntity<List<CourierDeliverySummary>> list(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(lifecycle.assignedDeliveries(date));
     }
 
     @GetMapping("/{lifecycleId}")

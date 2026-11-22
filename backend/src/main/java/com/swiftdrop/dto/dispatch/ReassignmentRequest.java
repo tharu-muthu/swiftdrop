@@ -9,4 +9,9 @@ public record ReassignmentRequest(
     @NotNull(message = "Booking ID is required") UUID bookingId,
     @NotNull(message = "New courier ID is required") UUID newCourierId,
     @NotBlank(message = "Reason is required") @jakarta.validation.constraints.Size(max=200) String reason
-) {}
+) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknown(String name, Object value) {
+        throw new IllegalArgumentException("Only documented request fields are accepted.");
+    }
+}
