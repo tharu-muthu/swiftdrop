@@ -32,3 +32,70 @@ it('uses backend zone and rate identifiers for mapping and state changes', async
   fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: 'Deactivate' }));
   await waitFor(() => expect(request).toHaveBeenCalledWith(`/api/v1/admin/rate-cards/${rateVersionId}`, expect.objectContaining({ method: 'PATCH' })));
 });
+
+it('displays helpful field descriptions, live LKR previews, and creates a rate card version', async () => {
+  const zoneA = 'zone-a-uuid';
+  const zoneB = 'zone-b-uuid';
+  request.mockImplementation(async (path, options) => {
+    if (options && path === '/api/v1/admin/rate-cards') {
+      return { rateVersionId: 'new-rate-id' };
+    }
+    if (path === '/api/v1/admin/zones') {
+      return [
+        { zoneId: zoneA, name: 'Zone A', active: true },
+        { zoneId: zoneB, name: 'Zone B', active: true },
+      ];
+    }
+    if (path === '/api/v1/admin/rate-cards') return [];
+    if (path === '/api/v1/admin/postcodes') return [];
+    return [];
+  });
+
+  render(<PricingAdminPage />);
+  await screen.findAllByRole('option', { name: 'Zone A' });
+
+  // Verify field descriptions are rendered
+  expect(screen.getByText(/Geographic zone where parcels will be collected/)).toBeVisible();
+  expect(screen.getByText(/Destination geographic zone where parcels will be delivered/)).toBeVisible();
+  expect(screen.getByText(/Starting delivery charge covering parcels up to the included weight/)).toBeVisible();
+  expect(screen.getByText(/Weight in kilograms covered by the base fee/)).toBeVisible();
+  expect(screen.getByText(/Additional fee charged for each full or partial kilogram/)).toBeVisible();
+  expect(screen.getByText(/Additional fee for small parcels/)).toBeVisible();
+  expect(screen.getByText(/Additional fee for standard medium parcels/)).toBeVisible();
+  expect(screen.getByText(/Additional fee for large bulky parcels/)).toBeVisible();
+  expect(screen.getByText(/Additional fee for oversized/)).toBeVisible();
+  expect(screen.getByText(/Timestamp from which this rate card becomes active/)).toBeVisible();
+
+  // Change base minor and verify preview badge updates
+  fireEvent.change(screen.getByLabelText('Pickup zone'), { target: { value: zoneA } });
+  fireEvent.change(screen.getByLabelText('Delivery zone'), { target: { value: zoneB } });
+  fireEvent.change(screen.getByLabelText('Base delivery fee'), { target: { value: '45000' } });
+  expect(screen.getByText('LKR 450.00')).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText('Included weight'), { target: { value: '2' } });
+  expect(screen.getByText('2 kg allowance')).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText('Extra weight rate'), { target: { value: '5000' } });
+  expect(screen.getByText('LKR 50.00 / extra kg')).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create rate version' }));
+
+  await waitFor(() => expect(request).toHaveBeenCalledWith(
+    '/api/v1/admin/rate-cards',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        pickupZoneId: zoneA,
+        dropoffZoneId: zoneB,
+        baseMinor: 45000,
+        includedKg: 2,
+        extraKgMinor: 5000,
+        sizeSurchargeSmall: 0,
+        sizeSurchargeMedium: 0,
+        sizeSurchargeLarge: 0,
+        sizeSurchargeExtraLarge: 0,
+        effectiveFrom: null,
+      }),
+    })
+  ));
+});
