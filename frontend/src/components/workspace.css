@@ -21,10 +21,14 @@
 .workspace-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:20px;margin-top:24px}
 .workspace-cards section{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .workspace-cards h2{margin-bottom:0}.workspace-cards p{margin:0 0 16px}.workspace-cards .button{margin-top:auto}
-.workspace .delivery-status{display:inline-block;padding:5px 9px;border-radius:6px;background:var(--sd-tint);color:var(--sd-text);white-space:nowrap}
+.workspace .delivery-status{display:inline-block;padding:6px 10px;border-radius:999px;background:#edf1f7;color:#52627a;white-space:nowrap;font-weight:700;font-size:12px}
+.workspace .delivery-status.assigned{background:#e9e1ff;color:#6541a8}
+.workspace .delivery-status.created{background:#fff0dc;color:#9b6000}
+.workspace .delivery-status.picked_up{background:#e6f0ff;color:#075fdf}
+.workspace .delivery-status.in_transit{background:#dff4ff;color:#006b91}
+.workspace .delivery-status.out_for_delivery{background:#e7e9ff;color:#3d4fc1}
 .workspace .delivery-status.delivered{background:var(--sd-success-tint);color:var(--sd-success)}
 .workspace .delivery-status.failed{background:var(--sd-danger-tint);color:var(--sd-danger)}
-.workspace .delivery-status.in_transit,.workspace .delivery-status.out_for_delivery{background:var(--sd-tint);color:var(--sd-primary-hover)}
 .workspace .attention-flag{display:inline-block;margin-left:7px;padding:4px 8px;border-radius:6px;background:#fff0d4;color:#804d00;font-weight:700;white-space:nowrap}
 @media(max-width:760px){.workspace section,.workspace article{padding:20px}.workspace .form-grid{grid-template-columns:1fr}}
 @media print{.workspace button{display:none}.workspace:has(.receipt-view)>:not(.receipt-view){display:none}.workspace .receipt-view{border:0;margin:0;padding:0;box-shadow:none}}

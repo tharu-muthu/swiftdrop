@@ -7,4 +7,4 @@ import java.time.Instant;
 
 /** Booking fields stay compatible; delivery state comes exclusively from M6. */
 public record MerchantOrderResponse(@JsonUnwrapped BookingSnapshot booking,
-        ParcelStatus deliveryStatus, Instant statusUpdatedAt) { }
+        ParcelStatus deliveryStatus, Instant statusUpdatedAt, boolean assigned) { }

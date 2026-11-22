@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import WorkspacePage, { JsonRequest } from '../../components/WorkspacePage.jsx';
+import { deliveryStatus } from '../../app/deliveryStatus.js';
 
 const emptyProfile = { userId: '', vehicleType: '', licensePlate: '', active: true };
 const dateTime = value => value ? new Date(value).toLocaleString() : 'Not recorded';
@@ -114,7 +115,7 @@ export default function DispatchDashboardPage() {
         <div className="table-scroll"><table><thead><tr><th>Tracking</th><th>Route</th><th>Status</th><th>Last update</th><th>Courier</th><th></th></tr></thead>
           <tbody>{board.items.map(row => <tr key={row.bookingId}>
             <td><a href={`/tracking/${row.trackingNumber}`}>{row.trackingNumber}</a></td><td>{row.pickupCity} → {row.deliveryCity}</td>
-            <td>{row.status.replaceAll('_', ' ')}{row.overdue && <span className="attention-flag">Overdue</span>}</td>
+            <td><span className="delivery-status">{deliveryStatus(row.status, Boolean(row.courierId)).label}</span>{row.overdue && <span className="attention-flag">Overdue</span>}</td>
             <td>{dateTime(row.updatedAt)}</td><td>{row.courierId || 'Unassigned'}</td>
             <td><button className="secondary" disabled={pending || detailLoading} onClick={() => choose(row.bookingId)}>Select</button></td>
           </tr>)}</tbody></table></div>

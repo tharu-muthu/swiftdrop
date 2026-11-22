@@ -5,6 +5,7 @@ import { loadPublicTracking, trackingEventsUrl, acceptTrackingSnapshot } from '.
 import Brand from '../../components/Brand.jsx';
 import PortalShell from '../../components/PortalShell.jsx';
 import './tracking.css';
+import { deliveryStatus } from '../../app/deliveryStatus.js';
 
 export default function PublicTrackingPage({ trackingNumber = '', inPortal = false }) {
   const [value, setValue] = useState(trackingNumber);
@@ -120,7 +121,7 @@ export default function PublicTrackingPage({ trackingNumber = '', inPortal = fal
       {tracking && !loading && <section className="tracking-result" aria-live="polite">
         <div className="tracking-result-heading">
           <div><p className="tracking-eyebrow">Tracking number</p><h2>{tracking.trackingNumber}</h2></div>
-          <strong className={`tracking-status ${tracking.currentStatus.toLowerCase()}`}>{tracking.currentStatus.replaceAll('_', ' ')}</strong>
+          <strong className={`tracking-status ${deliveryStatus(tracking.currentStatus, tracking.assigned).className}`}>{deliveryStatus(tracking.currentStatus, tracking.assigned).label}</strong>
         </div>
         <p className="tracking-updated">Last updated {new Date(tracking.lastUpdatedAt).toLocaleString()}</p>
         <p className="tracking-connection" role="status">Live updates: {connection}</p>

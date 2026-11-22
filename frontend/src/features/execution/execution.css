@@ -8,7 +8,14 @@
 .execution-empty { color: var(--sd-muted); }
 .delivery-detail { margin-top: 24px; padding: 24px; background: #fff; border-radius: 12px; border: 1px solid var(--sd-border); }
 .back-button { padding: 0; min-height: auto; background: transparent; color: var(--sd-primary); }
-.status-pill { display: inline-block; padding: 4px 10px; border-radius: 99px; background: #e6f0ff; color: var(--sd-primary); font-weight: 700; }
+.status-pill { display: inline-block; padding: 4px 10px; border-radius: 99px; background: #edf1f7; color: #52627a; font-weight: 700; }
+.status-pill.assigned { background:#e9e1ff; color:#6541a8; }
+.status-pill.created { background:#fff0dc; color:#9b6000; }
+.status-pill.picked_up { background:#e6f0ff; color:#075fdf; }
+.status-pill.in_transit { background:#dff4ff; color:#006b91; }
+.status-pill.out_for_delivery { background:#e7e9ff; color:#3d4fc1; }
+.status-pill.delivered { background:#e8f5ee; color:#176241; }
+.status-pill.failed { background:#fff3f1; color:#a12f27; }
 .delivery-detail dl { display: grid; grid-template-columns: 110px 1fr; gap: 8px 18px; }
 .delivery-detail dt { font-weight: 700; }
 .delivery-detail dd { margin: 0; }

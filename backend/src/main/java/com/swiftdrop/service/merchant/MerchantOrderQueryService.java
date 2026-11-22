@@ -37,6 +37,6 @@ public class MerchantOrderQueryService {
 
     private static MerchantOrderResponse response(BookingSnapshot booking, LifecycleSnapshot lifecycle) {
         return new MerchantOrderResponse(booking, lifecycle == null ? null : lifecycle.status(),
-                lifecycle == null ? null : lifecycle.updatedAt());
+                lifecycle == null ? null : lifecycle.updatedAt(), lifecycle != null && lifecycle.courierId() != null);
     }
 }

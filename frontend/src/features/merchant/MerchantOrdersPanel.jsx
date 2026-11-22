@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
+import AppLink from '../../components/AppLink.jsx';
+import { deliveryStatus } from '../../app/deliveryStatus.js';
 
 const PAGE_SIZE = 20;
-const statusLabel = value => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, letter => letter.toUpperCase()) : 'Not initialized';
 
 function DeliveryStatus({ order }) {
-  return <span className={`delivery-status ${(order.deliveryStatus || 'unknown').toLowerCase()}`}>{statusLabel(order.deliveryStatus)}</span>;
+  const status = deliveryStatus(order.deliveryStatus, order.assigned);
+  return <span className={`delivery-status ${status.className}`}>{status.label}</span>;
 }
 
 export default function MerchantOrdersPanel() {
@@ -54,9 +56,10 @@ export default function MerchantOrdersPanel() {
       {error && <p className="error" role="alert">{error}</p>}
       {loading ? <p role="status">Loading orders…</p> : orders && <>
         <p>{orders.totalElements} order{orders.totalElements === 1 ? '' : 's'}</p>
-        <div className="table-scroll"><table><thead><tr><th>Tracking number</th><th>Delivery status</th><th>Route</th><th>Fee</th><th>Booked</th></tr></thead>
+        <div className="table-scroll"><table><thead><tr><th>Actions</th><th>Tracking number</th><th>Delivery status</th><th>Route</th><th>Fee</th><th>Booked</th></tr></thead>
           <tbody>{orders.items.map(order => <tr key={order.id}>
-            <td><button className="secondary" disabled={detailPending} onClick={() => select(order.id)}>{order.trackingNumber}</button></td>
+            <td><button className="secondary" disabled={detailPending} onClick={() => select(order.id)}>View</button></td>
+            <td><strong>{order.trackingNumber}</strong></td>
             <td><DeliveryStatus order={order} /></td><td>{order.pickupCity} → {order.deliveryCity}</td>
             <td>{order.currencyCode} {(order.quotedAmountMinor / 100).toFixed(2)}</td><td>{new Date(order.createdAt).toLocaleString()}</td>
           </tr>)}</tbody></table></div>
@@ -76,7 +79,7 @@ export default function MerchantOrdersPanel() {
       <p>Pickup: {selected.pickupAddressSnapshot}, {selected.pickupCity} {selected.pickupPostalCode} · {selected.senderName} {selected.senderPhone}</p>
       <p>Delivery: {selected.dropoffAddressSnapshot}, {selected.deliveryCity} {selected.deliveryPostalCode} · {selected.recipientName} {selected.recipientPhone}</p>
       <p>{selected.parcelDescription} · {selected.parcelWeightGrams} g · {selected.parcelSize}</p>
-      <div className="actions"><a href={`/tracking/${selected.trackingNumber}`}>Live tracking</a>
+      <div className="actions"><AppLink className="button" href={`/tracking/${encodeURIComponent(selected.trackingNumber)}`}>Live tracking</AppLink>
         <button className="secondary" onClick={() => setSelected(null)}>Close order details</button></div>
     </section>}
   </>;
