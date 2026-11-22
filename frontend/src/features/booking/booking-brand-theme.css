@@ -6,6 +6,20 @@
 .booking-shell .summary-panel, .booking-shell .tracking-card, .booking-shell .quick-action { border-color: var(--sd-border); box-shadow: 0 7px 18px #17326010; }
 .booking-shell .quick-action { background: #fff; }
 .booking-shell .booking-stat { background: #f8fbff; border-color: var(--sd-border); }
+.booking-shell .booking-icon { display: block; width: 1em; height: 1em; flex: 0 0 auto; }
+.booking-shell .hero-overlay button, .booking-shell .history-toolbar button, .booking-shell .history-reset, .booking-shell .form-actions button { display: inline-flex; align-items: center; justify-content: center; gap: .55em; }
+.booking-shell .hero-overlay button .booking-icon, .booking-shell .form-actions button .booking-icon { width: 1.15em; height: 1.15em; }
+.booking-shell .quick-action .arrow { display: grid; place-items: center; }
+.booking-shell .quick-action .arrow .booking-icon { width: .7em; height: .7em; }
+.booking-shell .tracking-kicker { display: grid; place-items: center; width: 1em; }
+.booking-shell .history-metric-icon .booking-icon { width: .78em; height: .78em; }
+.booking-shell .history-search > span[aria-hidden] { display: grid; place-items: center; }
+.booking-shell .history-search > span[aria-hidden] .booking-icon { width: .82em; height: .82em; }
+.booking-shell .history-pagination button .booking-icon { width: 17px; height: 17px; }
+.booking-form-page .form-section-heading > span .booking-icon { width: 29px; height: 29px; }
+.booking-form-page .quote-ready-icon .booking-icon { width: 1em; height: 1em; margin: 0 auto; }
+.booking-form-page .booking-steps-card h2, .booking-form-page .quick-tips h3 { display: flex; align-items: center; gap: 8px; }
+.booking-form-page .booking-steps-card h2 .booking-icon, .booking-form-page .quick-tips h3 .booking-icon { width: 1.05em; height: 1.05em; }
 .booking-form-page .form-banner { background: linear-gradient(115deg, #f5f8fd, #e5effb); border: 1px solid var(--sd-border); }
 .booking-form-page .form-banner p, .booking-form-page .progress-steps .current { color: var(--sd-primary); }
 .booking-form-page .form-banner h1, .booking-form-page .form-section-heading h2 { color: var(--sd-text); }
