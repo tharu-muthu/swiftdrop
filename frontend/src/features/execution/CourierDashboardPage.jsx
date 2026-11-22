@@ -18,6 +18,30 @@ function currentWorkday() {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
+function formatTrackingNumber(trackingNumber) {
+  if (!trackingNumber?.startsWith('SDP-')) return trackingNumber;
+  const suffix = trackingNumber.slice(4);
+  if (suffix.length < 8) return trackingNumber;
+  const groups = suffix.match(/.{1,4}/g);
+  return `SDP-${groups.join('-')}`;
+}
+
+async function copyTrackingNumber(trackingNumber) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(trackingNumber);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = trackingNumber;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
+
 export default function CourierDashboardPage() {
   const { client } = useAuth();
   const [date, setDate] = useState(currentWorkday);
@@ -32,6 +56,7 @@ export default function CourierDashboardPage() {
   const [failureReason, setFailureReason] = useState('');
   const [recipientNameError, setRecipientNameError] = useState('');
   const [failureReasonError, setFailureReasonError] = useState('');
+  const [copiedLifecycleId, setCopiedLifecycleId] = useState('');
 
   async function refresh() {
     const request = ++listRequest.current;
@@ -79,6 +104,19 @@ export default function CourierDashboardPage() {
     } finally { setPending(false); }
   }
 
+  async function copyNumber(delivery) {
+    try {
+      await copyTrackingNumber(delivery.trackingNumber);
+      setCopiedLifecycleId(delivery.lifecycleId);
+      window.setTimeout(() => setCopiedLifecycleId(current => current === delivery.lifecycleId ? '' : current), 1800);
+    } catch {
+      setError('Unable to copy the tracking number.');
+    }
+  }
+
+  const activeDeliveries = deliveries.filter(delivery => !['DELIVERED', 'FAILED'].includes(delivery.status));
+  const completedDeliveries = deliveries.filter(delivery => ['DELIVERED', 'FAILED'].includes(delivery.status));
+
   return <PortalShell title="Assigned deliveries" contentClassName="execution-content">
     <p className="execution-muted">Update only parcels currently assigned to you.</p>
       {error && <p className="execution-error" role="alert">{error}</p>}
@@ -87,15 +125,16 @@ export default function CourierDashboardPage() {
         <button disabled={pending} onClick={() => { setDate(currentWorkday()); setSelected(null); }}>Today</button>
         <button disabled={pending || loading} onClick={refresh}>Refresh deliveries</button>
       </div>
-      <p className="execution-muted">Today's list includes unfinished work carried over from earlier days. Earlier dates show assignments or activity on that date that are still assigned to you.</p>
+      <p className="execution-muted">Today also includes unfinished work carried over from earlier days.</p>
       {loading && <p role="status">Loading deliveries...</p>}
-      {!selected ? <div className="delivery-list" aria-busy={loading}>
+      {!selected ? <div aria-busy={loading}>
         {!loading && !error && deliveries.length === 0 && <p className="execution-empty">No assigned deliveries. Your dispatcher can check your courier profile and assign parcels.</p>}
-        {deliveries.map(delivery => <button className="delivery-card" key={delivery.lifecycleId}
-          onClick={() => selectDelivery(delivery.lifecycleId)}>
-          <strong>{delivery.trackingNumber}</strong><span className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</span>
-          <small>Updated {new Date(delivery.updatedAt).toLocaleString()}</small>
-        </button>)}
+        {deliveries.length > 0 && <DeliverySection title="Active deliveries" count={activeDeliveries.length}
+          deliveries={activeDeliveries} emptyText="No active deliveries." onSelect={selectDelivery}
+          onCopy={copyNumber} copiedLifecycleId={copiedLifecycleId} />}
+        {completedDeliveries.length > 0 && <DeliverySection title="Completed" count={completedDeliveries.length}
+          deliveries={completedDeliveries} emptyText="" onSelect={selectDelivery}
+          onCopy={copyNumber} copiedLifecycleId={copiedLifecycleId} completed />}
       </div> : <DeliveryDetails delivery={selected} recipientName={recipientName}
         setRecipientName={setRecipientName} failureReason={failureReason} setFailureReason={setFailureReason}
         recipientNameError={recipientNameError} failureReasonError={failureReasonError}
@@ -103,11 +142,48 @@ export default function CourierDashboardPage() {
   </PortalShell>;
 }
 
+function DeliverySection({ title, count, deliveries, emptyText, onSelect, onCopy, copiedLifecycleId, completed = false }) {
+  return <section className={`delivery-section ${completed ? 'completed-section' : ''}`}>
+    <div className="delivery-section-heading"><h2>{title}</h2><span>{count}</span></div>
+    {deliveries.length === 0 ? emptyText && <p className="execution-empty">{emptyText}</p> :
+      <div className="delivery-list">{deliveries.map(delivery => {
+        const status = deliveryStatus(delivery.status);
+        return <article className="delivery-card" key={delivery.lifecycleId}>
+          <button className="delivery-card-main" onClick={() => onSelect(delivery.lifecycleId)} aria-label={`Open ${delivery.trackingNumber}`}>
+            <span className="delivery-tracking">{formatTrackingNumber(delivery.trackingNumber)}</span>
+            <small>Updated {new Date(delivery.updatedAt).toLocaleString()}</small>
+          </button>
+          <div className="delivery-card-actions">
+            <span className={`status-pill ${status.className}`}>{status.label}</span>
+            <button className="copy-tracking" type="button" onClick={() => onCopy(delivery)}
+              aria-label="Copy full tracking number"
+              title="Copy the full tracking number">
+              {copiedLifecycleId === delivery.lifecycleId ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </article>;
+      })}</div>}
+  </section>;
+}
+
 function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason,
   recipientNameError, failureReasonError, pending, onUpdate, onBack }) {
   const actions = nextStatuses[delivery.status] || [];
+  const [copied, setCopied] = useState(false);
+  async function copyDetailsNumber() {
+    try {
+      await copyTrackingNumber(delivery.trackingNumber);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
   return <article className="delivery-detail"><button className="back-button" onClick={onBack}>← Assigned deliveries</button>
-    <h2>{delivery.trackingNumber}</h2><p className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</p>
+    <div className="delivery-title"><h2>{formatTrackingNumber(delivery.trackingNumber)}</h2>
+      <button className="copy-tracking" type="button" onClick={copyDetailsNumber}
+        aria-label="Copy full tracking number" title="Copy the full tracking number">{copied ? 'Copied' : 'Copy'}</button></div>
+    <p className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</p>
     <dl><dt>Pickup</dt><dd>{delivery.pickupAddress}</dd><dt>Drop-off</dt><dd>{delivery.dropoffAddress}</dd>
       <dt>Sender contact</dt><dd>{delivery.senderName} {delivery.senderPhone}</dd><dt>Recipient contact</dt><dd>{delivery.recipientName} {delivery.recipientPhone}</dd>
       <dt>Parcel</dt><dd>{delivery.parcelDescription} · {delivery.parcelWeightGrams} g</dd></dl>
