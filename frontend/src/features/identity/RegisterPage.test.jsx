@@ -12,6 +12,11 @@ function fill(confirm = password) {
 }
 function csrf() { return { ok: true, json: async () => ({ token: 'csrf-fixture', headerName: 'X-XSRF-TOKEN' }) }; }
 describe('customer registration', () => {
+  it('links both SwiftDrop logos to the public landing page', () => {
+    render(<RegisterPage />);
+    expect(screen.getAllByRole('link', { name: 'SwiftDrop home' })).toHaveLength(2);
+    screen.getAllByRole('link', { name: 'SwiftDrop home' }).forEach(link => expect(link).toHaveAttribute('href', '/'));
+  });
   it('validates confirmation before network activity and toggles visibility', () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
     render(<RegisterPage />); fill('different');
