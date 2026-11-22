@@ -16,7 +16,7 @@ it('shows canonical delivery status in the list and loads the latest status in o
   renderPanel(request);
   expect(await screen.findByText('In transit')).toBeInTheDocument();
   expect(screen.queryByText('Created')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: order.trackingNumber }));
+  fireEvent.click(screen.getByRole('button', { name: 'View' }));
   const details = await screen.findByRole('region', { name: 'Merchant order details' });
   expect(within(details).getByText('Delivered')).toBeInTheDocument();
   expect(within(details).getByText(/Last status update:/)).toBeInTheDocument();
@@ -48,4 +48,10 @@ it('refreshes canonical status and identifies missing legacy lifecycle data', as
   expect(await screen.findByText('Not initialized')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Refresh orders' }));
   expect(await screen.findByText('Out for delivery')).toBeInTheDocument();
+});
+
+it('shows assignment as a distinct operational state while lifecycle remains created', async () => {
+  const request = vi.fn().mockResolvedValue(page([{ ...order, deliveryStatus: 'CREATED', assigned: true }]));
+  renderPanel(request);
+  expect(await screen.findByText('Assigned')).toBeInTheDocument();
 });

@@ -108,7 +108,7 @@ serialize concurrent requests.
 
 Merchant order lists are paginated: the browser shows 20 orders per page, with
 previous/next navigation and a total count. List/detail responses include M6's
-`deliveryStatus` and `statusUpdatedAt`, independently of administrative
+`deliveryStatus`, `statusUpdatedAt`, and assignment flag, independently of administrative
 `bookingState`. Refresh the order list or open details to read the latest status.
 Legacy orders without an initialized lifecycle show "Not initialized".
 Partner lists retain an array body, accept zero-based `page` and `size` (default

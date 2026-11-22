@@ -111,7 +111,10 @@ Approved owners use `GET /merchant/dashboard/orders?page=0&size=20` and
 `page` is zero-based and must be nonnegative; `size` is 1–100 (browser default 20).
 Sorting is `createdAt DESC, id DESC`, with a stable tie-breaker. There is no
 100-order history limit. Each item/detail keeps the existing booking fields at
-the response root and adds `deliveryStatus` and UTC `statusUpdatedAt` from M6.
+the response root and adds `deliveryStatus`, UTC `statusUpdatedAt`, and boolean
+`assigned` from the M6 lifecycle read contract. When `assigned=true` and
+`deliveryStatus=CREATED`, the UI presents the operational state as **Assigned**;
+the canonical lifecycle status remains `CREATED`.
 Possible statuses: `CREATED`, `PICKED_UP`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`,
 `DELIVERED`, `FAILED`. These fields are null for legacy orders without a lifecycle;
 the UI says "Not initialized". `bookingState` remains the separate booking state.
@@ -120,7 +123,8 @@ current state when opened; the list has an explicit refresh action.
 
 The partner list preserves its existing **array** body, with default `size=100`.
 It accepts the same paging bounds and returns `X-Total-Count`, `X-Total-Pages`,
-`X-Page`, `X-Page-Size`. Partner details include the same two delivery fields.
+`X-Page`, `X-Page-Size`. Partner details include the same delivery fields,
+including `assigned`.
 Creation responses remain booking snapshots. Authorization still resolves the
 merchant from the approved owner/key; no caller-supplied merchant ID is accepted.
 

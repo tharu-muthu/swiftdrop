@@ -5,10 +5,11 @@ import MerchantDashboardPage from './MerchantDashboardPage.jsx';
 
 function renderPage(request){const state={status:'authenticated',user:{fullName:'Owner',roles:['CUSTOMER','MERCHANT']}};render(<AuthProvider client={{subscribe:()=>()=>{},getSnapshot:()=>state,bootstrap:()=>{},request}}><MerchantDashboardPage /></AuthProvider>);}
 const business={id:'merchant-1',businessName:'Fixture shop',contactEmail:'shop@example.test',contactPhone:'0771234567',businessAddress:'Shop address',approvalStatus:'APPROVED',version:2};
-it('shows a newly issued API key once and allows dismissing it',async()=>{
+it('shows a newly issued API key once, copies it, and allows dismissing it',async()=>{
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
   const request=vi.fn(async(path,options)=>path.endsWith('/registration')?business:path.includes('/orders?')?{items:[],page:0,totalPages:0,totalElements:0}:path.endsWith('/api-keys')&&options?.method==='POST'?{apiKey:'fixture-issued-key'}:[]);
   renderPage(request);await screen.findByRole('heading',{name:'API credentials'});fireEvent.click(screen.getByRole('button',{name:'Generate API key'}));
-  expect(await screen.findByText('fixture-issued-key')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Dismiss key'}));
+  expect(await screen.findByText('fixture-issued-key')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Copy API key'}));expect(navigator.clipboard.writeText).toHaveBeenCalledWith('fixture-issued-key');fireEvent.click(screen.getByRole('button',{name:'Dismiss key'}));
   expect(screen.queryByText('fixture-issued-key')).not.toBeInTheDocument();
 });
 it('sends the loaded record version when updating merchant contacts',async()=>{
