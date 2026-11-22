@@ -29,6 +29,38 @@ const details = {
 };
 
 describe('courier execution dashboard', () => {
+  it('shows failure validation directly below the failure reason field', async () => {
+    const request = vi.fn().mockImplementation(path => {
+      if (path === '/api/v1/courier/deliveries/lifecycle-1') return Promise.resolve(details);
+      return Promise.resolve([summary]);
+    });
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: /SD-1001/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'FAILED' }));
+
+    expect(await screen.findByText('Failure reason is required.')).toBeVisible();
+    expect(screen.getByLabelText('Failure reason')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('shows recipient validation directly below the recipient name field', async () => {
+    const request = vi.fn().mockImplementation(path => {
+      if (path === '/api/v1/courier/deliveries/lifecycle-1') return Promise.resolve(details);
+      return Promise.resolve([summary]);
+    });
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: /SD-1001/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'DELIVERED' }));
+
+    expect(await screen.findByText('Recipient name is required.')).toBeVisible();
+    expect(screen.getByLabelText('Recipient name')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('shows an assigned parcel and requires recipient proof for delivery', async () => {
     const request = vi.fn().mockImplementation(path => {
       if (path === '/api/v1/courier/deliveries/lifecycle-1/status') {
