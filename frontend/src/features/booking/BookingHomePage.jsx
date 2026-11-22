@@ -57,7 +57,7 @@ export default function BookingHomePage() {
         <ActionCard icon="◇" tone="blue" title="Get Quote" description="Check parcel delivery rates instantly." to="/quote" />
         <ActionCard icon="□" tone="cyan" title="Create Booking" description="Book a parcel in just a few steps." to="/bookings/new" />
         <ActionCard icon="⌖" tone="green" title="Track Parcel" description="Check the real-time status of your parcel." to="/tracking" />
-        <ActionCard icon="▤" tone="purple" title="Download Receipt" description="Get and save booking receipts anytime." to="/receipts" />
+        <ActionCard icon="▤" tone="purple" title="Delivery Receipts" description="View receipts issued after delivery." to="/receipts" />
       </section>
       <section className="summary-panel" aria-labelledby="booking-summary-heading">
         <div className="summary-heading"><h2 id="booking-summary-heading"><span aria-hidden="true">▥</span> Booking Summary</h2><small>This Month Overview</small></div>

@@ -3,8 +3,8 @@ info:
   title: SwiftDrop merchant API (M2)
   version: 0.2.0
   description: |
-    Merchant onboarding, API keys, partner key authentication and merchant quotes.
-    Order creation (`/merchant/orders`) is reserved and not implemented yet.
+    Merchant onboarding, API keys, partner key authentication, merchant quotes,
+    orders and delivery status reads.
     The merchant is always derived from the session or the API key, never from a request body.
 servers:
   - url: http://localhost:8081/api/v1

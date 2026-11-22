@@ -78,6 +78,8 @@ describe('BookingFormPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
     expect(await screen.findByText('Delivery quote: LKR 450.00')).toBeInTheDocument();
     expect(request).toHaveBeenCalledWith('/api/v1/quotes', expect.objectContaining({ method: 'POST', body: JSON.stringify({ pickupPostalCode: '00600', dropoffPostalCode: '20000', weightGrams: 600, size: 'MEDIUM' }) }));
+    expect(screen.queryByRole('button', { name: 'Get quote' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm booking' })).toBeInTheDocument();
   });
   it('confirms with a stable idempotency key when a network failure is retried', async()=>{
     const quote={quoteId:'quote-1',currency:'LKR',amountMinor:45000,baseMinor:40000,extraWeightMinor:5000,sizeSurchargeMinor:0,expiresAt:'2026-12-01T10:00:00Z'};
