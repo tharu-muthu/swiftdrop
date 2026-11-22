@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from './AuthProvider.jsx';
 import AdminUsersPage from './AdminUsersPage.jsx';
@@ -88,5 +88,50 @@ describe('admin user management', () => {
     fireEvent.change(screen.getByLabelText('Action'), { target: { value: 'revoke' } });
     fireEvent.change(screen.getByLabelText('Reason *'), { target: { value: 'Self removal' } });
     expect(screen.getByRole('button', { name: 'Remove role' })).toBeDisabled();
+  });
+  it('opens details in a centered pop-up window modal, shows skeleton loading, and closes back to the original list', async () => {
+    let delayResolve = null;
+    const request = vi.fn().mockImplementation(path => {
+      if (path.endsWith('/customer-1')) {
+        return new Promise(resolve => { delayResolve = () => resolve(account); });
+      }
+      return Promise.resolve({ items: [account], page: 0, totalElements: 1, totalPages: 1 });
+    });
+    const snapshot = { status: 'authenticated', user: actor };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+    render(<AuthProvider client={client}><AdminUsersPage /></AuthProvider>);
+    expect(await screen.findByText('Customer One')).toBeVisible();
+    expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
+
+    // Click view: centered pop-up modal opens immediately with skeleton loading
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(screen.getByRole('dialog', { name: 'Account details modal' })).toBeVisible();
+    expect(screen.getByLabelText('Loading account details')).toBeVisible();
+
+    // When request resolves, details are shown in the modal
+    delayResolve();
+    const modal = await screen.findByRole('dialog', { name: 'Account details modal' });
+    expect(await within(modal).findByRole('region', { name: 'Account details' })).toBeVisible();
+    expect(within(modal).getByText('Account roles')).toBeVisible();
+    expect(screen.queryByLabelText('Loading account details')).not.toBeInTheDocument();
+
+    // Close via close button: modal closes, original list is intact
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+    expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
+    expect(screen.getByText('Customer One')).toBeVisible();
+
+    // Reopen and close via Escape key
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(await screen.findByRole('dialog', { name: 'Account details modal' })).toBeVisible();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
+    expect(screen.getByText('Customer One')).toBeVisible();
+
+    // Reopen and close via backdrop click
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(await screen.findByRole('dialog', { name: 'Account details modal' })).toBeVisible();
+    fireEvent.click(document.querySelector('.admin-modal-backdrop'));
+    expect(screen.queryByRole('dialog', { name: 'Account details modal' })).not.toBeInTheDocument();
+    expect(screen.getByText('Customer One')).toBeVisible();
   });
 });
