@@ -32,8 +32,9 @@ export default function App() {
   const [requestedPath, setPath] = useState(window.location.pathname);
   const auth = useAuth();
   const portals = auth.status === 'authenticated' ? availableWorkspaces(auth.user) : [];
-  const path = portals.length === 1 && ['/', '/login', '/register', '/workspaces'].includes(requestedPath)
-    ? portals[0].path : requestedPath;
+  const defaultPortal = portals.find(portal => portal.role === 'CUSTOMER') || (portals.length === 1 ? portals[0] : null);
+  const path = defaultPortal && ['/', '/login', '/register', '/workspaces'].includes(requestedPath)
+    ? defaultPortal.path : requestedPath;
   useLayoutEffect(() => {
     const update = () => setPath(window.location.pathname);
     window.addEventListener('popstate', update);

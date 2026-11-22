@@ -20,14 +20,16 @@ describe('role workspaces', () => {
     expect(screen.getByRole('heading', { name: 'Customer portal' })).toBeVisible();
     expect(screen.queryByText('Loading SwiftDrop')).not.toBeInTheDocument();
   });
-  it('selects a portal without reloading the document or restoring authentication again', () => {
-    state.user.roles = ['CUSTOMER', 'COURIER'];
+  it('defaults multiple-role customers to customer and still allows direct portal switching', () => {
+    state.user.roles = ['COURIER', 'CUSTOMER'];
     render(<App />);
-    fireEvent.click(screen.getByRole('link', { name: 'Open courier' }));
-    expect(window.location.pathname).toBe('/courier');
+    expect(window.location.pathname).toBe('/booking');
+    expect(screen.getByRole('heading', { name: 'Customer portal' })).toBeVisible();
+    act(() => navigate('/courier'));
     expect(screen.getByRole('heading', { name: 'Courier portal' })).toBeVisible();
     act(() => navigate('/workspaces'));
-    expect(screen.getByRole('heading', { name: 'Choose your portal' })).toBeVisible();
+    expect(window.location.pathname).toBe('/booking');
+    expect(screen.getByRole('heading', { name: 'Customer portal' })).toBeVisible();
   });
   it('keeps private content and login hidden while restoring the session', () => {
     state.status = 'loading';
@@ -55,12 +57,12 @@ describe('role workspaces', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('does not have the role');
     expect(screen.getByRole('link', { name: 'View your workspaces' })).toHaveAttribute('href', '/workspaces');
   });
-  it('renders assigned workspaces and an application path, not privileged self signup', () => {
-    state.user.roles = ['CUSTOMER', 'DISPATCHER_ADMIN'];
+  it('opens customer by default for customer administrators', () => {
+    state.user.roles = ['DISPATCHER_ADMIN', 'CUSTOMER'];
     render(<App />);
-    expect(screen.getByRole('link', { name: 'Open customer' })).toHaveAttribute('href', '/booking');
-    expect(screen.queryByRole('link', { name: 'Open courier' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Merchant application' })).toHaveAttribute('href', '/merchant');
+    expect(window.location.pathname).toBe('/booking');
+    expect(screen.getByRole('heading', { name: 'Customer portal' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Choose your portal' })).not.toBeInTheDocument();
   });
   it('offers multiple assigned workspaces', () => {
     state.user.roles = ['COURIER', 'DISPATCHER_ADMIN']; render(<App />);
