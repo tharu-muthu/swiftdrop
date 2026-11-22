@@ -30,6 +30,8 @@ export default function CourierDashboardPage() {
   const [pending, setPending] = useState(false);
   const [recipientName, setRecipientName] = useState('');
   const [failureReason, setFailureReason] = useState('');
+  const [recipientNameError, setRecipientNameError] = useState('');
+  const [failureReasonError, setFailureReasonError] = useState('');
 
   async function refresh() {
     const request = ++listRequest.current;
@@ -45,13 +47,22 @@ export default function CourierDashboardPage() {
   async function selectDelivery(id) {
     const request = ++detailRequest.current;
     try {
-      setError(''); const delivery = await loadDelivery(client, id);
+      setError(''); setRecipientNameError(''); setFailureReasonError('');
+      const delivery = await loadDelivery(client, id);
       if (request === detailRequest.current) { setSelected(delivery); setRecipientName(''); setFailureReason(''); }
     } catch (requestError) { if (request === detailRequest.current) setError(requestError.message); }
   }
   async function update(status) {
-    if (status === 'DELIVERED' && !recipientName.trim()) return setError('Recipient name is required.');
-    if (status === 'FAILED' && !failureReason.trim()) return setError('Failure reason is required.');
+    setRecipientNameError('');
+    setFailureReasonError('');
+    if (status === 'DELIVERED' && !recipientName.trim()) {
+      setRecipientNameError('Recipient name is required.');
+      return;
+    }
+    if (status === 'FAILED' && !failureReason.trim()) {
+      setFailureReasonError('Failure reason is required.');
+      return;
+    }
     setPending(true);
     try {
       const result = await updateDeliveryStatus(client, selected.lifecycleId, {
@@ -59,7 +70,9 @@ export default function CourierDashboardPage() {
         recipientName: status === 'DELIVERED' ? recipientName.trim() : null,
         failureReason: status === 'FAILED' ? failureReason.trim() : null,
       });
-      setSelected(result); setRecipientName(''); setFailureReason(''); await refresh();
+      setSelected(result); setRecipientName(''); setFailureReason('');
+      setRecipientNameError(''); setFailureReasonError('');
+      await refresh();
     } catch (requestError) {
       if ([403, 404].includes(requestError.status)) { setSelected(null); await refresh(); }
       setError(requestError.message);
@@ -85,11 +98,13 @@ export default function CourierDashboardPage() {
         </button>)}
       </div> : <DeliveryDetails delivery={selected} recipientName={recipientName}
         setRecipientName={setRecipientName} failureReason={failureReason} setFailureReason={setFailureReason}
+        recipientNameError={recipientNameError} failureReasonError={failureReasonError}
         pending={pending} onUpdate={update} onBack={() => setSelected(null)} />}
   </PortalShell>;
 }
 
-function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason, pending, onUpdate, onBack }) {
+function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason,
+  recipientNameError, failureReasonError, pending, onUpdate, onBack }) {
   const actions = nextStatuses[delivery.status] || [];
   return <article className="delivery-detail"><button className="back-button" onClick={onBack}>← Assigned deliveries</button>
     <h2>{delivery.trackingNumber}</h2><p className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</p>
@@ -99,8 +114,18 @@ function DeliveryDetails({ delivery, recipientName, setRecipientName, failureRea
     <h3>Status history</h3><ol className="status-history">{delivery.history.map(item =>
       <li key={item.sequenceNo}><strong className={`status-pill ${deliveryStatus(item.newStatus).className}`}>{deliveryStatus(item.newStatus).label}</strong><small>{new Date(item.occurredAt).toLocaleString()}</small>
         {item.failureReason && <span>{item.failureReason}</span>}</li>)}</ol>
-    {actions.includes('DELIVERED') && <label>Recipient name<input value={recipientName} onChange={event => setRecipientName(event.target.value)} maxLength="200" /></label>}
-    {actions.includes('FAILED') && <label>Failure reason<input value={failureReason} onChange={event => setFailureReason(event.target.value)} maxLength="500" /></label>}
+    {actions.includes('DELIVERED') && <div className="delivery-field"><label htmlFor="recipient-name">Recipient name</label>
+      <input id="recipient-name" value={recipientName} onChange={event => setRecipientName(event.target.value)}
+        maxLength="200" aria-invalid={recipientNameError ? 'true' : 'false'}
+        aria-describedby={recipientNameError ? 'recipient-name-error' : undefined} />
+      {recipientNameError && <p id="recipient-name-error" className="field-error" role="alert">{recipientNameError}</p>}
+    </div>}
+    {actions.includes('FAILED') && <div className="delivery-field"><label htmlFor="failure-reason">Failure reason</label>
+      <textarea id="failure-reason" rows="3" value={failureReason} onChange={event => setFailureReason(event.target.value)}
+        maxLength="500" aria-invalid={failureReasonError ? 'true' : 'false'}
+        aria-describedby={failureReasonError ? 'failure-reason-error' : undefined} />
+      {failureReasonError && <p id="failure-reason-error" className="field-error" role="alert">{failureReasonError}</p>}
+    </div>}
     <div className="execution-actions">{actions.map(status =>
       <button key={status} disabled={pending} onClick={() => onUpdate(status)}>{status.replaceAll('_', ' ')}</button>)}</div>
   </article>;
