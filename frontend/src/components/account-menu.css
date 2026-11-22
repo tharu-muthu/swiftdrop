@@ -24,3 +24,8 @@
 .account-dropdown-error{margin:0;padding:12px 22px;background:var(--sd-danger-tint);color:var(--sd-danger);font-size:13px}
 @media(max-width:760px){.account-dropdown{max-width:none}.account-dropdown-trigger{padding:4px;min-height:44px}.account-dropdown-chevron{display:none}.account-dropdown-panel{width:320px}.account-dropdown-summary{padding:18px}.account-dropdown-panel [role=menuitem]{padding:16px 18px}}
 @media(prefers-reduced-motion:reduce){.account-dropdown-chevron{transition:none}}
+
+.account-portal-options{padding:4px 12px 10px;background:var(--sd-background)}
+.account-dropdown-panel .account-portal-options [role=menuitem]{min-height:44px;padding:12px 16px;border-radius:6px;background:transparent;font-size:13px}
+.account-dropdown-panel .account-portal-options [aria-current=true]{background:var(--sd-tint);color:var(--sd-primary-hover);font-weight:650}
+.account-portal-options small{margin-left:auto;font-size:10px;color:var(--sd-muted)}

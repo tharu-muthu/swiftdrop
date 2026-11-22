@@ -27,7 +27,7 @@ it('supports keyboard navigation and returns focus to the trigger on Escape', ()
   setup();
   expect(screen.getByRole('menuitem', { name: 'My account' })).toHaveFocus();
   fireEvent.keyDown(document.activeElement, { key: 'ArrowDown' });
-  expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus();
+  expect(screen.getByRole('menuitem', { name: 'Switch portal' })).toHaveFocus();
   fireEvent.keyDown(document.activeElement, { key: 'Escape' });
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Account menu' })).toHaveFocus();
@@ -56,4 +56,16 @@ it('shows a retry error when sign-out cannot be confirmed', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Sign-out could not be confirmed');
   expect(window.location.pathname).toBe('/booking');
   expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeEnabled();
+});
+
+it('expands assigned portals and switches directly to the chosen portal', () => {
+  setup();
+  expect(screen.queryByRole('group', { name: 'Your portals' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Switch portal' }));
+  expect(screen.getByRole('menuitem', { name: 'Customer Current portal' })).toHaveAttribute('aria-current', 'true');
+  expect(screen.queryByRole('menuitem', { name: 'Courier' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Dispatcher administrator' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Merchant' }));
+  expect(window.location.pathname).toBe('/merchant');
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });

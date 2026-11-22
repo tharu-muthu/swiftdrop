@@ -45,14 +45,13 @@ it('keeps an accessible icon rail and remembers collapse across portal mounts', 
   expect(screen.getByRole('link', { name: 'SwiftDrop home' })).toHaveTextContent('SwiftDrop');
 });
 
-it('shows shared role links and highlights the current nested booking route', () => {
+it('shows only active portal links and highlights the current nested booking route', () => {
   setup(['CUSTOMER', 'COURIER'], '/bookings/parcel-1');
   const nav = within(screen.getByRole('navigation', { name: 'Workspace navigation' }));
   expect(nav.getByRole('link', { name: 'My bookings' })).toHaveAttribute('aria-current', 'page');
-  expect(nav.getByRole('link', { name: 'Courier deliveries' })).toHaveAttribute('href', '/courier');
+  expect(nav.queryByRole('link', { name: 'Courier deliveries' })).not.toBeInTheDocument();
   expect(nav.queryByRole('link', { name: 'User management' })).not.toBeInTheDocument();
-  fireEvent.click(nav.getByRole('link', { name: 'Switch portal' }));
-  expect(window.location.pathname).toBe('/workspaces');
+  expect(nav.queryByRole('link', { name: 'Switch portal' })).not.toBeInTheDocument();
 });
 
 it('keeps merchant links and account navigation available without customer privileges', () => {
@@ -65,3 +64,20 @@ it('keeps merchant links and account navigation available without customer privi
   fireEvent.click(screen.getByRole('menuitem', { name: 'My account' }));
   expect(window.location.pathname).toBe('/account');
 });
+
+for (const [path, visible, hidden] of [
+  ['/courier', 'Courier deliveries', 'Book parcel'],
+  ['/dispatch', 'User management', 'Merchant workspace'],
+  ['/merchant', 'Webhooks', 'Courier deliveries'],
+]) {
+  it(`isolates navigation for ${path} and retains it on account pages`, () => {
+    window.history.replaceState(null, '', path);
+    setup(['CUSTOMER', 'MERCHANT', 'COURIER', 'DISPATCHER_ADMIN']);
+    const nav = within(screen.getByRole('navigation', { name: 'Workspace navigation' }));
+    expect(nav.getByRole('link', { name: visible })).toBeVisible();
+    expect(nav.queryByRole('link', { name: hidden })).not.toBeInTheDocument();
+    fireEvent.click(nav.getByRole('link', { name: 'My account' }));
+    expect(nav.getByRole('link', { name: visible })).toBeVisible();
+    expect(nav.queryByRole('link', { name: hidden })).not.toBeInTheDocument();
+  });
+}
