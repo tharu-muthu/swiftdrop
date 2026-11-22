@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swiftdrop.dto.merchant.MerchantContext;
 import com.swiftdrop.dto.webhook.*;
 import com.swiftdrop.entity.webhook.WebhookDelivery;
-import com.swiftdrop.entity.webhook.WebhookDeliveryAttempt;
 import com.swiftdrop.entity.webhook.WebhookSubscription;
 import com.swiftdrop.exception.WebhookEndpointException;
 import com.swiftdrop.exception.WebhookSubscriptionConflictException;
@@ -14,7 +13,6 @@ import com.swiftdrop.repository.webhook.WebhookDeliveryRepository;
 import com.swiftdrop.repository.webhook.WebhookSubscriptionRepository;
 import com.swiftdrop.service.merchant.MerchantAccessService;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,14 +32,13 @@ public class WebhookSubscriptionService {
     private final WebhookSigningService signing;
     private final WebhookSecretProtector secrets;
     private final WebhookPayloadSerializer payloads;
-    private final WebhookDeliveryService delivery;
     private final Clock clock;
 
     public WebhookSubscriptionService(MerchantAccessService merchants,
             WebhookSubscriptionRepository subscriptions, WebhookDeliveryRepository deliveries,
             WebhookDeliveryAttemptRepository attempts, WebhookEndpointPolicy endpoints,
             WebhookSigningService signing, WebhookSecretProtector secrets,
-            ObjectMapper mapper, WebhookDeliveryService delivery, Clock clock) {
+            ObjectMapper mapper, Clock clock) {
         this.merchants = merchants;
         this.subscriptions = subscriptions;
         this.deliveries = deliveries;
@@ -50,7 +47,6 @@ public class WebhookSubscriptionService {
         this.signing = signing;
         this.secrets = secrets;
         this.payloads = new WebhookPayloadSerializer(mapper);
-        this.delivery = delivery;
         this.clock = clock;
     }
 

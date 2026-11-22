@@ -1,6 +1,12 @@
+import WorkspacesPage from '../features/identity/WorkspacesPage.jsx';
+import AppLoading from './AppLoading.jsx';
+import ConfirmEmailChangePage from '../features/identity/ConfirmEmailChangePage.jsx';
+import WorkspacePage from '../components/WorkspacePage.jsx';
+import { availableWorkspaces, canAccess } from './workspaces.js';
+import { navigate } from './navigation.js';
 import FoundationPage from './FoundationPage.jsx';
 import RegisterPage from '../features/identity/RegisterPage.jsx';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useAuth } from '../features/identity/AuthProvider.jsx';
 import LoginPage from '../features/identity/LoginPage.jsx';
 import AccountPage from '../features/identity/AccountPage.jsx';
@@ -23,13 +29,20 @@ import NotificationAdminPage from '../features/notification/NotificationAdminPag
 import CustomerToolsPage from '../features/booking/CustomerToolsPage.jsx';
 
 export default function App() {
-  const [path, setPath] = useState(window.location.pathname);
+  const [requestedPath, setPath] = useState(window.location.pathname);
   const auth = useAuth();
-  useEffect(() => {
+  const portals = auth.status === 'authenticated' ? availableWorkspaces(auth.user) : [];
+  const path = portals.length === 1 && ['/', '/login', '/register', '/workspaces'].includes(requestedPath)
+    ? portals[0].path : requestedPath;
+  useLayoutEffect(() => {
     const update = () => setPath(window.location.pathname);
     window.addEventListener('popstate', update);
     return () => window.removeEventListener('popstate', update);
   }, []);
+  useLayoutEffect(() => {
+    if (path !== requestedPath) navigate(path, { replace: true });
+  }, [path, requestedPath]);
+  if (path === '/change-email') return <ConfirmEmailChangePage />;
   if (path === '/foundation') return <FoundationPage />;
   if (path === '/auth/complete') return <AuthCompletePage />;
   if (path === '/forgot-password') return <ForgotPasswordPage />;
@@ -40,10 +53,12 @@ export default function App() {
     const trackingNumber = path.startsWith('/tracking/')
       ? decodeURIComponent(path.slice('/tracking/'.length))
       : new URLSearchParams(window.location.search).get('number') || '';
-    return <PublicTrackingPage trackingNumber={trackingNumber} />;
+    return <PublicTrackingPage trackingNumber={trackingNumber} inPortal={auth.status === 'authenticated'} />;
   }
-  if (auth.status === 'loading') return <main className="auth-loading" role="status">Checking your session…</main>;
+  if (auth.status === 'loading') return <AppLoading />;
   if (auth.status === 'authenticated') {
+    if (!canAccess(auth.user, path)) return <WorkspacePage title="Access unavailable"><p role="alert">Your account does not have the role required for this workspace.</p><a href="/workspaces">View your workspaces</a></WorkspacePage>;
+    if (['/', '/login', '/register', '/workspaces'].includes(path)) return <WorkspacesPage />;
     if (path === '/merchant') return <MerchantDashboardPage />;
     if (path === '/merchant/orders/new') return <BookingFormPage merchant />;
     if (auth.user.roles.includes('DISPATCHER_ADMIN')) {
@@ -61,7 +76,8 @@ export default function App() {
       if (path === '/bookings/new') return <BookingFormPage />;
       return path === '/bookings' ? <MyBookingsPage /> : <CustomerToolsPage path={path} />;
     }
-    return <AccountPage />;
+    if (path === '/account' || path === '/profile') return <AccountPage />;
+    return <WorkspacePage title="Page not found"><a href="/workspaces">View your workspaces</a></WorkspacePage>;
   }
   return path === '/register' || path === '/' ? <RegisterPage /> : <LoginPage />;
 }

@@ -7,10 +7,8 @@ import com.swiftdrop.dto.pricing.RateCardRequest;
 import com.swiftdrop.dto.pricing.RateCardResponse;
 import com.swiftdrop.dto.pricing.ZoneRequest;
 import com.swiftdrop.dto.pricing.ZoneResponse;
-import com.swiftdrop.service.identity.IdentityAccountService;
 import com.swiftdrop.service.pricing.PricingAdminService;
-import com.swiftdrop.service.pricing.PricingService;
-import com.swiftdrop.service.pricing.QuoteOwner;
+import com.swiftdrop.service.pricing.CustomerQuoteService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -26,25 +24,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 public class PricingController {
-    private final PricingService pricing;
+    private final CustomerQuoteService pricing;
     private final PricingAdminService admin;
-    private final IdentityAccountService identities;
 
-    public PricingController(PricingService pricing, PricingAdminService admin, IdentityAccountService identities) {
+    public PricingController(CustomerQuoteService pricing, PricingAdminService admin) {
         this.pricing = pricing;
         this.admin = admin;
-        this.identities = identities;
     }
 
     @PostMapping("/quotes")
     @ResponseStatus(HttpStatus.CREATED)
     public QuoteResponse createQuote(@Valid @RequestBody QuoteRequest request) {
-        return pricing.createQuote(currentCustomer(), request);
+        return pricing.create(request);
     }
 
     @GetMapping("/quotes/{quoteId}")
     public QuoteResponse getQuote(@PathVariable UUID quoteId) {
-        return pricing.getQuote(quoteId, currentCustomer());
+        return pricing.get(quoteId);
     }
 
     @GetMapping("/admin/zones")
@@ -69,9 +65,6 @@ public class PricingController {
         return admin.createRateCard(request);
     }
 
-    private QuoteOwner currentCustomer() {
-        return QuoteOwner.customer(identities.requireCurrentIdentity().userId());
-    }
     public record ActiveRequest(@jakarta.validation.constraints.NotNull Boolean active) { }
     @org.springframework.web.bind.annotation.PatchMapping("/admin/zones/{id}")
     public ZoneResponse zoneState(@PathVariable UUID id,@Valid @RequestBody ActiveRequest request) { return admin.zoneState(id,request.active()); }

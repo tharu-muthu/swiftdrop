@@ -189,3 +189,16 @@ See [verification record](../verification.md) for observed results and checks no
 - The v3 `RefreshSession` box is implemented as `auth_sessions` plus `refresh_tokens`, preserving a stable session ID and the complete rotation history.
 - The earlier shared-DataSource-instance requirement is replaced by direct Flyway plus application runtime connections to the same database, as explicitly requested in this task.
 - Reference PDFs/PNGs are preserved. This document is the current implementation ER for M1; merchant/courier operational tables still belong to M2/M5.
+
+## V13 profile-security extension
+
+V13 adds `account_action_tokens` (EMAIL_CHANGE / GOOGLE_REAUTH, hashed single-use
+secret, owner/session/authorization-version binding, expiry and terminal timestamps)
+and `saved_addresses` (UUID owner, label/contact/address snapshot source, default
+pickup flag and optimistic version). User locks serialize address mutations and
+limit each account to 20 entries. A partial unique index enforces one default.
+Email uniqueness continues to use V2's generated normalized column. Existing
+OAuth provider/subject links and booking snapshots are not changed.
+
+Coordinate V13 before running against a shared Neon branch. It has not been
+applied by the agent. See [account settings](../../contracts/identity-account-settings.md).

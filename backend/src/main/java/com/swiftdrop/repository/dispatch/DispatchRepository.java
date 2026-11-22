@@ -28,4 +28,8 @@ public class DispatchRepository {
                 """,user,vehicle,plate,active);
     }
     public List<Map<String,Object>> assignmentHistory(UUID booking) { return jdbc.queryForList("select id,courier_id,assigned_by,assigned_at,revoked_at,revocation_reason,is_active from swiftdrop.parcel_assignments where booking_id=? order by assigned_at",booking); }
+    public List<UUID> bookingsAssignedBetween(UUID courier, java.time.Instant start, java.time.Instant end) {
+        return jdbc.query("select distinct booking_id from swiftdrop.parcel_assignments where courier_id=? and assigned_at>=? and assigned_at<?",
+                (rs, row) -> rs.getObject(1, UUID.class), courier, java.sql.Timestamp.from(start), java.sql.Timestamp.from(end));
+    }
 }

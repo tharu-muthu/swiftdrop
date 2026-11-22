@@ -11,8 +11,8 @@ import java.util.Map;
 public class PasswordConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
-        var encoder = new Pbkdf2PasswordEncoder("", 16, 600_000, 256);
-        encoder.setAlgorithm(Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
+        var encoder = new Pbkdf2PasswordEncoder("", 16, 600_000,
+                Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
         return new DelegatingPasswordEncoder("pbkdf2-sha256-600k", Map.of("pbkdf2-sha256-600k", encoder));
     }
 }

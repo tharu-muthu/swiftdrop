@@ -24,3 +24,7 @@ The role grant makes the account eligible for M5's separate courier operational 
 ## Verification
 
 From `backend/` run `./mvnw.cmd --batch-mode --no-transfer-progress -Pintegration '-Dtest=MerchantReviewServiceTest' '-Dit.test=IdentityRoleIT' verify` on Windows. The integration test uses disposable PostgreSQL, checks role persistence, audit, admin-only access, and invalidation of prior sessions. It does not use Neon credentials.
+
+## Browser workflow
+
+See [role workspaces and onboarding](../docs/identity/role-workflows.md). Administrators can now grant COURIER from User management and complete the selected account's operational profile in the same screen. Both password and Google sign-in lead to `/workspaces`. Legacy courier/operational-role endpoints delegate to the same policy as the canonical grant/revoke editor.

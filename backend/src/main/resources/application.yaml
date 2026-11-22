@@ -67,7 +67,7 @@ spring:
           max-interval: 10s
           multiplier: 2
   mail:
-    # Private SPRING_MAIL_* values in backend/.env override Compose's Mailpit defaults.
+    # SMTP configuration is backend-only; Compose does not provide a local mail server.
     host: ${SPRING_MAIL_HOST:${MAIL_HOST:localhost}}
     port: ${SPRING_MAIL_PORT:${MAIL_PORT:1025}}
     username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:}}
@@ -96,6 +96,13 @@ logging:
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
     org.hibernate.orm.jdbc.bind: OFF
     org.hibernate.SQL: OFF
+    # HTTP client debug output includes request maps, including login credentials.
+    # Framework DEBUG messages can serialize profile/CSRF request and response bodies.
+    org.springframework.web: INFO
+    org.springframework.http.converter: INFO
+    org.springframework.web.client.RestTemplate: INFO
+    org.springframework.web.HttpLogging: INFO
+    org.springframework.jdbc.core: INFO
 
 swiftdrop:
   bootstrap:

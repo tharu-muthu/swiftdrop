@@ -33,7 +33,7 @@ class ApiKeyServiceTest {
     final ApiKeyService service = new ApiKeyService(identities, merchants, credentials, new ApiKeyGenerator());
 
     final UUID ownerId = UUID.randomUUID();
-    final IdentityContext owner = new IdentityContext(ownerId, UUID.randomUUID(), Set.of("CUSTOMER"), 1);
+    final IdentityContext owner = new IdentityContext(ownerId, UUID.randomUUID(), Set.of("MERCHANT"), 1);
 
     Merchant merchant(boolean approved) {
         var merchant = Merchant.register(ownerId, "Shop", "shop@example.com", null, null);
@@ -44,7 +44,7 @@ class ApiKeyServiceTest {
     }
 
     void signedInWith(Merchant merchant) {
-        when(identities.requireCurrentIdentity()).thenReturn(owner);
+        when(identities.requireCurrentRole(com.swiftdrop.dto.identity.IdentityRole.MERCHANT)).thenReturn(owner);
         when(merchants.findByOwnerUserId(ownerId)).thenReturn(Optional.of(merchant));
         when(merchants.findForUpdate(any())).thenReturn(Optional.of(merchant));
     }
@@ -84,7 +84,7 @@ class ApiKeyServiceTest {
 
     @Test
     void userWithoutABusinessIsNotFound() {
-        when(identities.requireCurrentIdentity()).thenReturn(owner);
+        when(identities.requireCurrentRole(com.swiftdrop.dto.identity.IdentityRole.MERCHANT)).thenReturn(owner);
         when(merchants.findByOwnerUserId(ownerId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(service::create).isInstanceOf(MerchantNotFoundException.class);
@@ -152,5 +152,19 @@ class ApiKeyServiceTest {
         when(credentials.findByIdAndMerchantId(foreignKeyId, approved.getId())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.revoke(foreignKeyId)).isInstanceOf(ApiKeyNotFoundException.class);
+    }
+    @Test void missingMerchantRoleCannotCreateListOrRevokeKeys() {
+        when(identities.requireCurrentRole(com.swiftdrop.dto.identity.IdentityRole.MERCHANT))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Access denied"));
+        assertThatThrownBy(service::create).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(service::list).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> service.revoke(UUID.randomUUID())).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        org.mockito.Mockito.verifyNoInteractions(merchants, credentials);
+    }
+    @Test void unapprovedBusinessCannotListOrRevokeCredentials() {
+        signedInWith(merchant(false));
+        assertThatThrownBy(service::list).isInstanceOf(MerchantNotApprovedException.class);
+        assertThatThrownBy(() -> service.revoke(UUID.randomUUID())).isInstanceOf(MerchantNotApprovedException.class);
+        org.mockito.Mockito.verifyNoInteractions(credentials);
     }
 }

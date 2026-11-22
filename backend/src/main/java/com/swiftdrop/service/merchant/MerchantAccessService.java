@@ -1,6 +1,7 @@
 package com.swiftdrop.service.merchant;
 
 import com.swiftdrop.dto.merchant.MerchantContext;
+import com.swiftdrop.dto.identity.IdentityRole;
 import com.swiftdrop.entity.merchant.Merchant;
 import com.swiftdrop.entity.merchant.MerchantApprovalStatus;
 import com.swiftdrop.exception.InvalidApiKeyException;
@@ -45,7 +46,7 @@ public class MerchantAccessService {
     /** For signed-in owners (dashboard, webhook settings). The merchant comes from the session, never the body. */
     @Transactional(readOnly = true)
     public MerchantContext requireApprovedOwnerMerchant() {
-        var owner = identities.requireCurrentIdentity();
+        var owner = identities.requireCurrentRole(IdentityRole.MERCHANT);
         var merchant = requireApproved(merchants.findByOwnerUserId(owner.userId())
                 .orElseThrow(MerchantNotFoundException::new));
         return new MerchantContext(merchant.getId(), merchant.getOwnerUserId(),
