@@ -29,6 +29,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> lockById(@Param("id") UUID id);
-    @Query("select u from User u where :query = '' or lower(u.fullName) like concat('%', :query, '%') escape '!' or u.emailNormalized like concat('%', :query, '%') escape '!'")
-    Page<User> searchForAdmin(@Param("query") String query, Pageable pageable);
+    @Query(value = """
+            select u.* from swiftdrop.users u
+            where (:query = '' or lower(u.full_name) like concat('%', :query, '%') escape '!'
+                    or u.email_normalized like concat('%', :query, '%') escape '!')
+              and (:role = '' or exists (
+                    select 1 from swiftdrop.user_roles ur join swiftdrop.roles r on r.id=ur.role_id
+                    where ur.user_id=u.id and r.name=:role))
+            order by u.created_at desc,u.id
+            """, countQuery = """
+            select count(*) from swiftdrop.users u
+            where (:query = '' or lower(u.full_name) like concat('%', :query, '%') escape '!'
+                    or u.email_normalized like concat('%', :query, '%') escape '!')
+              and (:role = '' or exists (
+                    select 1 from swiftdrop.user_roles ur join swiftdrop.roles r on r.id=ur.role_id
+                    where ur.user_id=u.id and r.name=:role))
+            """, nativeQuery = true)
+    Page<User> searchForAdmin(@Param("query") String query, @Param("role") String role, Pageable pageable);
 }

@@ -74,6 +74,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/merchants").hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/merchants/*/approve", "/api/v1/admin/merchants/*/reject")
                             .hasRole("DISPATCHER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/merchants/owners/*/suspend")
+                            .hasRole("DISPATCHER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings/dashboard").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/bookings", "/api/v1/bookings/{bookingId}").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/bookings").hasRole("CUSTOMER")

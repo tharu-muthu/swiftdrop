@@ -3,6 +3,7 @@ package com.swiftdrop.controller.merchant;
 import com.swiftdrop.dto.merchant.MerchantAdminResponse;
 import com.swiftdrop.dto.merchant.MerchantPageResponse;
 import com.swiftdrop.dto.merchant.MerchantRejectionRequest;
+import com.swiftdrop.dto.merchant.MerchantSuspensionRequest;
 import com.swiftdrop.entity.merchant.MerchantApprovalStatus;
 import com.swiftdrop.exception.ApiError;
 import com.swiftdrop.exception.MerchantDecisionConflictException;
@@ -45,6 +46,13 @@ public class MerchantAdminController {
     public ResponseEntity<MerchantAdminResponse> reject(@PathVariable UUID id,
             @Valid @RequestBody MerchantRejectionRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reviews.reject(id, request.reason()));
+    }
+
+    @PostMapping("/api/v1/admin/merchants/owners/{ownerUserId}/suspend")
+    public ResponseEntity<MerchantAdminResponse> suspendByOwner(@PathVariable UUID ownerUserId,
+            @Valid @RequestBody MerchantSuspensionRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(reviews.suspendByOwner(ownerUserId, request.reason()));
     }
 
     @ExceptionHandler(MerchantNotFoundException.class)
