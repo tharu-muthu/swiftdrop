@@ -44,7 +44,7 @@ class BookingHistorySecurityTest {
     @WithMockUser(roles = "CUSTOMER")
     void authenticatedCustomerCanReadTheirBookingHistory() throws Exception {
         when(history.history(isNull(), isNull(), isNull(), isNull(), eq(0), eq(10)))
-                .thenReturn(new BookingHistoryResponse(List.of(), new BookingHistorySummary(0, 0, false), 0, 10, 0, 0));
+                .thenReturn(new BookingHistoryResponse(List.of(), new BookingHistorySummary(0, 0, false, 0, 0), 0, 10, 0, 0));
 
         mvc.perform(get("/api/v1/bookings"))
                 .andExpect(status().isOk())
