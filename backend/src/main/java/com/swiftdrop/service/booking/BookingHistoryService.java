@@ -34,9 +34,10 @@ public class BookingHistoryService {
         // The summary's total must not change with the table filters; it reflects all owned records.
         var all = bookings.findHistory(customer.userId(), null, null, null, null, Pageable.unpaged());
         var states=lifecycles.statuses(all.getContent().stream().map(row->row.getId()).toList());
+        var lifecycleRows = lifecycles.summaries(all.getContent().stream().map(row -> row.getId()).toList());
         long allPending = all.getContent().stream().filter(booking -> isPending(booking.getBookingState()))
                 .filter(row->!java.util.Set.of("DELIVERED","FAILED").contains(states.getOrDefault(row.getId(),"CREATED"))).count();
-        return new BookingHistoryResponse(result.map(row->item(row,states.get(row.getId()))).getContent(),
+        return new BookingHistoryResponse(result.map(row->item(row,lifecycleRows.get(row.getId()))).getContent(),
                 new BookingHistorySummary(all.getTotalElements(), allPending, true,
                         states.values().stream().filter(state->java.util.Set.of("PICKED_UP","IN_TRANSIT","OUT_FOR_DELIVERY").contains(state)).count(),
                         states.values().stream().filter("DELIVERED"::equals).count()), result.getNumber(), result.getSize(),
@@ -47,13 +48,14 @@ public class BookingHistoryService {
         var customer = identities.requireCurrentRole(IdentityRole.CUSTOMER);
         var booking = bookings.findById(bookingId).orElseThrow(() -> new AccessDeniedException("Access denied"));
         if (!customer.userId().equals(booking.getCustomerId())) throw new AccessDeniedException("Access denied");
-        return new BookingDetailsResponse(item(booking,lifecycles.statuses(java.util.List.of(bookingId)).get(bookingId)),BookingReadService.snapshot(booking));
+        return new BookingDetailsResponse(item(booking,lifecycles.summaries(java.util.List.of(bookingId)).get(bookingId)),BookingReadService.snapshot(booking));
     }
 
-    private BookingHistoryItem item(ParcelBooking booking,String deliveryStatus) {
+    private BookingHistoryItem item(ParcelBooking booking, com.swiftdrop.dto.execution.LifecycleSnapshot lifecycle) {
         return new BookingHistoryItem(booking.getId(), booking.getTrackingNumber(), booking.getRecipientName(),
                 booking.getRecipientPhone(), booking.getPickupCity(), booking.getDeliveryCity(), booking.getCreatedAt(),
-                booking.getQuotedAmountMinor(), booking.getCurrencyCode(), booking.getBookingState(),deliveryStatus);
+                booking.getQuotedAmountMinor(), booking.getCurrencyCode(), booking.getBookingState(),
+                lifecycle == null ? null : lifecycle.status().name(), lifecycle != null && lifecycle.courierId() != null);
     }
     private static String normalized(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private static String normalizedState(String value) {

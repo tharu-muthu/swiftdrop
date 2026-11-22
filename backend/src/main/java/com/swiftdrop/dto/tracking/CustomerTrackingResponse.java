@@ -6,4 +6,4 @@ import java.util.List;
 
 public record CustomerTrackingResponse(String trackingNumber, ParcelStatus currentStatus,
         Instant lastUpdatedAt, List<TrackingTimelineItem> timeline, String pickupCity,
-        String deliveryCity, String recipientName) { }
+        String deliveryCity, String recipientName, boolean assigned) { }

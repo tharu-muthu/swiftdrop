@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import PortalShell from '../../components/PortalShell.jsx';
 import { loadAssignedDeliveries, loadDelivery, updateDeliveryStatus } from './executionApi.js';
+import { deliveryStatus } from '../../app/deliveryStatus.js';
 import './execution.css';
 
 const nextStatuses = {
@@ -79,7 +80,7 @@ export default function CourierDashboardPage() {
         {!loading && !error && deliveries.length === 0 && <p className="execution-empty">No assigned deliveries. Your dispatcher can check your courier profile and assign parcels.</p>}
         {deliveries.map(delivery => <button className="delivery-card" key={delivery.lifecycleId}
           onClick={() => selectDelivery(delivery.lifecycleId)}>
-          <strong>{delivery.trackingNumber}</strong><span>{delivery.status.replaceAll('_', ' ')}</span>
+          <strong>{delivery.trackingNumber}</strong><span className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</span>
           <small>Updated {new Date(delivery.updatedAt).toLocaleString()}</small>
         </button>)}
       </div> : <DeliveryDetails delivery={selected} recipientName={recipientName}
@@ -91,12 +92,12 @@ export default function CourierDashboardPage() {
 function DeliveryDetails({ delivery, recipientName, setRecipientName, failureReason, setFailureReason, pending, onUpdate, onBack }) {
   const actions = nextStatuses[delivery.status] || [];
   return <article className="delivery-detail"><button className="back-button" onClick={onBack}>← Assigned deliveries</button>
-    <h2>{delivery.trackingNumber}</h2><p className="status-pill">{delivery.status.replaceAll('_', ' ')}</p>
+    <h2>{delivery.trackingNumber}</h2><p className={`status-pill ${deliveryStatus(delivery.status).className}`}>{deliveryStatus(delivery.status).label}</p>
     <dl><dt>Pickup</dt><dd>{delivery.pickupAddress}</dd><dt>Drop-off</dt><dd>{delivery.dropoffAddress}</dd>
       <dt>Sender contact</dt><dd>{delivery.senderName} {delivery.senderPhone}</dd><dt>Recipient contact</dt><dd>{delivery.recipientName} {delivery.recipientPhone}</dd>
       <dt>Parcel</dt><dd>{delivery.parcelDescription} · {delivery.parcelWeightGrams} g</dd></dl>
     <h3>Status history</h3><ol className="status-history">{delivery.history.map(item =>
-      <li key={item.sequenceNo}><strong>{item.newStatus.replaceAll('_', ' ')}</strong><small>{new Date(item.occurredAt).toLocaleString()}</small>
+      <li key={item.sequenceNo}><strong className={`status-pill ${deliveryStatus(item.newStatus).className}`}>{deliveryStatus(item.newStatus).label}</strong><small>{new Date(item.occurredAt).toLocaleString()}</small>
         {item.failureReason && <span>{item.failureReason}</span>}</li>)}</ol>
     {actions.includes('DELIVERED') && <label>Recipient name<input value={recipientName} onChange={event => setRecipientName(event.target.value)} maxLength="200" /></label>}
     {actions.includes('FAILED') && <label>Failure reason<input value={failureReason} onChange={event => setFailureReason(event.target.value)} maxLength="500" /></label>}
