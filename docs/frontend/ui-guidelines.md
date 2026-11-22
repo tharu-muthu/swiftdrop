@@ -21,10 +21,14 @@ Keep the customer hero illustration and booking steps as feature content.
   All authenticated portals use it. `WorkspacePage` adds the common data/form
   content styling; `BookingFrame` retains the existing customer content styling.
 - `WorkspaceNavigation`: one set of role-filtered links with shared SVG icons,
-  current-page indication and `AppLink` navigation. A single-role account has no
-  portal switcher. Customers without MERCHANT see “Apply for merchant”.
+  current-page indication and `AppLink` navigation. Only the active portal
+  contributes role-specific links; the sidebar has no portal switcher. Customers without MERCHANT see “Apply for merchant”.
 - `AccountMenu`: shared header dropdown with name, email, current role badges,
-  My account and Sign out. It supports keyboard navigation, Escape, outside-click
+  My account, Switch portal and Sign out. Switch portal expands only assigned
+  roles and navigates directly to their home pages. Route-specific pages select
+  their portal; shared account/tracking pages retain the last valid portal in
+  tab-local session storage. Portal selection never changes authorization.
+  It supports keyboard navigation, Escape, outside-click
   dismissal and the existing session-revoking logout operation. Sign-out failures
   retain the authentication client?s safe retry path.
 - `AppLoading`: shared session restoration and Google completion indicator.
@@ -101,3 +105,5 @@ only for the backend emailVerified flag. A connected Google account alone does
 not override verification: existing backend flows verify an inbox link or a
 verified Google provider email matching the account address. New-email inbox
 confirmation and backend verification gates remain mandatory.
+
+Users with CUSTOMER open the customer portal by default after sign-in, including multi-role accounts. Direct portal routes and the account-menu switcher still select other assigned portals.
