@@ -13,7 +13,8 @@ final class ParcelStatusTransitionValidator {
             case PICKED_UP -> next == ParcelStatus.IN_TRANSIT || next == ParcelStatus.FAILED;
             case IN_TRANSIT -> next == ParcelStatus.OUT_FOR_DELIVERY || next == ParcelStatus.FAILED;
             case OUT_FOR_DELIVERY -> next == ParcelStatus.DELIVERED || next == ParcelStatus.FAILED;
-            case DELIVERED, FAILED -> false;
+            case FAILED -> next == ParcelStatus.OUT_FOR_DELIVERY;
+            case DELIVERED -> false;
         };
         if (!valid) throw new LifecycleConflictException("Invalid parcel status transition.");
         if (next == ParcelStatus.DELIVERED && (request.recipientName() == null || request.recipientName().isBlank())) {
