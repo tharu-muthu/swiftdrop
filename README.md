@@ -1,8 +1,50 @@
 # SwiftDrop
 
-The customer, merchant, dispatch, courier, tracking, notification and webhook
-workflows are now connected. Use the [integrated system guide](docs/full-system-implementation.md)
-for the demonstration order, new screens, API contracts, queues and migration notes.
+SwiftDrop is a React and Spring Boot parcel-delivery platform. The repository
+contains the connected customer, merchant, dispatch, courier, tracking,
+notification and webhook workflows required by the supplied group assignment.
+Use the [integrated system guide](docs/full-system-implementation.md) for the
+demonstration order, screens, API contracts, queues and migration notes.
+
+## Final submission checklist
+
+The assignment expects a working repository, design documentation, test and
+coverage evidence, and a contribution sheet. The corresponding material is in
+the following locations:
+
+| Required item | Location or command |
+| --- | --- |
+| Source repository and setup | This repository and the setup sections below |
+| Design, architecture, diagrams and decisions | `docs/reference/`, `docs/reference-review.md`, `docs/full-system-implementation.md` |
+| API and event contracts | `contracts/`, including `contracts/merchant-openapi.yaml` and `contracts/webhook-events.md` |
+| Test and coverage reports | `backend/target/surefire-reports/`, `backend/target/failsafe-reports/`, `backend/target/site/jacoco/` after running the commands in [Run tests and builds](#3-run-tests-and-builds) |
+| Demonstration runbook | [Integrated system guide](docs/full-system-implementation.md) |
+| Assignment copy and implementation mapping | `docs/reference/Group Assignment.pdf` and [assignment implementation audit](docs/assignment-implementation-audit.md) |
+| Contribution sheet | Include the final agreed sheet with the submission document |
+
+Before submitting, run the frontend tests and build, the Maven verification
+profile, and the Docker-backed integration profile. Record the actual output in
+the submission evidence. Do not report a check as passed when Docker, Neon,
+Google or SMTP was not available.
+
+### Assignment coverage and submission notes
+
+| Assignment requirement | Current repository status |
+| --- | --- |
+| Customer signup/login, quote, booking, history and receipt | Implemented. Password and session flows are covered by code and tests. |
+| Google OAuth login | Implemented as an optional provider integration. A live Google provider callback still needs a credentialed demonstration. |
+| Public real-time tracking | Implemented with public-safe snapshots and SSE. |
+| Merchant registration, approval, API orders and webhooks | Implemented with merchant isolation, API keys, signed callbacks and retries. |
+| Courier assignment, lifecycle updates, proof and failure reason | Implemented with role and ownership checks. |
+| Dispatcher/admin users, merchants, zones, pricing and reports | Implemented. The daily report currently exposes status counts and overdue age; add explicit success/failure percentages if the lecturer requires those exact metrics. |
+| Asynchronous notification | Implemented with RabbitMQ, durable jobs, retries and mock SMS. No real SMS provider is claimed. |
+| Containerized frontend, backend, database and broker | Frontend, backend and RabbitMQ are in `compose.yaml`. PostgreSQL is supplied externally through private Neon configuration, so confirm that this is accepted or add a PostgreSQL Compose service before final submission. |
+| Testing, authorization and coverage | Unit, frontend, security and Docker-backed PostgreSQL/RabbitMQ integration tests are present. Run them again on the submission machine and attach the generated reports. |
+| Optional Kubernetes and AI assistant bonus | Not included. |
+
+The assignment brief states a ten-person group, while this repository records
+nine members. Confirm the approved group size and the final contribution sheet
+with the lecturer before submission.
 
 Teammates: start with the [identity integration handoff](contracts/identity-services.md)
 before adding authenticated feature endpoints or calling identity services.
@@ -58,12 +100,12 @@ The health service is a liveness response and needs no repository or business ta
 | `backend/src/main/java/com/swiftdrop/` | `controller`, `service`, `repository`, `entity`, `dto`, `security`, `config`, `exception`, `integration` layers; add feature subpackages as needed. |
 | `backend/src/main/resources/` | Environment-based configuration and `db/migration/` Flyway SQL. |
 | `backend/src/test/` | HTTP/security tests and optional real PostgreSQL/RabbitMQ integration tests. |
-| `contracts/` | Health and registration API contracts; future OpenAPI/event schemas. |
+| `contracts/` | Versioned API, merchant OpenAPI, webhook and event contracts used by the implementation. |
 | `docs/reference/` | Original design PDF, diagrams and screen references, preserved unchanged. |
 | `docs/reference-review.md` | Conflicts, source provenance, scope decisions and unresolved team questions. |
 | `docs/identity/` | IAM checklist, registration guide, ER/table guide and connection rules. |
 | `docs/verification.md` | Actual environment and checks from this scaffold run. |
-| `compose.yaml` | Three containers: frontend, backend and RabbitMQ; the backend connects to Neon. |
+| `compose.yaml` | Three services: frontend, backend and RabbitMQ. PostgreSQL is an external Neon dependency in this checkout. |
 | `compose.dev.yaml` | Optional localhost ports for connecting locally running Java to RabbitMQ. |
 | `AGENTS.md` | Short architecture and coding rules for the team and coding assistants. |
 | `.env.example` | Root template for RabbitMQ and app ports; real `.env` files are ignored. |
@@ -446,9 +488,10 @@ reserved by the team and must not be reused.
 The team still needs lecturer approval for nine rather than ten members, member
 names/IDs, deadline and hosting decisions. The assignment found beside this
 repository was copied unchanged into `docs/reference/` for teammates. The current
-branch contains the connected M1–M9 workflows described above. Google
-provider credentials, SMTP/SMS provider credentials, shared-Neon rollout, hosting,
-TLS and the optional Kubernetes/AI bonus remain deployment or team-delivery work.
+branch contains the connected M1–M9 workflows described above. Live Google
+provider and SMTP checks, shared-Neon rollout, hosting and TLS remain
+environment-specific verification. The optional Kubernetes/AI bonus is not
+included.
 
 ## Role workspaces
 
