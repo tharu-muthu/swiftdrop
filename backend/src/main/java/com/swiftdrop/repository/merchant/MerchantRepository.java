@@ -20,4 +20,8 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Merchant m where m.id = :id")
     Optional<Merchant> findForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Merchant m where m.ownerUserId = :ownerUserId")
+    Optional<Merchant> findByOwnerUserIdForUpdate(@Param("ownerUserId") UUID ownerUserId);
 }

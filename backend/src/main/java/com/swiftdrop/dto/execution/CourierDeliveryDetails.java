@@ -8,4 +8,4 @@ import java.util.UUID;
 public record CourierDeliveryDetails(UUID lifecycleId, UUID bookingId, String trackingNumber,
         UUID recipientAccountId, String pickupAddress, String dropoffAddress, String parcelDescription,
         int parcelWeightGrams, ParcelStatus status, Instant updatedAt, List<StatusHistoryItem> history,
-        String recipientName,String recipientPhone,String senderName,String senderPhone) { }
+        String recipientName,String recipientPhone,String senderName,String senderPhone,String deliveryProofName) { }

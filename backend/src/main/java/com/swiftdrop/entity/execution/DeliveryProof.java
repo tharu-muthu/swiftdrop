@@ -19,4 +19,6 @@ public class DeliveryProof extends CreatedEntity {
         proof.historyId = historyId; proof.recipientName = recipientName;
         return proof;
     }
+    public UUID getHistoryId() { return historyId; }
+    public String getRecipientName() { return recipientName; }
 }

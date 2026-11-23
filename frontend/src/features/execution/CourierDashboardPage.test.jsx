@@ -29,6 +29,40 @@ const details = {
 };
 
 describe('courier execution dashboard', () => {
+  it('separates active and completed deliveries and formats the tracking code', async () => {
+    const active = { ...summary, lifecycleId: 'active-1', trackingNumber: 'SDP-B8AF9FE589FF4E74A88F1B12860354A3', status: 'IN_TRANSIT' };
+    const completed = { ...summary, lifecycleId: 'completed-1', trackingNumber: 'SDP-BE4DA3B948600D9A7EC8F2D4A1138844', status: 'DELIVERED' };
+    const request = vi.fn().mockResolvedValue([active, completed]);
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+
+    expect(await screen.findByRole('heading', { name: 'Active deliveries' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Completed' })).toBeVisible();
+    expect(screen.getByText('SDP-B8AF-9FE5-89FF-4E74-A88F-1B12-8603-54A3')).toBeVisible();
+  });
+
+  it('copies the original tracking number', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    const request = vi.fn().mockResolvedValue([{
+      ...summary,
+      trackingNumber: 'SDP-B8AF9FE589FF4E74A88F1B12860354A3',
+    }]);
+    const snapshot = { status: 'authenticated', user: courier };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+
+    render(<AuthProvider client={client}><CourierDashboardPage /></AuthProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy full tracking number' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'SDP-B8AF9FE589FF4E74A88F1B12860354A3',
+    ));
+  });
+
   it('shows failure validation directly below the failure reason field', async () => {
     const request = vi.fn().mockImplementation(path => {
       if (path === '/api/v1/courier/deliveries/lifecycle-1') return Promise.resolve(details);

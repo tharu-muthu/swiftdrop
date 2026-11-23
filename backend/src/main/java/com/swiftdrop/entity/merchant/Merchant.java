@@ -69,6 +69,7 @@ public class Merchant extends UuidEntity {
         return merchant;
     }
     public boolean isPending() { return approvalStatus == MerchantApprovalStatus.PENDING; }
+    public boolean isApproved() { return approvalStatus == MerchantApprovalStatus.APPROVED; }
     public void updateContact(String email,String phone,String address) {
         contactEmail=email; contactPhone=phone; businessAddress=address;
     }
@@ -82,6 +83,12 @@ public class Merchant extends UuidEntity {
 
     public void reject(UUID reviewer, String reason, Instant when) {
         this.approvalStatus = MerchantApprovalStatus.REJECTED;
+        this.reviewReason = reason;
+        this.reviewedBy = reviewer;
+        this.reviewedAt = when;
+    }
+    public void suspend(UUID reviewer, String reason, Instant when) {
+        this.approvalStatus = MerchantApprovalStatus.SUSPENDED;
         this.reviewReason = reason;
         this.reviewedBy = reviewer;
         this.reviewedAt = when;
