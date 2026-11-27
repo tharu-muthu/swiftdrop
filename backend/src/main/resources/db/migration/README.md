@@ -28,3 +28,10 @@ production least-privilege policies remain deployment decisions.
 V13 extends profile security with hashed account-action tokens and owned saved
 addresses. It is pending team migration-number coordination; no old migration
 was changed. Confirm the next free version before shared application startup.
+
+V14 adds indexes for user pagination, dispatch boards, assignment history,
+completion reports and notification lists. Coordinate V14 before shared startup;
+it is the next version in this checkout, not a reservation in teammates' branches.
+The migration preserves rows and existing indexes. Standard transactional index
+creation can block writes while building: use a quiet deployment window.
+See docs/database-performance.md at the repository root for verification and limits.
