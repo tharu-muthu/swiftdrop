@@ -30,17 +30,13 @@ public class BookingHistoryService {
         var customer = identities.requireCurrentRole(IdentityRole.CUSTOMER);
         var result = bookings.findHistory(customer.userId(), normalized(search), normalizedState(bookingState),
                 startOfDay(fromDate), startOfFollowingDay(toDate),
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
         // The summary's total must not change with the table filters; it reflects all owned records.
-        var all = bookings.findHistory(customer.userId(), null, null, null, null, Pageable.unpaged());
-        var states=lifecycles.statuses(all.getContent().stream().map(row->row.getId()).toList());
-        var lifecycleRows = lifecycles.summaries(all.getContent().stream().map(row -> row.getId()).toList());
-        long allPending = all.getContent().stream().filter(booking -> isPending(booking.getBookingState()))
-                .filter(row->!java.util.Set.of("DELIVERED","FAILED").contains(states.getOrDefault(row.getId(),"CREATED"))).count();
+        var counts = lifecycles.customerCounts(customer.userId());
+        var lifecycleRows = lifecycles.summaries(result.getContent().stream().map(row -> row.getId()).toList());
         return new BookingHistoryResponse(result.map(row->item(row,lifecycleRows.get(row.getId()))).getContent(),
-                new BookingHistorySummary(all.getTotalElements(), allPending, true,
-                        states.values().stream().filter(state->java.util.Set.of("PICKED_UP","IN_TRANSIT","OUT_FOR_DELIVERY").contains(state)).count(),
-                        states.values().stream().filter("DELIVERED"::equals).count()), result.getNumber(), result.getSize(),
+                new BookingHistorySummary(counts.total(), counts.pending(), true,
+                        counts.inTransit(), counts.delivered()), result.getNumber(), result.getSize(),
                 result.getTotalPages(), result.getTotalElements());
     }
 
@@ -64,5 +60,4 @@ public class BookingHistoryService {
     }
     private static Instant startOfDay(LocalDate date) { return date == null ? null : date.atStartOfDay(ZoneOffset.UTC).toInstant(); }
     private static Instant startOfFollowingDay(LocalDate date) { return date == null ? null : date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant(); }
-    private static boolean isPending(String state) { return "CREATED".equals(state) || "CONFIRMED".equals(state); }
 }

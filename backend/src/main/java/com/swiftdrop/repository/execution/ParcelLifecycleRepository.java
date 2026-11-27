@@ -9,6 +9,24 @@ import org.springframework.data.jpa.repository.Lock;
 import jakarta.persistence.LockModeType;
 
 public interface ParcelLifecycleRepository extends JpaRepository<ParcelLifecycle, UUID>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<ParcelLifecycle> {
+    interface CustomerCounts {
+        long getTotal();
+        long getPending();
+        long getInTransit();
+        long getDelivered();
+    }
+    // Read-only reporting join: booking owns the customer/state; M6 owns delivery status.
+    @org.springframework.data.jpa.repository.Query(value = """
+            select count(*) as total,
+              count(*) filter (where b.booking_state in ('CREATED','CONFIRMED')
+                and coalesce(l.status,'CREATED') not in ('DELIVERED','FAILED')) as pending,
+              count(*) filter (where l.status in ('PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY')) as inTransit,
+              count(*) filter (where l.status='DELIVERED') as delivered
+            from swiftdrop.parcel_bookings b
+            left join swiftdrop.parcel_lifecycles l on l.booking_id=b.id
+            where b.customer_id=:customerId
+            """, nativeQuery = true)
+    CustomerCounts customerCounts(@org.springframework.data.repository.query.Param("customerId") UUID customerId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<ParcelLifecycle> findByIdAndAssignedCourierId(UUID id, UUID courierId);
     Optional<ParcelLifecycle> findFirstByIdAndAssignedCourierId(UUID id, UUID courierId);
