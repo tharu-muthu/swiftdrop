@@ -27,13 +27,13 @@ describe('admin user management', () => {
     expect(request).not.toHaveBeenCalledWith(expect.stringContaining('query=ca'));
     fireEvent.change(screen.getByLabelText(/Find a user/), { target: { value: 'candidate' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Select user' }));
-    fireEvent.change(screen.getByLabelText('Vehicle type *'), { target: { value: 'Van' } });
+    fireEvent.change(screen.getByLabelText('Vehicle type *'), { target: { value: 'VAN' } });
     fireEvent.click(screen.getByRole('button', { name: 'Assign Courier' }));
 
     await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/admin/users/candidate-1/roles/grant',
       expect.objectContaining({ body: JSON.stringify({ role: 'COURIER', reason: 'Assigned COURIER through user management', expectedVersion: 7 }) })));
     await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/dispatch/couriers/candidate-1',
-      expect.objectContaining({ body: JSON.stringify({ vehicleType: 'Van', licensePlate: '', active: true }) })));
+      expect.objectContaining({ body: JSON.stringify({ vehicleType: 'VAN', licensePlate: '', active: true }) })));
   });
 
   it('searches and disables a user from the active toggle', async () => {
@@ -48,6 +48,8 @@ describe('admin user management', () => {
     fireEvent.change(screen.getByLabelText('Search by name or email'), { target: { value: 'one@example.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     expect(await screen.findByText('Customer One')).toBeVisible();
+    expect(screen.getByRole('switch', { name: 'Disable Customer One' }).parentElement).toHaveAttribute('title', 'Disable Customer One and end their sessions');
+    expect(screen.getByRole('button', { name: 'View' })).toHaveAttribute('title', "View Customer One's account details and role information");
     fireEvent.click(screen.getByRole('switch', { name: 'Disable Customer One' }));
     await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/admin/users/customer-1/suspend',
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ reason: 'Disabled through user management', expectedVersion: 3 }) })));
