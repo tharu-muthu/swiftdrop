@@ -8,6 +8,18 @@ const account = { id: 'customer-1', fullName: 'Customer One', email: 'one@exampl
   roles: ['CUSTOMER'], active: true, emailVerified: true, createdAt: '2026-11-01T00:00:00Z', version: 3 };
 
 describe('admin user management', () => {
+  it('opens courier onboarding directly from the fleet link', async () => {
+    window.history.replaceState(null, '', '/admin/users?role=COURIER&action=assign');
+    const request = vi.fn().mockResolvedValue({ items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+    const snapshot = { status: 'authenticated', user: actor };
+    const client = { subscribe: () => () => {}, getSnapshot: () => snapshot, bootstrap: vi.fn(), request };
+    try {
+      render(<AuthProvider client={client}><AdminUsersPage /></AuthProvider>);
+      expect(screen.getByRole('dialog', { name: 'Assign courier access' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Vehicle type *')).toBeInTheDocument();
+      await waitFor(() => expect(request).toHaveBeenCalledWith(expect.stringContaining('role=COURIER')));
+    } finally { window.history.replaceState(null, '', '/admin/users'); }
+  });
   it('filters by role and assigns selected users with an audit reason', async () => {
     const candidate = { ...account, id: 'candidate-1', roles: ['CUSTOMER'], version: 7 };
     const request = vi.fn().mockImplementation((path) => {

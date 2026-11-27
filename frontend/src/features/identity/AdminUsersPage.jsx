@@ -18,7 +18,10 @@ const initials = name => (name || '?').split(/\s+/).slice(0, 2).map(part => part
 
 export default function AdminUsersPage() {
   const { user: actor, client } = useAuth();
-  const [selectedRole, setSelectedRole] = useState('DISPATCHER_ADMIN');
+  const [selectedRole, setSelectedRole] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('role');
+    return ROLES.some(item => item.value === requested) ? requested : 'DISPATCHER_ADMIN';
+  });
   const role = ROLES.find(item => item.value === selectedRole);
   const [counts, setCounts] = useState({});
   const [query, setQuery] = useState('');
@@ -31,9 +34,10 @@ export default function AdminUsersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusReason, setStatusReason] = useState('');
   const [roleReason, setRoleReason] = useState('');
-  const [roleChoice, setRoleChoice] = useState('DISPATCHER_ADMIN');
+  const [roleChoice, setRoleChoice] = useState(selectedRole);
   const [roleAction, setRoleAction] = useState('grant');
-  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(() => selectedRole === 'COURIER'
+    && new URLSearchParams(window.location.search).get('action') === 'assign');
   const [directoryQuery, setDirectoryQuery] = useState('');
   const [directory, setDirectory] = useState([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
