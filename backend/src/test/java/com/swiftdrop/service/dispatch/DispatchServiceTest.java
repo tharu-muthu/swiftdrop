@@ -56,4 +56,14 @@ class DispatchServiceTest {
         assertThat(all.get(2).get("unavailableReason")).isEqualTo("PROFILE_INACTIVE");
         assertThat(service.couriers(true)).extracting(row->row.get("courierId")).containsExactly(good);
     }
+    @Test void newProfilesRequireKnownVehicleCodesButExistingLegacyValuesCanBeRetained() {
+        assertThatThrownBy(() -> service.profile(courier,"Motorbike","ABC-123",true))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository,never()).profile(any(),any(),any(),anyBoolean());
+        service.profile(courier,"MOTORCYCLE","ABC-123",true);
+        verify(repository).profile(courier,"MOTORCYCLE","ABC-123",true);
+        when(repository.vehicleType(courier)).thenReturn(Optional.of("Motorbike"));
+        service.profile(courier,"Motorbike","ABC-123",false);
+        verify(repository).profile(courier,"Motorbike","ABC-123",false);
+    }
 }

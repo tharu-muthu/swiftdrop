@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DispatchService {
+    private static final Set<String> VEHICLE_TYPES = Set.of("BICYCLE", "E_BICYCLE", "MOTORCYCLE", "SCOOTER", "THREE_WHEELER", "CAR", "VAN", "PICKUP_TRUCK", "LIGHT_TRUCK");
     private final DispatchRepository dispatch; private final BookingReadService bookings;
     private final ParcelLifecycleService execution; private final IdentityAccountService identities;
     public DispatchService(DispatchRepository dispatch,BookingReadService bookings,ParcelLifecycleService execution,IdentityAccountService identities) {
@@ -52,7 +53,11 @@ public class DispatchService {
     @Transactional(readOnly=true) public long workload(UUID id) { identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); return dispatch.workload(id); }
     @Transactional public void profile(UUID id,String vehicle,String plate,boolean active) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); identities.requireActiveCourier(id);
-        dispatch.profile(id,vehicle.trim(),plate,active);
+        String selected = vehicle == null ? "" : vehicle.trim();
+        // Existing free-text profiles remain editable; every new selection uses a stable code.
+        if (!VEHICLE_TYPES.contains(selected) && !dispatch.vehicleType(id).filter(selected::equals).isPresent())
+            throw new IllegalArgumentException("Select a supported vehicle type");
+        dispatch.profile(id,selected,plate,active);
     }
     @Transactional(readOnly=true) public List<Map<String,Object>> history(UUID id) { identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); return dispatch.assignmentHistory(id); }
     @Transactional public void completed(UUID booking) { dispatch.revoke(booking,"Delivery completed"); }
