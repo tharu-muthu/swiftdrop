@@ -44,7 +44,13 @@ public class DefaultAdminUserService implements AdminUserService {
         if (!roleName.isEmpty() && !java.util.Set.of("CUSTOMER", "MERCHANT", "COURIER", "DISPATCHER_ADMIN").contains(roleName))
             throw new IllegalArgumentException("Invalid role filter");
         var result = users.searchForAdmin(term, roleName, PageRequest.of(page, size));
-        return new AdminUsersPage(result.getContent().stream().map(this::safe).toList(),
+        var pageRoles = new java.util.HashMap<UUID, java.util.Set<String>>();
+        if (!result.isEmpty()) {
+            roles.namesForUsers(result.getContent().stream().map(User::getId).toList()).forEach(row ->
+                    pageRoles.computeIfAbsent(row.getUserId(), ignored -> new java.util.HashSet<>()).add(row.getName()));
+        }
+        return new AdminUsersPage(result.getContent().stream()
+                .map(user -> safe(user, pageRoles.getOrDefault(user.getId(), java.util.Set.of()))).toList(),
                 page, size, result.getTotalElements(), result.getTotalPages());
     }
 
@@ -88,8 +94,12 @@ public class DefaultAdminUserService implements AdminUserService {
     }
 
     private AdminUserResponse safe(User user) {
+        return safe(user, roles.namesForUser(user.getId()));
+    }
+
+    private AdminUserResponse safe(User user, java.util.Set<String> roleNames) {
         return new AdminUserResponse(user.getId(), user.getFullName(), user.getEmail(), user.getPhone(),
-                roles.namesForUser(user.getId()), user.isActive(), user.isEmailVerified(),
+                roleNames, user.isActive(), user.isEmailVerified(),
                 user.getCreatedAt(), user.getUpdatedAt(), user.getVersion());
     }
 }

@@ -13,6 +13,8 @@ public interface IdentityAccountService {
     AccountSummary requireActiveCourier(UUID userId);
     /** Admin-only bulk eligibility lookup for M5; never relies on cached role claims. */
     java.util.Set<UUID> eligibleCourierIds(java.util.Collection<UUID> candidateIds);
+    /** Admin-only, batched display details; includes unavailable accounts so staff can identify them. */
+    java.util.Map<UUID, com.swiftdrop.dto.identity.AccountLabel> accountLabels(java.util.Collection<UUID> ids);
     /** Trusted merchant integration handoff: verify the current state of an API-key owner. */
     void requireActiveMerchant(UUID userId);
     boolean isActiveMerchantAccount(UUID userId);

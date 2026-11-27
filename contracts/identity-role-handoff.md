@@ -27,4 +27,12 @@ From `backend/` run `./mvnw.cmd --batch-mode --no-transfer-progress -Pintegratio
 
 ## Browser workflow
 
+Dispatch's Courier fleet is for maintaining existing operational profiles:
+search names/emails/plates, filter availability, and edit vehicle details or
+availability using the selected account's hidden ID. Add courier opens User
+Management's existing courier onboarding dialog with vehicle fields.
+Unavailable identity accounts link to access review; changing fleet availability
+does not reactivate an account or change its roles, and does not revoke current
+assignments. Existing profiles and vehicle data are reused; no migration is needed.
+
 See [role workspaces and onboarding](../docs/identity/role-workflows.md). Administrators can now grant COURIER from User management and complete the selected account's operational profile in the same screen. Both password and Google sign-in lead to `/workspaces`. Legacy courier/operational-role endpoints delegate to the same policy as the canonical grant/revoke editor.
