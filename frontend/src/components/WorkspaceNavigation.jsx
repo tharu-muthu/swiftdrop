@@ -4,12 +4,20 @@ import AppLink from './AppLink.jsx';
 const icons = {
   '/workspaces': 'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z',
   '/booking': 'm3 10 9-7 9 7 M5 9v12h14V9 M9 21v-8h6v8',
-  '/bookings/new': 'M12 3v18 M3 12h18',
+  '/bookings/new': 'm3 6 7-3 7 3-7 3z M3 6v9l7 3V9 M17 6v5 M16 14v7 M12.5 17.5h7',
   '/bookings': 'm3 7 9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10',
   '/tracking': 'M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+  '/receipts': 'M5 3h14v18l-3-2-4 2-4-2-3 2z M8 7h8 M8 11h8 M8 15h4',
+  '/help': 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M9 8a3 3 0 0 1 6 0c0 2-3 2-3 5 M12 17h.01',
   '/merchant': 'M3 9h18l-2-6H5z M5 9v12h14V9 M9 21v-7h6v7',
+  '/merchant/orders/new': 'M14 3H4v18h16V9z M14 3v6h6 M12 12v6 M9 15h6',
+  '/merchant/webhooks': 'M10 5a2 2 0 1 1 4 0 2 2 0 0 1-4 0 M3 18a2 2 0 1 1 4 0 2 2 0 0 1-4 0 M17 18a2 2 0 1 1 4 0 2 2 0 0 1-4 0 M11 7l-5 9 M7 18h10 M18 16l-5-9',
   '/courier': 'M3 5h11v12H3z M14 9h4l3 4v4h-7 M8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
   '/dispatch': 'M4 4h16v5H4z M4 15h6v5H4z M14 15h6v5h-6z M12 9v3 M7 15v-3h10v3',
+  '/admin/users': 'M12 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M2 21v-3a7 7 0 0 1 14 0v3 M16 4a3 3 0 0 1 0 6 M19 13a5 5 0 0 1 3 5v3',
+  '/admin/merchants': 'M3 9h18l-2-6H5z M5 9v12h7 M19 9v3 M9 21v-7h3 M14 18l3 3 5-6',
+  '/admin/pricing': 'M3 3h8l10 10-8 8L3 11z M8 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0',
+  '/admin/notifications': 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
   '/account': 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
 };
 const defaultIcon = 'M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5';

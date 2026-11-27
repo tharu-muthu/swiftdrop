@@ -1,0 +1,9 @@
+.refresh-control{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:12px}
+.refresh-control-label{color:var(--sd-muted);font-size:12px;line-height:1.4}
+.workspace .refresh-control-button{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:8px;background:var(--sd-surface);color:var(--sd-muted);border:1px solid var(--sd-border);border-radius:8px;cursor:pointer;flex-shrink:0}
+.workspace .refresh-control-button:hover:not(:disabled){background:var(--sd-tint);color:var(--sd-primary);border-color:var(--sd-primary)}
+.workspace .refresh-control-button:focus-visible{outline:2px solid var(--sd-primary);outline-offset:3px}
+.refresh-control-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.refresh-control-button[aria-busy="true"] svg{animation:refresh-control-spin 1s linear infinite}
+@keyframes refresh-control-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.refresh-control-button[aria-busy="true"] svg{animation:none}}

@@ -21,12 +21,6 @@
 .profile-security-action summary{font-size:15px;font-weight:650;cursor:pointer;color:var(--sd-primary-hover)}
 .profile-stepup{padding:16px;background:var(--sd-tint);border-radius:8px;margin-top:20px}
 .profile-stepup p{margin-top:0}
-.saved-address-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:20px}
-.saved-address-card{padding:18px;border:1px solid var(--sd-border);border-radius:8px;overflow-wrap:anywhere}
-.saved-address-card h3{margin:0 0 10px}.saved-address-card p{color:var(--sd-muted);margin:6px 0}
-.saved-address-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-.saved-address-form{margin-top:24px;border-top:1px solid var(--sd-border);padding-top:20px}
-.saved-address-default{display:flex;align-items:center;gap:10px;margin-top:20px}
 
 .profile-subsection{border-top:1px solid var(--sd-border);margin-top:24px;padding-top:24px}
 .profile-subsection .profile-card-heading h3{margin:0;font-size:18px}

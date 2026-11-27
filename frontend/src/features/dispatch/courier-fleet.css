@@ -1,0 +1,14 @@
+.courier-fleet-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.workspace .courier-fleet-heading h2{margin-bottom:6px}
+.courier-fleet-heading p{margin:0;color:var(--sd-muted);font-size:14px}
+.courier-fleet-hint{font-size:12px;color:var(--sd-muted);margin:12px 0 22px}
+.courier-fleet-filters{display:grid;grid-template-columns:minmax(200px,1fr) minmax(180px,240px);gap:16px}
+.courier-fleet-detail{display:block;font-size:12px;color:var(--sd-muted);margin-top:5px;overflow-wrap:anywhere}
+.courier-fleet-count{color:var(--sd-muted);font-size:12px;margin:18px 0 10px}
+.courier-fleet-status{display:inline-block;border-radius:999px;padding:5px 10px;background:var(--sd-background);color:var(--sd-muted);font-size:12px;font-weight:600;white-space:nowrap}
+.courier-fleet-status.available{background:var(--sd-success-tint);color:var(--sd-success)}
+.courier-fleet-empty{padding:24px 0;color:var(--sd-muted)}
+.courier-fleet-editor{border-top:1px solid var(--sd-border);padding-top:20px;margin-top:24px}
+.courier-fleet-editor h3{margin:0;color:var(--sd-text)}
+.courier-fleet-editor h3:focus-visible{outline:2px solid var(--sd-primary);outline-offset:4px}
+@media(max-width:600px){.courier-fleet-filters{grid-template-columns:1fr}.courier-fleet-heading .button{width:100%;text-align:center}}

@@ -51,6 +51,13 @@ public class DefaultIdentityAccountService implements IdentityAccountService {
     }
 
     private static AccessDeniedException unavailable() { return new AccessDeniedException("Courier account is unavailable"); }
+    @Override public java.util.Map<UUID, AccountLabel> accountLabels(java.util.Collection<UUID> ids) {
+        requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
+        if (ids == null) throw new IllegalArgumentException("Account IDs required");
+        if (ids.isEmpty()) return java.util.Map.of();
+        return users.displayForIds(java.util.Set.copyOf(ids)).stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                UserRepository.AccountDisplay::getId, row -> new AccountLabel(row.getFullName(), row.getEmail())));
+    }
     @Override public java.util.Set<UUID> eligibleCourierIds(java.util.Collection<UUID> candidateIds) {
         requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
         if(candidateIds==null) throw new IllegalArgumentException("Courier candidates required");

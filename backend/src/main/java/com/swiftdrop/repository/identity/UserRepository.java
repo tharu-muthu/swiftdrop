@@ -12,6 +12,9 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
+    interface AccountDisplay { UUID getId(); String getFullName(); String getEmail(); }
+    @Query("select u.id as id,u.fullName as fullName,u.email as email from User u where u.id in :ids")
+    java.util.List<AccountDisplay> displayForIds(@Param("ids") java.util.Collection<UUID> ids);
     @Query(value = """
             select u.id from swiftdrop.users u
             join swiftdrop.user_roles ur on ur.user_id=u.id

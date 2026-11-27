@@ -15,6 +15,25 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class IdentityAccountServiceTest {
+    @Test void accountLabelsRequireCurrentAdministratorBeforeReadingAccounts() {
+        authenticate(Set.of("CUSTOMER"));
+        assertThatThrownBy(() -> service.accountLabels(List.of(target))).isInstanceOf(AccessDeniedException.class);
+        verifyNoInteractions(users);
+    }
+    @Test void accountLabelsUseOneBulkReadAndSkipEmptyLists() {
+        authenticate(Set.of("DISPATCHER_ADMIN"));
+        assertThat(service.accountLabels(List.of())).isEmpty();
+        verifyNoInteractions(users);
+        var row = mock(UserRepository.AccountDisplay.class);
+        when(row.getId()).thenReturn(target);
+        when(row.getFullName()).thenReturn("Alex Courier");
+        when(row.getEmail()).thenReturn("alex@example.test");
+        when(users.displayForIds(Set.of(target))).thenReturn(List.of(row));
+        assertThat(service.accountLabels(List.of(target, target))).containsEntry(
+                target, new AccountLabel("Alex Courier", "alex@example.test"));
+        verify(users).displayForIds(Set.of(target));
+        verifyNoMoreInteractions(users);
+    }
     final IdentitySessionService sessions = mock(IdentitySessionService.class);
     final UserRepository users = mock(UserRepository.class);
     final RoleRepository roles = mock(RoleRepository.class);

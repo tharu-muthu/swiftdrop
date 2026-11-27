@@ -23,6 +23,8 @@ Portal redirects are resolved by the app router, including repeated login landin
 
 For COURIER, the selected account now includes a Courier setup form. Existing profile details load before editing. Supply vehicle type, optional license plate and availability, then save. Identity owns the membership; M5 dispatch owns this profile through its existing API. The two steps are deliberately visible and independently retryable: a granted role without a profile is not operationally eligible. Open dispatch to assign deliveries.
 
+Vehicle type is now a shared dropdown: Bicycle, Electric bicycle, Motorcycle, Scooter, Three-wheeler, Car, Van, Pickup truck and Light truck. New profiles store stable uppercase codes. Historical free-text values remain visible and can be retained while editing; selecting a standard option normalizes that profile. No migration rewrites existing data.
+
 MERCHANT is excluded from direct role editing. A CUSTOMER can open Merchant application to submit business details or review their status. An administrator uses Merchant approvals. Approval and the identity grant remain atomic; the owner then signs in again. Rejection does not grant access.
 
 The first administrator is provisioned only through the private startup bootstrap described in `contracts/identity-role-handoff.md`. There is no public administrator signup, role picker, credential seed or invitation endpoint.

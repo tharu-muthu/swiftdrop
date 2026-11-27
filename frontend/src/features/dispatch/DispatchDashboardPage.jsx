@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import WorkspacePage, { JsonRequest } from '../../components/WorkspacePage.jsx';
 import { deliveryStatus } from '../../app/deliveryStatus.js';
+import CourierFleetPanel, { vehicleLabel } from './CourierFleetPanel.jsx';
+import RefreshControl from '../../components/RefreshControl.jsx';
 
-const emptyProfile = { userId: '', vehicleType: '', licensePlate: '', active: true };
 const dateTime = value => value ? new Date(value).toLocaleString() : 'Not recorded';
 
 export default function DispatchDashboardPage() {
@@ -15,13 +16,13 @@ export default function DispatchDashboardPage() {
   const [overdue, setOverdue] = useState(false);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
   const [selected, setSelected] = useState('');
   const [details, setDetails] = useState(null);
   const [history, setHistory] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [courierId, setCourierId] = useState('');
   const [reason, setReason] = useState('');
-  const [profile, setProfile] = useState(() => ({ ...emptyProfile, userId: new URLSearchParams(window.location.search).get('courier') || '' }));
   const [date, setDate] = useState('');
   const [report, setReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -46,6 +47,7 @@ export default function DispatchDashboardPage() {
       if (!active) return;
       applyCouriers(fleet);
       setBoard(result);
+      setLastRefreshed(Date.now());
     }).catch(failure => { if (active) { setBoard(null); setError(failure.message); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -102,7 +104,8 @@ export default function DispatchDashboardPage() {
   return <WorkspacePage title="Dispatch operations">
     {error && <p className="error" role="alert">{error}</p>}
     {notice && <p className="notice" role="status">{notice}</p>}
-    <button disabled={pending || loading} onClick={() => { clearSelection(); setRevision(value => value + 1); }}>Refresh board</button>
+    <RefreshControl label="Refresh board" lastRefreshed={lastRefreshed} loading={loading} disabled={pending}
+      onRefresh={() => { clearSelection(); setRevision(value => value + 1); }} />
     <section aria-label="Parcel board">
       <h2>Parcel board</h2>
       <div className="actions">
@@ -142,7 +145,7 @@ export default function DispatchDashboardPage() {
         }, 'Assignment saved.');
       }}>
         <label>Courier<select required value={courierId} onChange={event => setCourierId(event.target.value)}>
-          <option value="">Select eligible courier</option>{available.map(row => <option key={row.courierId} value={row.courierId}>{row.vehicleType} · {row.licensePlate} · workload {row.workload}</option>)}
+          <option value="">Select eligible courier</option>{available.map(row => <option key={row.courierId} value={row.courierId}>{row.fullName || 'Courier'} · {vehicleLabel(row.vehicleType)} · {row.licensePlate || 'No plate'} · workload {row.workload}</option>)}
         </select></label>
         {!available.length && <p>No eligible couriers are available. Check account access and operational availability.</p>}
         {booking.courierId && <label>Reassignment reason<textarea required maxLength={200} value={reason} onChange={event => setReason(event.target.value)} /></label>}
@@ -150,25 +153,7 @@ export default function DispatchDashboardPage() {
       </form>}
       <h3>Assignment history</h3>{history.map(row => <p key={row.id}>{row.courier_id} · {dateTime(row.assigned_at)} · {row.is_active ? 'Current' : row.revocation_reason}</p>)}
     </section>}
-    <section><h2>Courier operational profiles</h2>
-      <p>First grant the verified user the Courier role in User management, then register their vehicle here.</p>
-      <form onSubmit={event => {
-        event.preventDefault();
-        action(() => client.request(`/api/v1/dispatch/couriers/${profile.userId}`, JsonRequest('PUT', {
-          vehicleType: profile.vehicleType, licensePlate: profile.licensePlate, active: profile.active,
-        })), 'Courier profile saved.');
-      }}>
-        <div className="form-grid">
-          <label>Courier user ID<input required value={profile.userId} onChange={event => setProfile({ ...profile, userId: event.target.value })} /></label>
-          <label>Vehicle type<input required maxLength={50} value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })} /></label>
-          <label>License plate<input maxLength={20} value={profile.licensePlate} onChange={event => setProfile({ ...profile, licensePlate: event.target.value })} /></label>
-          <label className="check-label"><input type="checkbox" checked={profile.active} onChange={event => setProfile({ ...profile, active: event.target.checked })} />Active</label>
-        </div><button disabled={pending}>Save courier profile</button>
-      </form>
-      <ul>{couriers.map(row => <li key={row.courierId}>{row.vehicleType} · {row.licensePlate} · {row.eligible ? 'Eligible' : row.unavailableReason === 'PROFILE_INACTIVE' ? 'Operational profile inactive' : 'Account unavailable'} · workload {row.workload}{' '}
-        <button className="secondary" onClick={() => setProfile({ userId: row.courierId, vehicleType: row.vehicleType, licensePlate: row.licensePlate || '', active: row.active })}>Edit</button>
-      </li>)}</ul>
-    </section>
+    <CourierFleetPanel couriers={couriers} loading={loading} onSaved={() => setRevision(value => value + 1)} />
     <section><h2>Daily delivery report (UTC)</h2>
       <form onSubmit={loadReport}><label>Report date<input type="date" value={date} onChange={event => setDate(event.target.value)} /></label><button disabled={reportLoading}>Load report</button></form>
       {report && <><p>{report.date} · Open deliveries without an update for {report.delayHours} hours: {report.overdueOpenDeliveries}</p>

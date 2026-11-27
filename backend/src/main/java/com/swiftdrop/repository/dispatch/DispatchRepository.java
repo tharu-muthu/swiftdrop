@@ -15,6 +15,7 @@ public class DispatchRepository {
             from swiftdrop.courier_profiles p order by p.created_at
             """); }
     public boolean active(UUID courier) { return jdbc.query("select is_active from swiftdrop.courier_profiles where user_id=? for update",(rs,row)->rs.getBoolean(1),courier).stream().findFirst().orElse(false); }
+    public Optional<String> vehicleType(UUID courier) { return jdbc.query("select vehicle_type from swiftdrop.courier_profiles where user_id=? for update",(rs,row)->rs.getString(1),courier).stream().findFirst(); }
     public long workload(UUID courier) { return jdbc.queryForObject("select count(*) from swiftdrop.parcel_assignments where courier_id=? and is_active",Long.class,courier); }
     public Optional<UUID> assigned(UUID booking) { return jdbc.query("select courier_id from swiftdrop.parcel_assignments where booking_id=? and is_active",(rs,row)->rs.getObject(1,UUID.class),booking).stream().findFirst(); }
     public UUID assign(UUID booking,UUID courier,UUID actor) {

@@ -3,7 +3,6 @@ import { useAuth } from './AuthProvider.jsx';
 import PortalShell from '../../components/PortalShell.jsx';
 import './profile.css';
 import AccountSecuritySettings from './AccountSecuritySettings.jsx';
-import SavedAddressBook from './SavedAddressBook.jsx';
 
 const phonePattern = /^\+?[0-9][0-9 -]*[0-9]$/;
 const initials = name => (name || '').split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
@@ -93,7 +92,6 @@ export default function AccountPage() {
           <ProfileField id="profile-phone" label={editing ? 'Mobile number (optional)' : 'Mobile number'} value={editing ? draft.phone : user.phone || ''} editable={editing} error={errors.phone} onChange={event => setDraft({ ...draft, phone: event.target.value })} />
         </div><ProfileField id="profile-email" label="Email address" value={user.email} help={user.emailVerified ? "Your sign-in email. Use Change email under Security & sign-in to verify a new address." : "Verify your inbox before changing your sign-in email."} />
         {editing && <div className="profile-form-actions"><span>Changes apply to your account only.</span><div><button type="button" className="profile-secondary" onClick={cancel} disabled={pending}>Cancel</button><button type="submit" className="profile-primary" disabled={pending}>{pending ? 'Saving changes…' : 'Save changes'}</button></div></div>}</form>
-        <SavedAddressBook />
       </section>
       <section className="profile-card" aria-labelledby="security-heading"><h2 id="security-heading">Security & sign-in</h2>
         {new URLSearchParams(window.location.search).get('google') === 'linked' && <p className="profile-banner" role="status">Google account linked. Reload your profile to see the connection.</p>}

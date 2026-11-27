@@ -11,6 +11,9 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 
 public interface RoleRepository extends JpaRepository<Role, UUID> {
+    interface UserRoleName { UUID getUserId(); String getName(); }
+    @Query(value = "select ur.user_id as userId,r.name from swiftdrop.roles r join swiftdrop.user_roles ur on ur.role_id=r.id where ur.user_id in (:ids)", nativeQuery = true)
+    java.util.List<UserRoleName> namesForUsers(@Param("ids") java.util.Collection<UUID> ids);
     Optional<Role> findByName(String name);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Role r where r.name = :name")

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
+import { VehicleTypeOptions } from './VehicleTypeOptions.jsx';
 
 export default function CourierProfileSetup({ account }) {
   const { client } = useAuth();
@@ -35,7 +36,7 @@ export default function CourierProfileSetup({ account }) {
   return <div className="admin-action"><h3>Courier setup</h3><p>Operational profile for {account.fullName}. This does not change account roles.</p>
     {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     {loading ? <p role="status">Loading courier profile...</p> : loadFailed ? <p>Reload this account to retry loading its current profile.</p> : <form onSubmit={save}>
-      <label htmlFor="setup-vehicle">Vehicle type *</label><input id="setup-vehicle" required maxLength={50} disabled={pending} value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })} />
+      <label htmlFor="setup-vehicle">Vehicle type *</label><select id="setup-vehicle" required disabled={pending} value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })}><option value="">Select a vehicle type</option><VehicleTypeOptions current={profile.vehicleType} /></select>
       <label htmlFor="setup-plate">License plate</label><input id="setup-plate" maxLength={20} disabled={pending} value={profile.licensePlate} onChange={event => setProfile({ ...profile, licensePlate: event.target.value })} />
       <label><input type="checkbox" checked={profile.active} disabled={pending} onChange={event => setProfile({ ...profile, active: event.target.checked })} />Available for assignments</label>
       <button className="profile-primary" disabled={pending || !profile.vehicleType.trim()}>Save courier profile</button>

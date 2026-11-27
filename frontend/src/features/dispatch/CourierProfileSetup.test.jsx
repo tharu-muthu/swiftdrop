@@ -12,10 +12,10 @@ describe('courier onboarding', () => {
     const request = vi.fn().mockResolvedValue([]); setup(request);
     const vehicle = await screen.findByLabelText('Vehicle type *');
     expect(screen.getByRole('button', { name: 'Save courier profile' })).toBeDisabled();
-    fireEvent.change(vehicle, { target: { value: 'Motorcycle' } });
+    fireEvent.change(vehicle, { target: { value: 'MOTORCYCLE' } });
     fireEvent.change(screen.getByLabelText('License plate'), { target: { value: 'ABC-1234' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save courier profile' }));
-    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/dispatch/couriers/courier-1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ vehicleType: 'Motorcycle', licensePlate: 'ABC-1234', active: true }) })));
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/v1/dispatch/couriers/courier-1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ vehicleType: 'MOTORCYCLE', licensePlate: 'ABC-1234', active: true }) })));
     expect(await screen.findByRole('status')).toHaveTextContent('Courier setup complete');
   });
   it('loads the existing profile before edits', async () => {

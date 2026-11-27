@@ -22,9 +22,18 @@ security context must contain the application's validated `IdentityContext`
 principal, not a mock name, anonymous principal or an OAuth framework principal.
 Do not construct this context from JSON, query parameters or headers.
 
+`accountLabels(Collection<UUID> ids)` is an administrator-only bulk display
+lookup returning an immutable map of IDs to `AccountLabel(fullName, email)`.
+It authorizes before lookup, skips empty inputs and omits missing accounts.
+Unlike eligibility checks, it includes suspended or role-revoked accounts so
+administrators can identify operational records. It never grants access.
+M5 adds these labels and a separate `accountEligible` flag to its courier
+directory response without querying identity repositories directly.
+
 All operations are read-only, using normal REQUIRED transaction participation.
 Returned role sets are immutable snapshots. They contain no password hashes,
-access/refresh tokens, email or phone. Do not cache them for authorization.
+access/refresh tokens, email or phone. The explicit administrator-only
+`AccountLabel` display contract includes email. Do not cache them for authorization.
 Exceptions propagate: missing authentication/session maps to safe HTTP 401;
 permission/target rejection maps to safe HTTP 403. Do not catch and bypass them.
 DB failures propagate and must never be treated as permission granted.

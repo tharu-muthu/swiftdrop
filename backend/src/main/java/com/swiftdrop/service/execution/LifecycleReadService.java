@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class LifecycleReadService {
     private final ParcelLifecycleRepository lifecycles; private final ParcelStatusHistoryRepository history;
     public LifecycleReadService(ParcelLifecycleRepository lifecycles,ParcelStatusHistoryRepository history) { this.lifecycles=lifecycles; this.history=history; }
+    public CustomerDeliveryCounts customerCounts(UUID customerId) {
+        var counts = lifecycles.customerCounts(customerId);
+        return new CustomerDeliveryCounts(counts.getTotal(), counts.getPending(), counts.getInTransit(), counts.getDelivered());
+    }
     public Optional<LifecycleSnapshot> find(UUID booking) {
         return lifecycles.findByBookingId(booking).map(row->new LifecycleSnapshot(row.getId(),booking,row.getAssignedCourierId(),row.getStatus(),row.getUpdatedAt(),
                 history.findAllByLifecycleIdOrderBySequenceNoAsc(row.getId()).stream().map(item->new StatusHistoryItem(item.getSequenceNo(),item.getPreviousStatus(),item.getNewStatus(),item.getActorUserId(),item.getFailureReason(),item.getOccurredAt())).toList()));

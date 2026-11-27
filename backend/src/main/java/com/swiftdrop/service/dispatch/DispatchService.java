@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DispatchService {
+    private static final Set<String> VEHICLE_TYPES = Set.of("BICYCLE", "E_BICYCLE", "MOTORCYCLE", "SCOOTER", "THREE_WHEELER", "CAR", "VAN", "PICKUP_TRUCK", "LIGHT_TRUCK");
     private final DispatchRepository dispatch; private final BookingReadService bookings;
     private final ParcelLifecycleService execution; private final IdentityAccountService identities;
     public DispatchService(DispatchRepository dispatch,BookingReadService bookings,ParcelLifecycleService execution,IdentityAccountService identities) {
@@ -39,9 +40,15 @@ public class DispatchService {
     @Transactional(readOnly=true) public List<Map<String,Object>> couriers(boolean activeOnly) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
         var profiles=dispatch.couriers();
-        var accounts=identities.eligibleCourierIds(profiles.stream().map(row->(UUID)row.get("courierId")).toList());
+        var ids=profiles.stream().map(row->(UUID)row.get("courierId")).toList();
+        var accounts=identities.eligibleCourierIds(ids);
+        var labels=identities.accountLabels(ids);
         return profiles.stream().map(profile->{
             Map<String,Object> row=new LinkedHashMap<>(profile);
+            var label=labels.get((UUID)profile.get("courierId"));
+            row.put("fullName",label == null ? "Account unavailable" : label.fullName());
+            row.put("email",label == null ? null : label.email());
+            row.put("accountEligible",accounts.contains((UUID)profile.get("courierId")));
             boolean operational=Boolean.TRUE.equals(profile.get("active"));
             boolean eligible=operational&&accounts.contains((UUID)profile.get("courierId"));
             row.put("eligible",eligible);
@@ -52,7 +59,11 @@ public class DispatchService {
     @Transactional(readOnly=true) public long workload(UUID id) { identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); return dispatch.workload(id); }
     @Transactional public void profile(UUID id,String vehicle,String plate,boolean active) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); identities.requireActiveCourier(id);
-        dispatch.profile(id,vehicle.trim(),plate,active);
+        String selected = vehicle == null ? "" : vehicle.trim();
+        // Existing free-text profiles remain editable; every new selection uses a stable code.
+        if (!VEHICLE_TYPES.contains(selected) && !dispatch.vehicleType(id).filter(selected::equals).isPresent())
+            throw new IllegalArgumentException("Select a supported vehicle type");
+        dispatch.profile(id,selected,plate,active);
     }
     @Transactional(readOnly=true) public List<Map<String,Object>> history(UUID id) { identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN); return dispatch.assignmentHistory(id); }
     @Transactional public void completed(UUID booking) { dispatch.revoke(booking,"Delivery completed"); }
