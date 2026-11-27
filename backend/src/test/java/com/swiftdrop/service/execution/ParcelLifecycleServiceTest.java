@@ -7,7 +7,6 @@ import com.swiftdrop.dto.booking.BookingSnapshot;
 import com.swiftdrop.entity.execution.*;
 import com.swiftdrop.exception.LifecycleConflictException;
 import com.swiftdrop.service.booking.BookingReadService;
-import com.swiftdrop.service.dispatch.DispatchCompletionService;
 import com.swiftdrop.repository.execution.*;
 import com.swiftdrop.security.IdentityContext;
 import com.swiftdrop.service.identity.IdentityAccountService;
