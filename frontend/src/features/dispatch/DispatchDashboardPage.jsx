@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../identity/AuthProvider.jsx';
 import WorkspacePage, { JsonRequest } from '../../components/WorkspacePage.jsx';
 import { deliveryStatus } from '../../app/deliveryStatus.js';
+import { VehicleTypeOptions } from './VehicleTypeOptions.jsx';
 
 const emptyProfile = { userId: '', vehicleType: '', licensePlate: '', active: true };
 const dateTime = value => value ? new Date(value).toLocaleString() : 'Not recorded';
@@ -160,7 +161,7 @@ export default function DispatchDashboardPage() {
       }}>
         <div className="form-grid">
           <label>Courier user ID<input required value={profile.userId} onChange={event => setProfile({ ...profile, userId: event.target.value })} /></label>
-          <label>Vehicle type<input required maxLength={50} value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })} /></label>
+          <label>Vehicle type<select required value={profile.vehicleType} onChange={event => setProfile({ ...profile, vehicleType: event.target.value })}><option value="">Select a vehicle type</option><VehicleTypeOptions current={profile.vehicleType} /></select></label>
           <label>License plate<input maxLength={20} value={profile.licensePlate} onChange={event => setProfile({ ...profile, licensePlate: event.target.value })} /></label>
           <label className="check-label"><input type="checkbox" checked={profile.active} onChange={event => setProfile({ ...profile, active: event.target.checked })} />Active</label>
         </div><button disabled={pending}>Save courier profile</button>
