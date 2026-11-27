@@ -6,6 +6,25 @@ notification and webhook workflows required by the supplied group assignment.
 Use the [integrated system guide](docs/full-system-implementation.md) for the
 demonstration order, screens, API contracts, queues and migration notes.
 
+## What you can do
+
+The public landing page at `/` adapts from desktop to mobile and includes parcel
+tracking. Register at `/register`, verify your email, then sign in at `/login`.
+Accounts with one role go straight to their workspace. Accounts with multiple
+roles can switch via `/workspaces`.
+
+| Area | Main screens and workflows |
+| --- | --- |
+| Customer | `/booking` dashboard, `/bookings/new` quotes and booking, `/bookings` history, and `/receipts`. |
+| Merchant | `/merchant` application and workspace, `/merchant/orders/new` orders, API credentials, and `/merchant/webhooks`. |
+| Courier | `/courier` for assigned deliveries, workday filters, status updates, and delivery outcomes. |
+| Dispatch | `/dispatch` for assignments, overdue parcels, reports, and the searchable Courier fleet. Select a courier by name to edit their vehicle and availability. **Add courier** opens the existing onboarding dialog in User Management. |
+| Administration | `/admin/users` for accounts and roles, `/admin/merchants` for approvals, `/admin/pricing` for rates and zones, and `/admin/notifications` for notification jobs. |
+| My account | `/account` (also `/profile`) for profile and security settings. Password recovery begins at `/forgot-password`. |
+| Public tracking | `/tracking` or `/tracking/{trackingNumber}` for the parcel timeline. |
+
+For a first run, follow configuration and startup steps 1 and 2A below.
+
 ## Final submission checklist
 
 The assignment expects a working repository, design documentation, test and
@@ -62,7 +81,7 @@ coordination and the current Google/Docker readiness limitations.
 Customer registration, password login/logout, rotating refresh sessions, profile
 management and password recovery are implemented. Open `/register`, `/login`,
 `/profile` and `/forgot-password`.
-The email-verification branch adds a required inbox proof for password accounts.
+Password accounts must verify their email before signing in.
 **Do not start its backend against shared Neon until mail delivery is verified:**
 existing password users must verify before they can sign in again. See the
 [email-verification rollout guide](contracts/identity-email-verification.md).
@@ -70,7 +89,7 @@ See [authentication setup and request flow](docs/identity/sessions.md) and the
 [current API contract](contracts/identity-sessions.md) and [recovery guide](contracts/identity-password-recovery.md).
 Administrator controls now include guarded courier/administrator grants and revocation.
 
-**New setup step:** from the root run
+**Authentication setup:** from the root run
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-auth.ps1`
 before starting the backend. This adds private signing/origin settings while
 preserving Neon credentials. For full Compose use `-Compose` instead.
@@ -94,7 +113,7 @@ The health service is a liveness response and needs no repository or business ta
 | --- | --- |
 | `frontend/` | React browser app, Vite development server, npm dependencies and tests; Docker builds static files served by Nginx. |
 | `frontend/src/app/` | Page entry point, preserved foundation page and shared styles. |
-| `frontend/src/features/` | Feature screens and API calls; `identity/` implements registration. |
+| `frontend/src/features/` | Feature screens and API calls, including the public landing page and all role workspaces. |
 | `frontend/src/components/` | Reusable auth layout, brand and form fields. |
 | `backend/` | Single Spring Boot Maven project and its Windows/Linux/macOS Maven wrappers. |
 | `backend/src/main/java/com/swiftdrop/` | `controller`, `service`, `repository`, `entity`, `dto`, `security`, `config`, `exception`, `integration` layers; add feature subpackages as needed. |
@@ -224,8 +243,8 @@ connection. It runs frontend tests/build and backend unit/security tests as part
 of building the images. Compose starts RabbitMQ, waits for it, then starts the
 backend (connected to Neon) and frontend.
 
-Open **[http://localhost:8080/register](http://localhost:8080/register)**. You should
-see the SwiftDrop registration form. A valid submission shows **“Account created”**
+Open **[http://localhost:8080](http://localhost:8080)** for the public landing page.
+Open `/register` to create a customer account. A valid submission shows **“Account created”**
 without signing you in. The original health/retry page is at `/foundation`; it
 shows **“Backend connected”** when the backend is reachable.
 
@@ -250,7 +269,9 @@ FROM swiftdrop.flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-Expect successful V1 through V13 entries when the account-settings migration is coordinated, or V1 through V12 before that migration is rolled out. Health reports **application liveness**; it
+This checkout includes V1 through V14. Coordinate V14 with the team before
+starting against shared Neon. See [database performance](docs/database-performance.md)
+for the index migration and verification. Health reports **application liveness**; it
 does not probe broker availability or assert that business integrations work.
 
 Useful commands:
@@ -393,7 +414,7 @@ See [the identity schema guide](docs/identity/schema.md) for guard limits and ex
 environment loading; private files are preserved.
 
 Expected startup: Flyway applies and validates the migrations present in
-`backend/src/main/resources/db/migration/` (currently V1 through V13), Hibernate
+`backend/src/main/resources/db/migration/` (currently V1 through V14), Hibernate
 validates the identity, merchant, execution, booking, pricing and webhook tables,
 followed by `Started SwiftDropApplication`.
 Check it with `curl.exe http://localhost:8081/api/v1/health`; expect
@@ -467,8 +488,8 @@ Nginx serves the built page and proxies API requests in Docker.
 | Wrapper/dependency download fails | Check internet/proxy access to Maven Central and npm. Retry the same command. Do not disable TLS verification. |
 | Windows build cannot rename `swiftdrop-backend.jar` | Stop the Java process running that JAR before packaging again. `spring-boot:run` uses compiled classes and avoids running from the packaged JAR. |
 | Docker image downloads fail or integration tests report `ContainerFetchException` | Ensure Docker Desktop can reach Docker Hub and its CDN (`production.cloudfront.docker.com`). Retry the image pulls above after connectivity recovers, then rerun the check. A failed image pull is not a passed or skipped integration test. |
-| Compose says a password is missing | Fill both blank values in root `.env`; run `docker compose config --quiet`. |
-| DB authentication fails | Check `.env` against the existing volume's credentials; changing the file does not reset the volume. |
+| Compose says a password is missing | Check `RABBITMQ_PASSWORD` and `AUTH_JWT_SECRET` in root `.env`; run `docker compose config --quiet`. |
+| DB authentication fails | Check the Neon username and password in private `backend/.env`, including any Flyway overrides. |
 | Neon connection fails or uses the wrong branch | Check the runtime values and any optional Flyway overrides in private `backend/.env`. Use the same branch/compute/database, a direct Flyway endpoint, TLS parameters and suitable grants. Clear stale exported overrides. Restart after editing; never paste credentials into logs/issues. |
 | Port already in use | Change the relevant host port in `.env`. For local backend changes, keep `BACKEND_URL` aligned. |
 | React says backend unavailable | Check backend logs and health URL; ensure correct startup mode, `.env`, DB connectivity and proxy target. |
@@ -481,9 +502,7 @@ Read [the reference review](docs/reference-review.md) and [coding rules](AGENTS.
 Coordinate one ordered Flyway history, feature DTOs and service contracts. Keep
 business authorization in services as features arrive. The detailed v3 ER views
 are the design baseline; the implemented M1 model is in [the identity ER guide](docs/identity/schema.md).
-The standalone ER PNG has recorded conflicts. V2 is used by identity; coordinate
-the next free migration number before merging another schema change. V8 is already
-reserved by the team and must not be reused.
+The standalone ER PNG has recorded conflicts. Coordinate the next free migration number before merging another schema change. Preserve applied migrations.
 
 The team still needs lecturer approval for nine rather than ten members, member
 names/IDs, deadline and hosting decisions. The assignment found beside this
@@ -495,46 +514,24 @@ included.
 
 ## Role workspaces
 
-After sign-in, open `/workspaces` to choose among assigned roles. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
+For an account with multiple roles, open `/workspaces` to choose a workspace. Administrators use `/admin/users` to search accounts, assign roles with a reason, and complete courier operational profiles. Merchant roles come through `/admin/merchants` approval. Role changes end the affected account's sessions; sign in again for updated access. See [the role workflow guide](docs/identity/role-workflows.md) for setup and authorization rules.
 
 The [assignment RBAC matrix](docs/identity/rbac-assignment-review.md) documents role and ownership rules. Courier deliveries now have a Sri Lankan workday filter with unfinished carryover; reassignment stops after pickup.
 
 
-### Profile security and saved addresses
+### Profile security
 
-`/account` now includes verified email change, password change/set-password,
-email verification status and an owned saved-address book. Booking pickup and
-recipient forms can copy a saved address into their draft without linking or
-rewriting earlier bookings. See [the account-settings contract](contracts/identity-account-settings.md)
-for API fields, step-up checks, revocation and migration coordination.
+My Account includes verified email changes, password changes, and password setup
+for eligible Google accounts. Saved-address APIs and tables remain in the backend.
+The saved-address section is no longer shown on My Account.
+See the [account settings contract](contracts/identity-account-settings.md).
 
-Coordinate the new **V13** migration before applying it to a shared Neon branch.
-Existing SMTP credentials are reused. Google-only security changes require
-Google authentication-time metadata and recent provider authentication; missing
-or stale signed claims are rejected. Follow the [Google OIDC reference](https://developers.google.com/identity/openid-connect/reference)
-for the `auth_time` claim and check it with your configured Google project.
+### Optional Google sign-in
 
-With Docker Desktop running, validate from the repository root:
-
-```powershell
-npm.cmd --prefix frontend test
-npm.cmd --prefix frontend run build
-.\backend\mvnw.cmd -f backend/pom.xml -Pintegration verify
-```
-
-For a focused new backend integration run:
-
-```powershell
-.\backend\mvnw.cmd -f backend/pom.xml -Pintegration -Dit.test=AccountSettingsIT verify
-```
-
-After tests and shared-migration/SMTP coordination, rebuild both applications:
-
-```powershell
-docker compose up --build --detach --wait
-```
-
-The current source has been checked with the frontend test suite, frontend build,
-and backend Maven compilation. Run the Docker-backed integration profile before
-submission because it requires the local Docker engine and disposable
-PostgreSQL/RabbitMQ containers.
+For Docker, configure `GOOGLE_ENABLED`, `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, and `GOOGLE_FRONTEND_ORIGIN` in private `backend/.env`.
+Use the same browser origin throughout the flow. With the default Compose origin
+`http://localhost:8080`, the callback is
+`http://localhost:8080/login/oauth2/code/google`. Recreate the backend after
+changing settings. See the [team development guide](docs/team-development-guide.md)
+for provider setup and checks.
