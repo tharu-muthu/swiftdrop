@@ -32,6 +32,7 @@
 .landing-audience-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:34px}
 .landing-audience-grid article{padding:26px;border:1px solid #dce5f2;border-radius:12px;background:white}
 .landing-audience-grid article>span{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:#fff1df;color:#a95d0d;font-size:22px;font-weight:700}
+.landing-icon{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .landing-audience-grid h3{font-size:20px;margin:22px 0 10px}
 .landing-journey{margin-block:clamp(48px,6vw,100px);padding:clamp(20px,4vw,46px);background:#e9f0fb;border-radius:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:clamp(24px,4vw,54px);align-items:center}
 .landing-journey ol{list-style:none;padding:0;margin:0;display:grid;gap:12px}
