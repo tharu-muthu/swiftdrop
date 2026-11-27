@@ -6,11 +6,15 @@ import van from '../../assets/booking-hero-van.png';
 import './landing.css';
 
 const audiences = [
-  { icon: '□', title: 'For customers', text: 'Estimate delivery fees, book parcels, follow every status update, review booking history and download receipts.' },
-  { icon: '◇', title: 'For merchants', text: 'Create business orders from a dashboard or secured API, then receive signed webhook updates as deliveries progress.' },
-  { icon: '○', title: 'For couriers', text: 'See assigned deliveries for the day, record each delivery stage and capture recipient or failure details.' },
-  { icon: '⌁', title: 'For dispatch teams', text: 'Assign unallocated parcels, monitor courier workloads, manage delivery zones and review daily operations.' },
+  { icon: 'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10 M7.5 5l9 4', title: 'For customers', text: 'Estimate delivery fees, book parcels, follow every status update, review booking history and download receipts.' },
+  { icon: 'M3 9h18l-2-5H5z M5 9v11h14V9 M10 20v-6h4v6', title: 'For merchants', text: 'Create business orders from a dashboard or secured API, then receive signed webhook updates as deliveries progress.' },
+  { icon: 'M3 6h11v11H8 M14 10h4l3 3v4h-2 M14 17h1 M3 17h1 M8 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0', title: 'For couriers', text: 'See assigned deliveries for the day, record each delivery stage and capture recipient or failure details.' },
+  { icon: 'M8 5H5v16h14V5h-3 M8 3h8v5H8z M8 13l1 1 2-2 M13 13h3 M8 17l1 1 2-2 M13 17h3', title: 'For dispatch teams', text: 'Assign unallocated parcels, monitor courier workloads, manage delivery zones and review daily operations.' },
 ];
+
+function LandingIcon({ path }) {
+  return <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={path} /></svg>;
+}
 
 const deliveryStages = ['Created', 'Picked up', 'In transit', 'Out for delivery', 'Delivered'];
 
@@ -32,7 +36,7 @@ export default function LandingPage() {
         <div className="landing-art">
           <div className="landing-orbit" />
           <img src={van} alt="SwiftDrop delivery van" />
-          <div className="landing-art-note"><span aria-hidden="true">✓</span><div><strong>Every delivery, connected</strong><small>Booking, dispatch, progress and proof in one system.</small></div></div>
+          <div className="landing-art-note"><span><LandingIcon path="M12 3l8 3v5c0 5-3 8-8 10-5-2-8-5-8-10V6z M8 12l3 3 5-5" /></span><div><strong>Every delivery, connected</strong><small>Booking, dispatch, progress and proof in one system.</small></div></div>
         </div>
       </section>
 
@@ -47,7 +51,7 @@ export default function LandingPage() {
 
       <section className="landing-platform" aria-labelledby="platform-title">
         <div className="landing-section-heading"><p className="landing-eyebrow">Built around the whole operation</p><h2 id="platform-title">One system for everyone involved.</h2><p>Each person gets the tools and information relevant to their role, while the delivery stays connected from end to end.</p></div>
-        <div className="landing-audience-grid">{audiences.map(item => <article key={item.title}><span aria-hidden="true">{item.icon}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
+        <div className="landing-audience-grid">{audiences.map(item => <article key={item.title}><span><LandingIcon path={item.icon} /></span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
 
       <section className="landing-journey" aria-labelledby="journey-title">
