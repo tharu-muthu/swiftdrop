@@ -50,8 +50,13 @@ class DispatchServiceTest {
         when(repository.couriers()).thenReturn(List.of(
                 Map.of("courierId",good,"active",true),Map.of("courierId",blocked,"active",true),Map.of("courierId",inactive,"active",false)));
         when(identities.eligibleCourierIds(List.of(good,blocked,inactive))).thenReturn(Set.of(good,inactive));
+        when(identities.accountLabels(List.of(good,blocked,inactive))).thenReturn(Map.of(
+                good,new com.swiftdrop.dto.identity.AccountLabel("Alex Courier","alex@example.test")));
         var all=service.couriers(false);
         assertThat(all).extracting(row->row.get("eligible")).containsExactly(true,false,false);
+        assertThat(all.get(0)).containsEntry("fullName","Alex Courier").containsEntry("email","alex@example.test");
+        assertThat(all.get(1)).containsEntry("accountEligible",false);
+        assertThat(all.get(2)).containsEntry("accountEligible",true);
         assertThat(all.get(1).get("unavailableReason")).isEqualTo("ACCOUNT_UNAVAILABLE");
         assertThat(all.get(2).get("unavailableReason")).isEqualTo("PROFILE_INACTIVE");
         assertThat(service.couriers(true)).extracting(row->row.get("courierId")).containsExactly(good);

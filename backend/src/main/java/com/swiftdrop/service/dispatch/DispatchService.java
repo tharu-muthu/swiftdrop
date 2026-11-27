@@ -40,9 +40,15 @@ public class DispatchService {
     @Transactional(readOnly=true) public List<Map<String,Object>> couriers(boolean activeOnly) {
         identities.requireCurrentRole(IdentityRole.DISPATCHER_ADMIN);
         var profiles=dispatch.couriers();
-        var accounts=identities.eligibleCourierIds(profiles.stream().map(row->(UUID)row.get("courierId")).toList());
+        var ids=profiles.stream().map(row->(UUID)row.get("courierId")).toList();
+        var accounts=identities.eligibleCourierIds(ids);
+        var labels=identities.accountLabels(ids);
         return profiles.stream().map(profile->{
             Map<String,Object> row=new LinkedHashMap<>(profile);
+            var label=labels.get((UUID)profile.get("courierId"));
+            row.put("fullName",label == null ? "Account unavailable" : label.fullName());
+            row.put("email",label == null ? null : label.email());
+            row.put("accountEligible",accounts.contains((UUID)profile.get("courierId")));
             boolean operational=Boolean.TRUE.equals(profile.get("active"));
             boolean eligible=operational&&accounts.contains((UUID)profile.get("courierId"));
             row.put("eligible",eligible);
