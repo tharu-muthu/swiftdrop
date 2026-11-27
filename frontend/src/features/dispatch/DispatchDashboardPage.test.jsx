@@ -12,6 +12,29 @@ const board = { items: [parcel], totalPages: 2, totalElements: 51, delayHours: 2
 const good = { courierId: 'good', vehicleType: 'VAN', licensePlate: 'GOOD-1', active: true, eligible: true, workload: 0 };
 const blocked = { courierId: 'blocked', vehicleType: 'BIKE', licensePlate: 'BLOCKED-1', active: true, eligible: false, unavailableReason: 'ACCOUNT_UNAVAILABLE', workload: 0 };
 
+it('refreshes through the icon control and retains the last successful timestamp on failure', async () => {
+  let rejectRefresh;
+  let refreshing = false;
+  const request = vi.fn(path => {
+    if (!path.includes('/bookings?')) return Promise.resolve([]);
+    if (refreshing) return new Promise((resolve, reject) => { rejectRefresh = reject; });
+    return Promise.resolve(board);
+  });
+  renderPage(request);
+  expect(await screen.findByText('Last refreshed just now')).toBeInTheDocument();
+  const timestamp = screen.getByText('Last refreshed just now').getAttribute('title');
+  const button = screen.getByRole('button', { name: 'Refresh board' });
+  expect(button).toHaveAttribute('title', 'Refresh board');
+  refreshing = true;
+  fireEvent.click(button);
+  expect(button).toBeDisabled();
+  expect(screen.getByText('Refreshing…')).toBeInTheDocument();
+  rejectRefresh(new Error('Unable to refresh'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Unable to refresh');
+  expect(screen.getByText('Last refreshed just now')).toHaveAttribute('title', timestamp);
+  expect(button).toBeEnabled();
+});
+
 it('loads the paginated dispatch board and an empty fleet without requiring manual booking IDs', async () => {
   const request = vi.fn(async path => path.startsWith('/api/v1/dispatch/bookings') ? { items: [], totalPages: 0, totalElements: 0 } : []);
   renderPage(request);
