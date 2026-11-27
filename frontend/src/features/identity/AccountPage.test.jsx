@@ -16,11 +16,11 @@ function setup(updateProfile = vi.fn(), reloadProfile = vi.fn()) {
 }
 
 describe('profile page', () => {
-  it('groups address management under personal information and security changes under sign-in', () => {
+  it('keeps personal information focused on account details and security changes under sign-in', () => {
     setup();
     const personal = screen.getByRole('region', { name: 'Personal information' });
     const security = screen.getByRole('region', { name: 'Security & sign-in' });
-    expect(within(personal).getByRole('heading', { name: 'Saved addresses' })).toBeInTheDocument();
+    expect(within(personal).queryByRole('heading', { name: 'Saved addresses' })).not.toBeInTheDocument();
     expect(within(security).getByText('Change email', { selector: 'summary' })).toBeInTheDocument();
     expect(within(security).getByText('Change password', { selector: 'summary' })).toBeInTheDocument();
     expect(within(personal).queryByText('Change password', { selector: 'summary' })).not.toBeInTheDocument();
